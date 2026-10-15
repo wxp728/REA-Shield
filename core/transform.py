@@ -109,6 +109,11 @@ def protect(policy: dict, sources: list[str], out_dir: str, root: str = ".",
     whitelist = _whitelist_symbols(policy, root, "ir")
     vmp_whitelist = _whitelist_symbols(policy, root, "vm")
     strategies = _plugin_strategies(policy)
+    # 外部 SPI 插件（FR-C11）：策略名由 ANTI_REA_EXTRA_STRATEGIES 追加，
+    # 插件路径由 ANTI_REA_EXTRA_PLUGINS 经环境继承给引擎宿主。
+    extra_strats = [s for s in os.environ.get("ANTI_REA_EXTRA_STRATEGIES", "").split(",") if s]
+    if extra_strats:
+        strategies = sorted(set(strategies) | set(extra_strats))
     extra_inputs: list[str] = []
     if "virtualize" in strategies:
         extra_inputs.append(_find_vm_bc())
@@ -155,6 +160,7 @@ def protect(policy: dict, sources: list[str], out_dir: str, root: str = ".",
         "vmp_whitelist": vmp_whitelist,
         "baseline_exe": os.path.abspath(baseline_exe),
         "protected_exe": os.path.abspath(protected_exe),
+        "extra_plugins": os.environ.get("ANTI_REA_EXTRA_PLUGINS", ""),
         "offline": offline,
     }
 

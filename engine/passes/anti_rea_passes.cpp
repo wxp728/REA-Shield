@@ -36,9 +36,11 @@
 #include "llvm/Transforms/Scalar/Reg2Mem.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
 
+#include "spi/transform_plugin.h"
 #include "vm_isa.h"
 
 #include <cstdlib>
+#include <dlfcn.h>
 #include <functional>
 #include <map>
 #include <set>
@@ -753,6 +755,70 @@ struct NoisePass : PassInfoMixin<NoisePass> {
   static bool isRequired() { return true; }
 };
 
+// ------------------------- 外部插件宿主（FR-C11 / ADR-005）-------------------------
+// 读取 ANTI_REA_EXTRA_PLUGINS（逗号分隔 .so 路径），dlopen 后校验 anti_rea_spi_version()；
+// 版本不匹配即拒载（E_PLUGIN_INCOMPATIBLE），不影响核心引擎。仅对 ANTI_REA_STRATEGIES
+// 中请求的策略执行 apply()。
+struct ExternalPluginPass : PassInfoMixin<ExternalPluginPass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
+    std::string list = envStr("ANTI_REA_EXTRA_PLUGINS", "");
+    if (list.empty()) return PreservedAnalyses::all();
+
+    std::set<std::string> Want = splitCSV(envStr("ANTI_REA_STRATEGIES", ""));
+    uint64_t Seed = (uint64_t)envInt("ANTI_REA_SEED", 0);
+    bool Changed = false;
+
+    for (const std::string &Path : splitCSV(list)) {
+      void *H = dlopen(Path.c_str(), RTLD_NOW | RTLD_LOCAL);
+      if (!H) {
+        errs() << "anti-rea: E_PLUGIN_INCOMPATIBLE: " << Path << ": "
+               << (dlerror() ? dlerror() : "dlopen 失败") << "\n";
+        continue;
+      }
+      auto Ver = (int (*)())dlsym(H, "anti_rea_spi_version");
+      auto Reg = (anti_rea::TransformPlugin * (*)())
+          dlsym(H, "anti_rea_register_plugin");
+      if (!Ver || !Reg) {
+        errs() << "anti-rea: E_PLUGIN_INCOMPATIBLE: " << Path
+               << ": 缺少 anti_rea_spi_version/anti_rea_register_plugin\n";
+        continue;
+      }
+      if (Ver() != anti_rea::SPI_VERSION) {
+        errs() << "anti-rea: E_PLUGIN_INCOMPATIBLE: " << Path
+               << ": spi=" << Ver() << " host=" << anti_rea::SPI_VERSION
+               << "\n";
+        continue;
+      }
+      anti_rea::TransformPlugin *P = Reg();
+      if (!P) {
+        errs() << "anti-rea: E_PLUGIN_INCOMPATIBLE: " << Path
+               << ": register_plugin 返回空\n";
+        continue;
+      }
+      anti_rea::TransformCapabilities Cap = P->capabilities();
+      if (!Want.empty() && !Want.count(Cap.name)) continue; // 未请求该策略
+      anti_rea::Config Cfg{"{}"};
+      std::string Err;
+      if (!P->validate(Cfg, Err)) {
+        errs() << "anti-rea: E_PLUGIN_INCOMPATIBLE: " << Cap.name << ": " << Err
+               << "\n";
+        continue;
+      }
+      anti_rea::Result R = P->apply(M, Cfg, Seed);
+      if (!R.ok) {
+        errs() << "anti-rea: E_TRANSFORM_FAILED: " << Cap.name << ": " << R.detail
+               << "\n";
+        continue;
+      }
+      errs() << "anti-rea: 外部插件 " << Cap.name << " applied (" << R.detail
+             << ")\n";
+      Changed = true;
+    }
+    return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
+  }
+  static bool isRequired() { return true; }
+};
+
 } // namespace
 
 // ------------------------- 注册 -------------------------
@@ -772,13 +838,23 @@ llvmGetPassPluginInfo() {
                   if (Name == "anti-rea") { FPM.addPass(AntiReaPass()); return true; }
                   return false;
                 });
-            // clang -fpass-plugin 路径：在流水线末端挂 reg2mem + anti-rea
+            PB.registerPipelineParsingCallback(
+                [](StringRef Name, ModulePassManager &MPM,
+                   ArrayRef<PassBuilder::PipelineElement>) {
+                  if (Name == "external-transforms") {
+                    MPM.addPass(ExternalPluginPass());
+                    return true;
+                  }
+                  return false;
+                });
+            // clang -fpass-plugin 路径：在流水线末端挂 reg2mem + anti-rea + 外部插件宿主
             PB.registerOptimizerLastEPCallback(
                 [](ModulePassManager &MPM, OptimizationLevel) {
                   FunctionPassManager FPM;
                   FPM.addPass(RegToMemPass());
                   FPM.addPass(AntiReaPass());
                   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+                  MPM.addPass(ExternalPluginPass());
                 });
           }};
 }
