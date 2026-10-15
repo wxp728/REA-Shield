@@ -1,19 +1,24 @@
 /*
- * Anti-REA Transform Engine —— LLVM Pass 插件（R1 MVP）
+ * Anti-REA Transform Engine —— LLVM Pass 插件
  * 关联：FR-C1 CFF / FR-C2 MBA / FR-C3 不透明谓词 / FR-C6 选择性变换（白名单）
- * 设计：docs/design/ddd/dd-03-llvm-transforms.md
+ *       FR-C7 代码虚拟化（R2）
+ * 设计：docs/design/ddd/dd-03-llvm-transforms.md、dd-04-virtualization.md
  *
  * 暴露的 pass：
  *   - cff-flatten       仅控制流平坦化
  *   - mba               仅非线性 MBA（加法/异或恒等式）
  *   - opaque-predicates 仅不透明谓词
- *   - anti-rea          按 -anti-rea-strategies 组合施加（默认 cff,mba,opaque）
+ *   - vm-virtualize     仅代码虚拟化（整型叶子函数 -> 自定义 ISA 字节码）
+ *   - anti-rea          按 ANTI_REA_STRATEGIES 组合施加（默认 cff,mba,opaque）
  *
- * 白名单（FR-C6）：
- *   -anti-rea-whitelist=foo,bar   只变换列出的函数；空则不变换任何函数
- *   特殊值 "*" 表示变换全部函数（便于测试）
+ * 配置（环境变量，见 engine/README.md；clang -fpass-plugin 下 cl::opt 注册晚于
+ * 命令行解析，故不用 -mllvm）：
+ *   ANTI_REA_WHITELIST      IR 变换白名单（FR-C6）
+ *   ANTI_REA_VMP_WHITELIST  虚拟化白名单（命中者只做 VM）
+ *   ANTI_REA_STRATEGIES     cff,mba,opaque,virtualize 子集
+ *   ANTI_REA_SEED           随机种子（可复现）
  *
- * 关键约束（见 dd-03 §2）：CFF 前须 reg2mem（消除跨块 SSA 支配依赖）；
+ * 关键约束（见 dd-03 §2）：CFF/VM 前须 reg2mem（消除跨块 SSA 支配依赖）；
  * 变换应在优化流水线末端执行。
  */
 #include "llvm/IR/BasicBlock.h"
@@ -30,7 +35,10 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar/Reg2Mem.h"
 
+#include "vm_isa.h"
+
 #include <cstdlib>
+#include <functional>
 #include <map>
 #include <set>
 #include <string>
@@ -70,6 +78,12 @@ static std::set<std::string> splitCSV(const std::string &s) {
 
 static bool whitelisted(StringRef Name) {
   static std::set<std::string> WL = splitCSV(envStr("ANTI_REA_WHITELIST", ""));
+  if (WL.empty()) return false;
+  if (WL.count("*")) return true;
+  return WL.count(Name.str()) > 0;
+}
+static bool vmpWhitelisted(StringRef Name) {
+  static std::set<std::string> WL = splitCSV(envStr("ANTI_REA_VMP_WHITELIST", ""));
   if (WL.empty()) return false;
   if (WL.count("*")) return true;
   return WL.count(Name.str()) > 0;
@@ -288,17 +302,325 @@ static bool applyOpaque(Function &F, int Seed) {
   return !CondBrs.empty() || !Switches.empty();
 }
 
+// ------------------------- 虚拟化（FR-C7，R2）-------------------------
+// 将整型叶子函数 lower 为自定义 ISA 字节码，函数体替换为调用 VM 解释器。
+// 设计：docs/design/ddd/dd-04-virtualization.md §3/§4
+// v0.1 边界：仅整型；无浮点/聚合/指针运算/函数调用；不支持者跳过并回退 IR 变换。
+
+static bool isVMInt(Type *T) {
+  return T->isIntegerTy() && T->getIntegerBitWidth() <= 64;
+}
+
+static bool vmEligible(Function &F) {
+  if (F.isDeclaration()) return false;
+  if (!isVMInt(F.getReturnType())) return false;
+  for (Argument &A : F.args())
+    if (!isVMInt(A.getType())) return false;
+  for (BasicBlock &BB : F) {
+    Instruction *T = BB.getTerminator();
+    if (!(isa<BranchInst>(T) || isa<SwitchInst>(T) || isa<ReturnInst>(T) ||
+          isa<UnreachableInst>(T)))
+      return false;
+    for (Instruction &I : BB) {
+      if (isa<AllocaInst>(&I)) {
+        auto *AI = cast<AllocaInst>(&I);
+        if (!isVMInt(AI->getAllocatedType())) return false;
+      } else if (auto *LI = dyn_cast<LoadInst>(&I)) {
+        if (!isVMInt(LI->getType())) return false;
+        if (!isa<AllocaInst>(LI->getPointerOperand())) return false;
+      } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
+        if (!isVMInt(SI->getValueOperand()->getType())) return false;
+        if (!isa<AllocaInst>(SI->getPointerOperand())) return false;
+      } else if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
+        if (!isVMInt(BO->getType())) return false;
+        switch (BO->getOpcode()) {
+        case Instruction::Add: case Instruction::Sub: case Instruction::Mul:
+        case Instruction::And: case Instruction::Or: case Instruction::Xor:
+        case Instruction::Shl: case Instruction::LShr: case Instruction::AShr:
+          break;
+        default: return false;
+        }
+      } else if (auto *CI = dyn_cast<ICmpInst>(&I)) {
+        if (!isVMInt(CI->getOperand(0)->getType())) return false;
+        switch (CI->getPredicate()) {
+        case CmpInst::ICMP_EQ: case CmpInst::ICMP_NE:
+        case CmpInst::ICMP_SGT: case CmpInst::ICMP_SGE:
+        case CmpInst::ICMP_SLT: case CmpInst::ICMP_SLE:
+          break;
+        default: return false;  // 暂不支持无符号比较
+        }
+      } else if (isa<TruncInst>(&I) || isa<ZExtInst>(&I) || isa<SExtInst>(&I)) {
+        if (!isVMInt(I.getType())) return false;
+      } else if (auto *Sel = dyn_cast<SelectInst>(&I)) {
+        if (!isVMInt(Sel->getType())) return false;
+      } else if (auto *BC = dyn_cast<BitCastInst>(&I)) {
+        // 放行 no-op bitcast（reg2mem alloca point 标记）
+        if (BC->getType() != BC->getOperand(0)->getType()) return false;
+      } else if (isa<BranchInst>(&I) || isa<SwitchInst>(&I) ||
+                 isa<ReturnInst>(&I) || isa<UnreachableInst>(&I)) {
+        // 端子，单独处理
+      } else {
+        return false;  // 调用/PHI/GEP/Select/浮点等一律回退
+      }
+    }
+  }
+  return true;
+}
+
+static bool applyVM(Function &F, uint32_t Seed) {
+  if (!vmEligible(F)) return false;
+
+  LLVMContext &Ctx = F.getContext();
+  unsigned NArgs = F.arg_size();
+
+  // 寄存器分配：参数 -> 0..n-1；alloca -> 随后；临时值按需分配
+  std::map<Value *, unsigned> Reg;
+  unsigned Next = 0;
+  for (Argument &A : F.args()) Reg[&A] = A.getArgNo();
+  Next = NArgs;
+  std::map<AllocaInst *, unsigned> Slot;
+  for (BasicBlock &BB : F)
+    for (Instruction &I : BB)
+      if (auto *AI = dyn_cast<AllocaInst>(&I)) {
+        Slot[AI] = Next++;
+        Reg[&I] = Slot[AI];
+      }
+
+  // 字节码缓冲与编码表
+  std::vector<unsigned char> Code;
+  unsigned char Enc[32], Dec[32];
+  anti_rea_vm_tables(Seed, Enc, Dec);
+  auto op = [&](unsigned char real) { Code.push_back(Enc[real]); };
+  auto u8 = [&](uint8_t v) { Code.push_back(v); };
+  auto u16 = [&](uint16_t v) { u8(v & 0xff); u8((v >> 8) & 0xff); };
+  auto u32 = [&](uint32_t v) { for (int i = 0; i < 4; i++) u8((v >> (8 * i)) & 0xff); };
+  auto u64 = [&](uint64_t v) { for (int i = 0; i < 8; i++) u8((v >> (8 * i)) & 0xff); };
+
+  std::map<BasicBlock *, uint32_t> Offset;
+  std::vector<std::pair<size_t, BasicBlock *>> Fixups;
+  bool Overflow = false;
+
+  // 取寄存器（常量为即时数；其定义值须已在 Reg 中）
+  std::function<unsigned(Value *)> R = [&](Value *V) -> unsigned {
+    if (auto *CI = dyn_cast<ConstantInt>(V)) {
+      if (Next >= ANTI_REA_VM_NREG) { Overflow = true; return 0; }
+      unsigned r = Next++;
+      op(OP_MOVI); u16((uint16_t)r); u64((uint64_t)CI->getSExtValue());
+      return r;
+    }
+    auto it = Reg.find(V);
+    return it == Reg.end() ? 0 : it->second;
+  };
+  auto sext32 = [&](unsigned r) {  // 符号扩展低 32 位（i32 不变量）
+    op(OP_SHL); u16(r); u16(r); u8(32);
+    op(OP_SRA); u16(r); u16(r); u8(32);
+  };
+  auto zext32 = [&](unsigned r) {
+    op(OP_SHL); u16(r); u16(r); u8(32);
+    op(OP_SHR); u16(r); u16(r); u8(32);
+  };
+  auto tmp = [&]() -> unsigned {
+    if (Next >= ANTI_REA_VM_NREG) { Overflow = true; return 0; }
+    return Next++;
+  };
+
+  for (BasicBlock &BB : F) {
+    Offset[&BB] = (uint32_t)Code.size();
+    for (Instruction &I : BB) {
+      if (isa<AllocaInst>(&I) || isa<BranchInst>(&I) || isa<SwitchInst>(&I) ||
+          isa<ReturnInst>(&I) || isa<UnreachableInst>(&I))
+        continue;
+      if (auto *LI = dyn_cast<LoadInst>(&I)) {
+        unsigned d = tmp();
+        op(OP_MOVE); u16((uint16_t)d);
+        u16((uint16_t)Slot[cast<AllocaInst>(LI->getPointerOperand())]);
+        Reg[&I] = d;
+      } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
+        unsigned v = R(SI->getValueOperand());
+        op(OP_MOVE);
+        u16((uint16_t)Slot[cast<AllocaInst>(SI->getPointerOperand())]);
+        u16((uint16_t)v);
+      } else if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
+        unsigned a = R(BO->getOperand(0)), b = R(BO->getOperand(1)), d = tmp();
+        unsigned char o = OP_ADD;
+        switch (BO->getOpcode()) {
+        case Instruction::Add: o = OP_ADD; break;
+        case Instruction::Sub: o = OP_SUB; break;
+        case Instruction::Mul: o = OP_MUL; break;
+        case Instruction::And: o = OP_AND; break;
+        case Instruction::Or:  o = OP_OR;  break;
+        case Instruction::Xor: o = OP_XOR; break;
+        case Instruction::Shl: o = OP_SHLV; break;
+        case Instruction::LShr: o = OP_SHRV; break;
+        case Instruction::AShr: o = OP_SRAV; break;
+        default: break;
+        }
+        op(o); u16((uint16_t)d); u16((uint16_t)a); u16((uint16_t)b);
+        if (BO->getType()->getIntegerBitWidth() == 32) sext32(d);
+        Reg[&I] = d;
+      } else if (auto *CI = dyn_cast<ICmpInst>(&I)) {
+        unsigned a = R(CI->getOperand(0)), b = R(CI->getOperand(1)), d = tmp();
+        unsigned char o = OP_CMPEQ;
+        switch (CI->getPredicate()) {
+        case CmpInst::ICMP_EQ:  o = OP_CMPEQ;  break;
+        case CmpInst::ICMP_NE:  o = OP_CMPNE;  break;
+        case CmpInst::ICMP_SLT: o = OP_CMPSLT; break;
+        case CmpInst::ICMP_SLE: o = OP_CMPSLE; break;
+        case CmpInst::ICMP_SGT: o = OP_CMPSGT; break;
+        case CmpInst::ICMP_SGE: o = OP_CMPSGE; break;
+        default: break;
+        }
+        op(o); u16((uint16_t)d); u16((uint16_t)a); u16((uint16_t)b);
+        Reg[&I] = d;
+      } else if (isa<TruncInst>(&I)) {
+        unsigned a = R(I.getOperand(0)), d = tmp();
+        op(OP_MOVE); u16((uint16_t)d); u16((uint16_t)a);
+        if (I.getType()->getIntegerBitWidth() == 32) sext32(d);
+        Reg[&I] = d;
+      } else if (isa<ZExtInst>(&I)) {
+        unsigned a = R(I.getOperand(0)), d = tmp();
+        op(OP_MOVE); u16((uint16_t)d); u16((uint16_t)a);
+        if (I.getOperand(0)->getType()->getIntegerBitWidth() == 32) zext32(d);
+        Reg[&I] = d;
+      } else if (isa<SExtInst>(&I)) {
+        unsigned a = R(I.getOperand(0)), d = tmp();
+        op(OP_MOVE); u16((uint16_t)d); u16((uint16_t)a);
+        Reg[&I] = d;
+      } else if (auto *Sel = dyn_cast<SelectInst>(&I)) {
+        // 无分支 select：d = b ^ ((a ^ b) & (0 - (c != 0)))
+        unsigned c = R(Sel->getCondition());
+        unsigned a = R(Sel->getTrueValue()), b = R(Sel->getFalseValue());
+        unsigned z = tmp();
+        op(OP_MOVI); u16((uint16_t)z); u64(0);
+        unsigned ne = tmp();
+        op(OP_CMPNE); u16((uint16_t)ne); u16((uint16_t)c); u16((uint16_t)z);
+        unsigned mask = tmp();
+        op(OP_SUB); u16((uint16_t)mask); u16((uint16_t)z); u16((uint16_t)ne);
+        unsigned xa = tmp();
+        op(OP_XOR); u16((uint16_t)xa); u16((uint16_t)a); u16((uint16_t)b);
+        unsigned t2 = tmp();
+        op(OP_AND); u16((uint16_t)t2); u16((uint16_t)xa); u16((uint16_t)mask);
+        unsigned d = tmp();
+        op(OP_XOR); u16((uint16_t)d); u16((uint16_t)b); u16((uint16_t)t2);
+        if (Sel->getType()->getIntegerBitWidth() == 32) sext32(d);
+        Reg[&I] = d;
+      } else if (auto *BC = dyn_cast<BitCastInst>(&I)) {
+        (void)BC;
+        Reg[&I] = R(I.getOperand(0));
+      }
+    }
+    // 端子
+    Instruction *T = BB.getTerminator();
+    if (auto *RI = dyn_cast<ReturnInst>(T)) {
+      unsigned r = RI->getReturnValue() ? R(RI->getReturnValue()) : 0;
+      op(OP_RET); u16((uint16_t)r);
+    } else if (auto *Br = dyn_cast<BranchInst>(T)) {
+      if (Br->isUnconditional()) {
+        op(OP_JMP);
+        Fixups.push_back({Code.size(), Br->getSuccessor(0)}); u32(0);
+      } else {
+        unsigned c = R(Br->getCondition());
+        op(OP_JNZ); u16((uint16_t)c);
+        Fixups.push_back({Code.size(), Br->getSuccessor(0)}); u32(0);
+        op(OP_JMP);
+        Fixups.push_back({Code.size(), Br->getSuccessor(1)}); u32(0);
+      }
+    } else if (auto *Sw = dyn_cast<SwitchInst>(T)) {
+      unsigned c = R(Sw->getCondition());
+      for (auto &Case : Sw->cases()) {
+        unsigned v = R(Case.getCaseValue());
+        unsigned d = tmp();
+        op(OP_CMPEQ); u16((uint16_t)d); u16((uint16_t)c); u16((uint16_t)v);
+        op(OP_JNZ); u16((uint16_t)d);
+        Fixups.push_back({Code.size(), Case.getCaseSuccessor()}); u32(0);
+      }
+      unsigned dd = tmp();
+      op(OP_MOVI); u16((uint16_t)dd); u64(1);  // 无条件
+      op(OP_JNZ); u16((uint16_t)dd);
+      Fixups.push_back({Code.size(), Sw->getDefaultDest()}); u32(0);
+    } else {  // unreachable
+      op(OP_HALT);
+    }
+  }
+  op(OP_HALT);
+
+  if (Overflow) return false;
+
+  // 回填跳转目标
+  for (auto &fx : Fixups) {
+    uint32_t t = Offset[fx.second];
+    Code[fx.first + 0] = (unsigned char)(t & 0xff);
+    Code[fx.first + 1] = (unsigned char)((t >> 8) & 0xff);
+    Code[fx.first + 2] = (unsigned char)((t >> 16) & 0xff);
+    Code[fx.first + 3] = (unsigned char)((t >> 24) & 0xff);
+  }
+
+  Module *M = F.getParent();
+  Module &Mod = *M;
+  auto *I8 = IntegerType::get(Ctx, 8);
+  auto *I32 = IntegerType::get(Ctx, 32);
+  auto *I64 = IntegerType::get(Ctx, 64);
+  auto *PtrTy = PointerType::getUnqual(Ctx);
+  auto *ArrTy = ArrayType::get(I8, Code.size());
+
+  Constant *CDA = ConstantDataArray::get(Ctx, ArrayRef<uint8_t>(Code));
+  auto *GV = new GlobalVariable(Mod, ArrTy, /*isConstant=*/true,
+                                GlobalValue::PrivateLinkage, CDA,
+                                "__anti_rea_vm_code_" + F.getName().str());
+
+  FunctionCallee Run = Mod.getOrInsertFunction(
+      "anti_rea_vm_run",
+      FunctionType::get(I64, {PtrTy, I64, PtrTy, I32, I32, I32}, false));
+
+  // 用「调用解释器」替换函数体
+  BasicBlock *NewEntry = BasicBlock::Create(Ctx, "vm.entry", &F);
+  IRBuilder<> B(NewEntry);
+  unsigned ArrN = NArgs ? NArgs : 1;
+  auto *ArgsTy = ArrayType::get(I64, ArrN);
+  AllocaInst *ArgsArr = B.CreateAlloca(ArgsTy, nullptr, "vm.args");
+  for (unsigned i = 0; i < NArgs; i++) {
+    Value *A = F.getArg(i);
+    Value *Ext = A;
+    if (A->getType()->getIntegerBitWidth() < 64)
+      Ext = B.CreateSExt(A, I64);
+    Value *P = B.CreateGEP(ArgsTy, ArgsArr,
+                           {ConstantInt::get(I32, 0), ConstantInt::get(I32, i)});
+    B.CreateStore(Ext, P);
+  }
+  Value *CodeLen = ConstantInt::get(I64, (uint64_t)Code.size());
+  Value *NArgsC = ConstantInt::get(I32, (uint32_t)NArgs);
+  Value *SeedC = ConstantInt::get(I32, Seed);
+  Value *NRegsC = ConstantInt::get(I32, Next);
+  CallInst *Call = B.CreateCall(Run, {GV, CodeLen, ArgsArr, NArgsC, SeedC, NRegsC});
+  Value *RV = Call;
+  if (F.getReturnType()->getIntegerBitWidth() < 64)
+    RV = B.CreateTrunc(Call, F.getReturnType());
+  B.CreateRet(RV);
+
+  std::vector<BasicBlock *> Old;
+  for (BasicBlock &BB : F)
+    if (&BB != NewEntry) Old.push_back(&BB);
+  for (BasicBlock *BB : Old) BB->eraseFromParent();
+  return true;
+}
+
 // ------------------------- 组合 Pass -------------------------
 struct AntiReaPass : public PassInfoMixin<AntiReaPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
-    if (!whitelisted(F.getName())) return PreservedAnalyses::all();
     if (F.isDeclaration()) return PreservedAnalyses::all();
-
     static std::set<std::string> &S = strategySet();
+    uint32_t seed = (uint32_t)envInt("ANTI_REA_SEED", 0);
+
+    // 虚拟化：命中 VMP 白名单 -> 只做 VM，跳过 IR 变换（dd-04 §8）
+    if (S.count("virtualize") && vmpWhitelisted(F.getName()))
+      return applyVM(F, seed) ? PreservedAnalyses::none()
+                              : PreservedAnalyses::all();
+
+    if (!whitelisted(F.getName())) return PreservedAnalyses::all();
     bool changed = false;
-    if (S.count("cff")) changed |= applyCFF(F, (unsigned)envInt("ANTI_REA_SEED", 0));
+    if (S.count("cff")) changed |= applyCFF(F, seed);
     if (S.count("mba")) changed |= applyMBA(F);
-    if (S.count("opaque")) changed |= applyOpaque(F, envInt("ANTI_REA_SEED", 0));
+    if (S.count("opaque")) changed |= applyOpaque(F, (int)seed);
     return changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
   }
   static bool isRequired() { return true; }
@@ -324,6 +646,13 @@ struct OpaquePass : PassInfoMixin<OpaquePass> {
                : PreservedAnalyses::all();
   }
 };
+struct VMPass : PassInfoMixin<VMPass> {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
+    return applyVM(F, (uint32_t)envInt("ANTI_REA_SEED", 0))
+               ? PreservedAnalyses::none()
+               : PreservedAnalyses::all();
+  }
+};
 
 } // namespace
 
@@ -338,6 +667,7 @@ llvmGetPassPluginInfo() {
                   if (Name == "cff-flatten") { FPM.addPass(CFFPass()); return true; }
                   if (Name == "mba") { FPM.addPass(MBAPass()); return true; }
                   if (Name == "opaque-predicates") { FPM.addPass(OpaquePass()); return true; }
+                  if (Name == "vm-virtualize") { FPM.addPass(VMPass()); return true; }
                   if (Name == "anti-rea") { FPM.addPass(AntiReaPass()); return true; }
                   return false;
                 });

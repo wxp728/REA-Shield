@@ -19,9 +19,14 @@ STRAT_MAP = {
     "mixed_boolean_arithmetic": "mba",
     "non_linear_mba": "mba",
     "opaque_predicates": "opaque",
+    "code_virtualization": "virtualize",
 }
+# 走 IR 白名单的策略（虚拟化走独立白名单）
+_IR_STRATEGIES = {"control_flow_flattening", "mixed_boolean_arithmetic",
+                  "non_linear_mba", "opaque_predicates"}
 # 策略名 -> 覆盖需求，供 transform.log 记录
-SUPPORTED_REQ = {"cff": "FR-C1", "mba": "FR-C2", "opaque": "FR-C3"}
+SUPPORTED_REQ = {"cff": "FR-C1", "mba": "FR-C2", "opaque": "FR-C3",
+                 "virtualize": "FR-C7"}
 
 _DEFAULT_LLVM_BIN = "/opt/anti-rea-toolchain/clang+llvm-18.1.8-x86_64-linux-gnu-ubuntu-18.04/bin"
 
@@ -31,6 +36,14 @@ def _find_plugin() -> str:
     if not os.path.exists(cand):
         raise FileNotFoundError(
             "E_TRANSFORM_FAILED: 未找到插件 %s，请先构建 engine/" % cand)
+    return cand
+
+
+def _find_vm_bc() -> str:
+    cand = os.path.join(common.REPO_ROOT, "engine", "build", "vm_interp.bc")
+    if not os.path.exists(cand):
+        raise FileNotFoundError(
+            "E_TRANSFORM_FAILED: 未找到 VM 解释器 %s，请先构建 engine/" % cand)
     return cand
 
 
@@ -46,12 +59,21 @@ def _clang() -> str:
     raise FileNotFoundError("E_BUILD_FAILED: 未找到 clang")
 
 
-def _whitelist_symbols(policy: dict, root: str) -> list[str]:
-    """策略中非空策略的资产 -> 其文件内命中的敏感函数符号（白名单）。"""
+def _whitelist_symbols(policy: dict, root: str, only: str) -> list[str]:
+    """按策略类型收集白名单符号。
+
+    only="vm"  -> 含 code_virtualization 的资产；
+    only="ir"  -> 含任一 IR 策略的资产。
+    """
     syms: set[str] = set()
     for a in policy.get("assets", []):
-        if not a.get("strategies"):
-            continue
+        strat = set(a.get("strategies", []))
+        if only == "vm":
+            if "code_virtualization" not in strat:
+                continue
+        else:
+            if not (strat & _IR_STRATEGIES):
+                continue
         p = os.path.join(root, a["path"])
         if os.path.isfile(p) and os.path.splitext(p)[1] in scanner._LANG_EXT_SOURCES:
             for cand in scanner._scan_file(p):
@@ -79,8 +101,12 @@ def protect(policy: dict, sources: list[str], out_dir: str, root: str = ".",
 
     clang = _clang()
     plugin = _find_plugin()
-    whitelist = _whitelist_symbols(policy, root)
+    whitelist = _whitelist_symbols(policy, root, "ir")
+    vmp_whitelist = _whitelist_symbols(policy, root, "vm")
     strategies = _plugin_strategies(policy)
+    extra_inputs: list[str] = []
+    if "virtualize" in strategies:
+        extra_inputs.append(_find_vm_bc())
 
     baseline_exe = os.path.join(art_dir, "baseline")
     protected_exe = os.path.join(art_dir, "protected")
@@ -91,9 +117,11 @@ def protect(policy: dict, sources: list[str], out_dir: str, root: str = ".",
 
     env = dict(os.environ)
     env["ANTI_REA_WHITELIST"] = ",".join(whitelist)
+    env["ANTI_REA_VMP_WHITELIST"] = ",".join(vmp_whitelist)
     env["ANTI_REA_STRATEGIES"] = ",".join(strategies) if strategies else ""
     env["ANTI_REA_SEED"] = str(seed)
-    cmd = [clang, "-O1", "-fpass-plugin=" + plugin, *sources, "-o", protected_exe]
+    cmd = [clang, "-O1", "-fpass-plugin=" + plugin,
+           *sources, *extra_inputs, "-o", protected_exe]
     p = subprocess.run(cmd, capture_output=True, text=True, env=env)
     if p.returncode != 0:
         raise RuntimeError("E_BUILD_FAILED: 保护构建失败:\n" + (p.stderr or ""))
@@ -104,6 +132,7 @@ def protect(policy: dict, sources: list[str], out_dir: str, root: str = ".",
         "seed: %d" % seed,
         "plugin: %s" % plugin,
         "whitelist: %s" % ",".join(whitelist),
+        "vmp_whitelist: %s" % ",".join(vmp_whitelist),
         "strategies: %s" % ",".join(strategies),
         "requirements: %s" % ",".join(SUPPORTED_REQ.get(s, "?") for s in strategies),
     ]
@@ -120,6 +149,7 @@ def protect(policy: dict, sources: list[str], out_dir: str, root: str = ".",
         "toolchain": {"clang": clang},
         "strategies": strategies,
         "whitelist": whitelist,
+        "vmp_whitelist": vmp_whitelist,
         "baseline_exe": os.path.abspath(baseline_exe),
         "protected_exe": os.path.abspath(protected_exe),
         "offline": offline,

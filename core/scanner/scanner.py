@@ -96,6 +96,37 @@ def _detect_project(root: str) -> dict:
             "target_platform": "linux-x86_64"}
 
 
+def _function_body(text: str, brace_pos: int) -> str:
+    """从 '{' 位置起做朴素花括号匹配，返回函数体文本（含花括号）。"""
+    if brace_pos < 0 or brace_pos >= len(text) or text[brace_pos] != "{":
+        return ""
+    depth = 0
+    for i in range(brace_pos, len(text)):
+        c = text[i]
+        if c == "{":
+            depth += 1
+        elif c == "}":
+            depth -= 1
+            if depth == 0:
+                return text[brace_pos:i + 1]
+    return text[brace_pos:]
+
+
+_HEX_BYTES_RE = re.compile(r"(?:0x[0-9A-Fa-f]{2}\s*,?\s*){4,}")
+
+
+def _looks_like_key_material(body: str) -> bool:
+    """轻量数据流信号（FR-A4 部分）：函数体内含硬编码密钥字节数组或高熵密钥串。"""
+    if _HEX_BYTES_RE.search(body):
+        return True
+    for sm in re.finditer(r'"([^"\\]{8,})"', body):
+        val = sm.group(1)
+        if _shannon_entropy(val) >= 3.5 and re.search(
+                r"(key|secret|token|password)", val, re.I):
+            return True
+    return False
+
+
 def _scan_file(path: str) -> list[dict]:
     """返回该文件的候选资产（未分级）。"""
     try:
@@ -111,8 +142,12 @@ def _scan_file(path: str) -> list[dict]:
         line = text.count("\n", 0, m.start()) + 1
         for typ, rx in _NAME_RULES:
             if rx.search(name):
+                ev = [f"fn.name:{rx.pattern}"]
+                body = _function_body(text, m.end() - 1)
+                if _looks_like_key_material(body):
+                    ev.append("dataflow.key_material")
                 out.append({"path": path, "symbol": name, "line": line,
-                            "type": typ, "evidence": [f"fn.name:{rx.pattern}"]})
+                            "type": typ, "evidence": ev})
                 break
 
     # 字符串类（密钥/Token 模式）
@@ -137,7 +172,8 @@ def _score(asset: dict) -> tuple[int, str]:
     t = _TYPE_WEIGHT.get(asset["type"], 0.1)
     c = 0.9 if asset.get("evidence") else 0.5
     e = 1.0 if asset["type"] == "secret" else 0.6
-    d = 0.5 if any("entropy" in x for x in asset.get("evidence", [])) else 0.0
+    d = 0.5 if any(("entropy" in x) or ("key_material" in x)
+                   for x in asset.get("evidence", [])) else 0.0
     score = 100 * (0.35 * t + 0.25 * c + 0.20 * e + 0.20 * d)
     if asset["type"] == "open_source":
         return int(score), "P3"

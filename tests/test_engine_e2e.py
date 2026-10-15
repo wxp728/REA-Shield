@@ -20,6 +20,7 @@ from core.evaluate import verify  # noqa: E402
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SAMPLES = os.path.join(REPO, "tests", "samples")
 HELLO = os.path.join(SAMPLES, "hello.c")
+P0_SECRET = os.path.join(SAMPLES, "p0_secret.c")
 
 _LLVM_BIN = "/opt/anti-rea-toolchain/clang+llvm-18.1.8-x86_64-linux-gnu-ubuntu-18.04/bin"
 
@@ -47,10 +48,60 @@ class TestEndToEnd(unittest.TestCase):
             policy = plan(manifest, {"max_overhead": 0.2}, seed=3)
             policy["_run_id"] = manifest["run_id"]
             meta = protect(policy, [HELLO], out, root=SAMPLES, seed=3)
-            self.assertEqual(meta["whitelist"], ["secret_mix"])  # 选择性（FR-C6）
+            # 选择性（FR-C6）：命中的敏感函数入白名单，普通函数不入
+            self.assertIn("secret_mix", meta["whitelist"])
+            for plain in ("add", "classify", "main"):
+                self.assertNotIn(plain, meta["whitelist"])
             report = verify(out)
             self.assertTrue(report["functional_pass"], report)
             common.validate(report, "verification_report.schema.json")
+
+    def test_vm_virtualization_pipeline(self):
+        """P0 资产经代码虚拟化（FR-C7）后功能保持。"""
+        with tempfile.TemporaryDirectory() as out:
+            manifest = scan(SAMPLES)
+            policy = plan(manifest, {"max_overhead": 0.5}, seed=7)
+            policy["_run_id"] = manifest["run_id"]
+            meta = protect(policy, [P0_SECRET], out, root=SAMPLES, seed=7)
+            self.assertIn("virtualize", meta["strategies"])
+            self.assertTrue(meta["vmp_whitelist"], meta)
+            report = verify(out)
+            self.assertTrue(report["functional_pass"], report)
+
+    def test_vm_ir_lowering_runs_correctly(self):
+        """vm-virtualize：IR 含解释器调用，且链接后功能与基线一致。"""
+        opt = _opt()
+        if not opt:
+            self.skipTest("无 opt")
+        plug = _find_plugin()
+        with tempfile.TemporaryDirectory() as t:
+            ir = os.path.join(t, "p0.ll")
+            subprocess.run([_clang(), "-O1", "-S", "-emit-llvm", P0_SECRET, "-o", ir],
+                           check=True, capture_output=True)
+            out_ll = os.path.join(t, "p0.prot.ll")
+            env = dict(os.environ)
+            env["ANTI_REA_SEED"] = "7"
+            subprocess.run([opt, "-load-pass-plugin=" + plug,
+                            "-passes=reg2mem,vm-virtualize", ir, "-S", "-o", out_ll],
+                           check=True, capture_output=True, env=env)
+            with open(out_ll, encoding="utf-8") as fh:
+                text = fh.read()
+            self.assertIn("anti_rea_vm_run", text)          # FR-C7
+            self.assertIn("__anti_rea_vm_code_", text)
+
+            def build_and_run(src, exe):
+                subprocess.run([_clang(), src, "-o", exe],
+                               check=True, capture_output=True)
+                p = subprocess.run([exe], capture_output=True, text=True)
+                return p.stdout
+
+            base = build_and_run(P0_SECRET, os.path.join(t, "base"))
+            vm_bc = os.path.join(REPO, "engine", "build", "vm_interp.bc")
+            vm_exe = os.path.join(t, "prot")
+            subprocess.run([_clang(), out_ll, vm_bc, "-o", vm_exe],
+                           check=True, capture_output=True)
+            prot = subprocess.run([vm_exe], capture_output=True, text=True).stdout
+            self.assertEqual(base, prot)                    # 功能保持（FR-C8）
 
     def test_transform_markers_and_selectivity(self):
         opt = _opt()
