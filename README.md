@@ -10,7 +10,7 @@
 | :--- | :--- |
 | S0 立项与需求分析 | ✅ 完成（M0 需求基线已批准，tag `m0-baseline`） |
 | S1 概要设计 | ✅ 完成（设计交付物 + **4 项 PoC 全部通过**，M1 架构门禁通过，tag `m1-architecture`） |
-| S2 详细设计 | 🟡 进行中（DDD 索引 + 端到端场景 + OI-07 已产出；余 DD-01…DD-10） |
+| S2 详细设计 | ✅ 完成（DD-01…DD-10 + 构建集成；评审建议通过 **M2**，待人工批准 tag `m2-design`） |
 | S3 及以后 | ⬜ 未开始 |
 
 > **接手请先读 [`docs/STATUS.md`](docs/STATUS.md)**（项目状态与交接说明），再按其中的「下一步」继续。
@@ -37,8 +37,11 @@ anti-rea/
 │       └── ddd/                      # S2 详细设计
 │           ├── README.md                    # 索引 / 任务追踪 / M2 出口映射
 │           ├── e2e-scenario.md              # 端到端 Agent 调用场景（主线）
-│           └── decisions/
-│               └── OI-07-rea-success-criteria.md   # 「REA 成功」判定口径
+│           ├── dd-01-scanner.md … dd-08-adaptive.md  # 各模块详细设计
+│           ├── dd-09-test-plan.md           # 测试计划（覆盖全部需求）
+│           ├── dd-build-integration.md      # 构建集成与产物管理
+│           ├── dd-10-review.md              # 详细设计评审（M2 门）
+│           └── decisions/                   # OI-05 / OI-07 决策记录
 ├── schemas/                  # 数据契约（JSON Schema, Draft 2020-12）
 │   ├── asset_manifest.schema.json
 │   ├── protection_policy.schema.json

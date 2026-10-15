@@ -6,7 +6,7 @@
 - **创建日期**：2026-10-15
 - **阶段**：S2 详细设计（任务 DD-01…DD-10）
 - **上游依据**：`HLD.md` v1.1（M1 基线）、`interfaces.md` v1.1、`ADR.md` v1.1、`docs/requirements/SRS.md` v1.2（M0 基线）
-- **状态**：进行中
+- **状态**：交付完成，评审建议通过（M2 待人工批准；见 `dd-10-review.md`）
 - **目标**：把每个模块设计到「换一个执行者也能照着实现」的算法级，并产出与设计同步、覆盖全部 FR 的测试计划（M2 设计基线）。
 
 ---
@@ -16,7 +16,8 @@
 | 文件 | 内容 | 对应任务 | 状态 |
 | :--- | :--- | :--- | :--- |
 | `e2e-scenario.md` | **主线**：AI Agent 经 MCP 调用 skill 的端到端场景（集成视图） | DD-10 交叉 / 全局 | ✅ 初稿 |
-| `decisions/OI-07-rea-success-criteria.md` | 待决问题 OI-07 落定：「REA 成功」判定 + 独立会话上下文窗口口径 | DD-07 | ✅ 初稿 |
+| `decisions/OI-07-rea-success-criteria.md` | 待决问题 OI-07 落定：「REA 成功」判定 + 独立会话上下文窗口口径 | DD-07 | ✅ 已决 |
+| `decisions/OI-05-mtd-signing.md` | 待决问题 OI-05 落定：MTD 变体上限 + 制品签名/分发 | DD-02 | ✅ 已决 |
 | `dd-01-scanner.md` | 资产扫描详细设计 | DD-01 | ✅ 初稿 |
 | `dd-02-strategy.md` | 策略引擎详细设计 | DD-02 | ✅ 初稿 |
 | `dd-03-llvm-transforms.md` | LLVM 变换详细设计 | DD-03 | ✅ 初稿 |
@@ -26,7 +27,8 @@
 | `dd-07-evaluation.md` | 评估层详细设计 | DD-07 | ✅ 初稿 |
 | `dd-08-adaptive.md` | 自适应引擎详细设计 | DD-08 | ✅ 初稿 |
 | `dd-09-test-plan.md` | 测试计划（覆盖全部 FR） | DD-09 | ✅ 初稿 |
-| `dd-10-review.md` | 详细设计评审记录 | DD-10 | ⬜ 待产出 |
+| `dd-build-integration.md` | 构建集成与产物管理（FR-D1…D7、FR-G1…G3 补充设计） | 补充 | ✅ 初稿 |
+| `dd-10-review.md` | 详细设计评审记录 | DD-10 | ✅ 完成 |
 
 ## 2. 编写顺序与依赖
 
