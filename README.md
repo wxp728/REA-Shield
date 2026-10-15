@@ -9,8 +9,9 @@
 | 阶段 | 状态 |
 | :--- | :--- |
 | S0 立项与需求分析 | ✅ 完成（M0 需求基线已批准，tag `m0-baseline`） |
-| S1 概要设计 | 🟡 设计交付物完成；**M1 门禁待执行 PoC** |
-| S2 详细设计及以后 | ⬜ 未开始 |
+| S1 概要设计 | ✅ 完成（设计交付物 + **4 项 PoC 全部通过**，M1 架构门禁通过，tag `m1-architecture`） |
+| S2 详细设计 | 🟡 下一步（DD-01…DD-10） |
+| S3 及以后 | ⬜ 未开始 |
 
 > **接手请先读 [`docs/STATUS.md`](docs/STATUS.md)**（项目状态与交接说明），再按其中的「下一步」继续。
 
@@ -33,11 +34,17 @@ anti-rea/
 │       ├── interfaces.md             # 接口契约（模块/MCP/CLI/SPI/错误码）
 │       ├── ADR.md                    # 架构决策记录（ADR-001…007）
 │       └── poc-plan.md              # 技术选型 PoC 方案（PoC-1…4）
-└── schemas/                  # 数据契约（JSON Schema, Draft 2020-12）
-    ├── asset_manifest.schema.json
-    ├── protection_policy.schema.json
-    ├── verification_report.schema.json
-    └── eval_report.schema.json
+├── schemas/                  # 数据契约（JSON Schema, Draft 2020-12）
+│   ├── asset_manifest.schema.json
+│   ├── protection_policy.schema.json
+│   ├── verification_report.schema.json
+│   └── eval_report.schema.json
+└── poc/                      # S1 技术选型 PoC（可执行代码与证据）
+    ├── poc1-llvm-pass/       #   LLVM Pass：控制流平坦化（CFF）
+    ├── poc2-ghidra-headless/ #   Ghidra Headless（PyGhidra）批量反编译
+    ├── poc3-deap/            #   DEAP 策略进化原型
+    ├── poc4-wbc/             #   白盒查找表编码（AES）
+    └── setup_env.sh          #   环境安装记录脚本
 ```
 
 ## 快速导航
@@ -50,6 +57,7 @@ anti-rea/
 | 查需求与验收标准 | `docs/requirements/SRS.md` |
 | 查架构与接口 | `docs/design/HLD.md`、`docs/design/interfaces.md` |
 | 查技术取舍理由 | `docs/design/ADR.md` |
+| 看 PoC 方案与结论 | `docs/design/poc-plan.md`、`poc/` |
 | 继续做去风险验证 | `docs/design/poc-plan.md` |
 
 ## 约定
