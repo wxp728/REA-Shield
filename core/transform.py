@@ -6,6 +6,8 @@
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -14,6 +16,22 @@ from . import common
 from .scanner import scanner
 from . import wbc
 from . import adversarial
+
+
+def _input_fingerprint(sources: list[str]) -> str:
+    h = hashlib.sha256()
+    for p in sorted(sources):
+        h.update(os.path.basename(p).encode())
+        if os.path.exists(p):
+            with open(p, "rb") as fh:
+                h.update(hashlib.sha256(fh.read()).hexdigest().encode())
+    return h.hexdigest()
+
+
+def _policy_hash(policy: dict) -> str:
+    clean = {k: v for k, v in policy.items() if not k.startswith("_")}
+    return hashlib.sha256(
+        json.dumps(clean, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 # policy 策略名 -> 引擎插件策略名
 STRAT_MAP = {
@@ -166,6 +184,10 @@ def protect(policy: dict, sources: list[str], out_dir: str, root: str = ".",
         "protected_exe": os.path.abspath(protected_exe),
         "extra_plugins": os.environ.get("ANTI_REA_EXTRA_PLUGINS", ""),
         "offline": offline,
+        # FR-G2 可复现元数据
+        "input_fingerprint": _input_fingerprint(sources),
+        "policy_hash": _policy_hash(policy),
+        "generated_at": common.now_iso(),
     }
 
     # 组合防护：白盒密码（FR-C10）与对抗诱导（FR-C9）产物

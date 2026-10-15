@@ -1,0 +1,7 @@
+id: bench-crypto-001
+language: c
+description: 高敏密码样例基准（对应 tests/samples/p0_secret.c）
+license: MIT
+targets:
+  - { symbol: secret_schedule, name: secret_schedule, category: crypto, secret: "3b7e1516" }
+  - { symbol: secret_roundtrip, name: secret_roundtrip, category: crypto }

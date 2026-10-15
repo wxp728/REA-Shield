@@ -1,0 +1,8 @@
+id: bench-hello-001
+language: c
+description: 入门样例基准（对应 tests/samples/hello.c）
+license: MIT
+targets:
+  - { symbol: add, name: add, category: arithmetic }
+  - { symbol: classify, name: classify, category: classify }
+  - { symbol: secret_mix, name: secret_mix, category: crypto }

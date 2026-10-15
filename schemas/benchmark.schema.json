@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anti-rea.dev/schemas/benchmark.schema.json",
+  "title": "Benchmark",
+  "description": "评测基准题库条目（ground truth），供攻击模拟判分（FR-E7、dd-07 §6）。",
+  "type": "object",
+  "required": ["id", "targets"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string" },
+    "language": { "type": "string" },
+    "description": { "type": "string" },
+    "license": { "type": "string" },
+    "build": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "system": { "type": "string" },
+        "cmd": { "type": "string" }
+      }
+    },
+    "targets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["symbol", "name"],
+        "additionalProperties": false,
+        "properties": {
+          "symbol": { "type": "string", "description": "原始符号名（用于定位）" },
+          "name": { "type": "string", "description": "ground truth 函数名" },
+          "category": { "type": "string", "description": "功能类别（S1 判分）" },
+          "secret": { "type": "string", "description": "P0 关键秘密（S4 判分，可选）" },
+          "vuln": { "type": "string", "description": "已知漏洞标识（漏洞发现率判分，可选）" }
+        }
+      }
+    }
+  }
+}
