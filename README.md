@@ -1,0 +1,60 @@
+# Anti-REA Skill
+
+> 一个 AI Agent 可调用的**代码工程反逆向加固技能**：对源码 / 二进制施加多层级防护变换，把 AI 驱动逆向工具（REA 类）的**逆向成本推高到高于逆向收益**——目标不是「不可逆向」，而是「不值得逆向」。
+
+## 仓库现状
+
+本仓库当前处于**规划与设计阶段**（尚未开始编码）。
+
+| 阶段 | 状态 |
+| :--- | :--- |
+| S0 立项与需求分析 | ✅ 完成（M0 需求基线已批准，tag `m0-baseline`） |
+| S1 概要设计 | 🟡 设计交付物完成；**M1 门禁待执行 PoC** |
+| S2 详细设计及以后 | ⬜ 未开始 |
+
+> **接手请先读 [`docs/STATUS.md`](docs/STATUS.md)**（项目状态与交接说明），再按其中的「下一步」继续。
+
+## 目录结构
+
+```text
+anti-rea/
+├── plan/                     # 方案与项目计划
+│   ├── anti-rea-plan.md              # 原始技术方案（能力模块导向）
+│   └── anti-rea-project-plan.md      # 全生命周期项目计划（阶段/里程碑/出口准则）
+├── docs/
+│   ├── STATUS.md             # ★ 项目状态与交接（新会话入口）
+│   ├── requirements/         # S0 交付物
+│   │   ├── SRS.md                    # 需求规格（47 FR + 11 NFR + 5 CQ）
+│   │   ├── use-cases.md              # 用例文档
+│   │   ├── rtm.md                    # 需求追踪矩阵
+│   │   └── compliance.md             # 合规与边界需求
+│   └── design/               # S1 交付物
+│       ├── HLD.md                    # 概要设计说明书
+│       ├── interfaces.md             # 接口契约（模块/MCP/CLI/SPI/错误码）
+│       ├── ADR.md                    # 架构决策记录（ADR-001…007）
+│       └── poc-plan.md              # 技术选型 PoC 方案（PoC-1…4）
+└── schemas/                  # 数据契约（JSON Schema, Draft 2020-12）
+    ├── asset_manifest.schema.json
+    ├── protection_policy.schema.json
+    ├── verification_report.schema.json
+    └── eval_report.schema.json
+```
+
+## 快速导航
+
+| 我想…… | 看这里 |
+| :--- | :--- |
+| 了解这个项目要做什么 | `plan/anti-rea-plan.md` |
+| 了解开发流程与里程碑 | `plan/anti-rea-project-plan.md` |
+| 知道当前进度 / 如何接手 | `docs/STATUS.md` |
+| 查需求与验收标准 | `docs/requirements/SRS.md` |
+| 查架构与接口 | `docs/design/HLD.md`、`docs/design/interfaces.md` |
+| 查技术取舍理由 | `docs/design/ADR.md` |
+| 继续做去风险验证 | `docs/design/poc-plan.md` |
+
+## 约定
+
+- 需求编号：`FR-<层><序号>` / `NFR-<序号>` / `CQ-<序号>`；优先级 MoSCoW。
+- 所有跨模块数据必须通过 `schemas/` 校验（fail-fast）。
+- 行尾统一 LF（见 `.gitattributes`）。
+- 文档变更需记录版本与变更历史。
