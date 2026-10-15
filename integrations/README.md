@@ -11,10 +11,16 @@
 | 集成 | 文件 | 挂载点 | 样例 |
 | :--- | :--- | :--- | :--- |
 | CMake | `cmake/AntiRea.cmake` | `add_custom_target(POST_BUILD)` | `cmake/example/` |
-| Cargo | `cargo/build.rs` | `build.rs` | `cargo/example/` |
+| Cargo | `cargo/example/build.rs` | `build.rs` | `cargo/example/` |
 | npm | `npm/anti-rea-protect.js` | `scripts.postbuild` | `npm/example/` |
 | Python | `python/anti_rea_build_ext.py` | `build_ext` | `python/example/` |
-| MCP Server | （R3，FR-D6） | stdio JSON-RPC | — |
+| MCP Server | `mcp/`（见 `core/mcp/`） | stdio JSON-RPC | — |
+
+## 已知限制
+
+- **Rust IR 级保护**：变换引擎基于 LLVM Pass + clang 流水线；Cargo 集成 v1.0 保护 crate 内的
+  **C/FFI 源**（`--source csrc/secret.c`）。对纯 Rust 源做 IR 级保护需 `rustc --emit=llvm-ir`
+  适配（ADR-006 适配层），列为后续增强。
 
 ## 快速验证
 

@@ -56,17 +56,20 @@ class TestNpmIntegration(unittest.TestCase):
             _report_ok(os.path.join(proj, "anti-rea"))
 
 
-@unittest.skipUnless(shutil.which("cargo") or shutil.which("rustc"),
+@unittest.skipUnless(shutil.which("cargo") or shutil.which("rustc") or
+                     os.path.exists(os.path.expanduser("~/.cargo/bin/cargo")),
                      "无 cargo/rustc")
 class TestCargoIntegration(unittest.TestCase):
     def test_sample_project(self):
         with tempfile.TemporaryDirectory() as t:
             proj = os.path.join(t, "example")
             shutil.copytree(os.path.join(INT, "cargo", "example"), proj)
-            shutil.copy(os.path.join(INT, "cargo", "build.rs"),
-                        os.path.join(proj, "build.rs"))
-            subprocess.run(["cargo", "build"], cwd=proj, check=True,
-                           capture_output=True, env=_env())
+            env = _env()
+            env["PATH"] = os.path.expanduser("~/.cargo/bin") + os.pathsep + env.get("PATH", "")
+            env["CARGO_NET_OFFLINE"] = "true"
+            cargo = shutil.which("cargo", path=env["PATH"]) or "cargo"
+            subprocess.run([cargo, "build"], cwd=proj, check=True,
+                           capture_output=True, env=env)
             _report_ok(os.path.join(proj, "anti-rea"))
 
 
