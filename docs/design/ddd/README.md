@@ -19,8 +19,8 @@
 | `decisions/OI-07-rea-success-criteria.md` | 待决问题 OI-07 落定：「REA 成功」判定 + 独立会话上下文窗口口径 | DD-07 | ✅ 初稿 |
 | `dd-01-scanner.md` | 资产扫描详细设计 | DD-01 | ✅ 初稿 |
 | `dd-02-strategy.md` | 策略引擎详细设计 | DD-02 | ✅ 初稿 |
-| `dd-03-llvm-transforms.md` | LLVM 变换详细设计 | DD-03 | ⬜ 待产出 |
-| `dd-04-virtualization.md` | 虚拟化引擎与 ISA 规范 | DD-04 | ⬜ 待产出 |
+| `dd-03-llvm-transforms.md` | LLVM 变换详细设计 | DD-03 | ✅ 初稿 |
+| `dd-04-virtualization.md` | 虚拟化引擎与 ISA 规范 | DD-04 | ✅ 初稿 |
 | `dd-05-adversarial.md` | 对抗诱导详细设计 | DD-05 | ⬜ 待产出 |
 | `dd-06-wbc.md` | 白盒密码详细设计 | DD-06 | ⬜ 待产出 |
 | `dd-07-evaluation.md` | 评估层详细设计 | DD-07 | ⬜ 待产出 |
