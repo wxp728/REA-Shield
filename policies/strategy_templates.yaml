@@ -7,7 +7,7 @@ templates:
     mtd: { enabled: true, variant_count: 8 }
   - id: P1-combo
     match: { sensitivity: P1 }
-    strategies: [control_flow_flattening, mixed_boolean_arithmetic, opaque_predicates]
+    strategies: [control_flow_flattening, mixed_boolean_arithmetic, opaque_predicates, function_boundary_perturbation, data_flow_noise]
   - id: P2-light
     match: { sensitivity: P2 }
     strategies: [identifier_renaming, string_encryption]

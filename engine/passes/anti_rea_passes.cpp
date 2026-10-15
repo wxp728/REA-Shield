@@ -34,6 +34,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar/Reg2Mem.h"
+#include "llvm/Transforms/Utils/CodeExtractor.h"
 
 #include "vm_isa.h"
 
@@ -604,6 +605,82 @@ static bool applyVM(Function &F, uint32_t Seed) {
   return true;
 }
 
+// ------------------------- 函数边界扰动（FR-C4）-------------------------
+// 用 CodeExtractor 将单个非入口基本块外提为新函数，改变反编译器的函数识别数；
+// 语义不变（由 CodeExtractor 构造保证，随后由验证层差分确认）。
+static bool applyFuncSplit(Function &F, unsigned Seed) {
+  if (F.isDeclaration() || F.size() < 3) return false;
+  if (F.hasFnAttribute("anti-rea-nosplit")) return false;  // 防重复拆分（新增函数回访）
+  if (unsupportedTerminator(F.getEntryBlock().getTerminator())) return false;
+
+  BasicBlock *Cand = nullptr;
+  unsigned idx = 0, pick = Seed % F.size();
+  for (BasicBlock &BB : F) {
+    if (&BB == &F.getEntryBlock()) continue;
+    if (isa<PHINode>(BB.begin())) continue;
+    auto *Br = dyn_cast<BranchInst>(BB.getTerminator());
+    if (!Br || !Br->isUnconditional()) continue;
+    if (idx++ == pick || !Cand) Cand = &BB;
+  }
+  if (!Cand) return false;
+  if (unsupportedTerminator(Cand->getTerminator())) return false;
+
+  CodeExtractorAnalysisCache CEAC(F);
+  CodeExtractor Extractor({Cand});
+  Function *NewF = Extractor.extractCodeRegion(CEAC);
+  if (!NewF) return false;
+  NewF->addFnAttr(Attribute::NoInline);
+  NewF->addFnAttr("anti-rea-nosplit");
+  F.addFnAttr("anti-rea-nosplit");
+  return true;
+}
+
+// ------------------------- 数据流噪声（FR-C5）-------------------------
+// 对整型二元运算注入无副作用冗余：v -> ((v + k) - k)，k 取自可变全局（不可常量折叠）。
+static GlobalVariable *noiseGlobal(Module *M, Type *Ty) {
+  std::string Name = "__anti_rea_noise_" +
+                     std::to_string(Ty->getIntegerBitWidth());
+  if (GlobalVariable *G = M->getGlobalVariable(Name)) return G;
+  return new GlobalVariable(*M, Ty, /*isConstant=*/false,
+                            GlobalValue::PrivateLinkage,
+                            ConstantInt::get(Ty, 0x5bd1e995u), Name);
+}
+
+static bool applyNoise(Function &F, unsigned Seed) {
+  double ratio = 1.0;
+  if (const char *r = std::getenv("ANTI_REA_NOISE_RATIO")) ratio = std::atof(r);
+  if (ratio <= 0.0) return false;
+
+  unsigned long rng = Seed ? Seed : 0x2545F491u;
+  auto next = [&]() { rng ^= rng << 13; rng ^= rng >> 7; rng ^= rng << 17; return rng; };
+
+  Module *M = F.getParent();
+  std::vector<BinaryOperator *> Targets;
+  for (BasicBlock &BB : F)
+    for (Instruction &I : BB)
+      if (auto *BO = dyn_cast<BinaryOperator>(&I))
+        if (BO->getType()->isIntegerTy() && !BO->getType()->isIntegerTy(1))
+          Targets.push_back(BO);
+  if (Targets.empty()) return false;
+
+  bool changed = false;
+  for (BinaryOperator *BO : Targets) {
+    if (ratio < 1.0 && (double)(next() % 1000) / 1000.0 >= ratio) continue;
+    Type *Ty = BO->getType();
+    IRBuilder<> B(BO->getNextNode());
+    GlobalVariable *G = noiseGlobal(M, Ty);
+    LoadInst *K = B.CreateLoad(Ty, G, "noise.k");
+    Value *Add = B.CreateAdd(BO, K, "noise.a");
+    Value *Sub = B.CreateSub(Add, K, "noise.b");
+    BO->replaceUsesWithIf(Sub, [&](Use &U) {
+      auto *I = dyn_cast<Instruction>(U.getUser());
+      return I != Add && I != Sub;
+    });
+    changed = true;
+  }
+  return changed;
+}
+
 // ------------------------- 组合 Pass -------------------------
 struct AntiReaPass : public PassInfoMixin<AntiReaPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
@@ -621,6 +698,8 @@ struct AntiReaPass : public PassInfoMixin<AntiReaPass> {
     if (S.count("cff")) changed |= applyCFF(F, seed);
     if (S.count("mba")) changed |= applyMBA(F);
     if (S.count("opaque")) changed |= applyOpaque(F, (int)seed);
+    if (S.count("func_split")) changed |= applyFuncSplit(F, seed);
+    if (S.count("noise")) changed |= applyNoise(F, seed);
     return changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
   }
   static bool isRequired() { return true; }
@@ -633,11 +712,13 @@ struct CFFPass : PassInfoMixin<CFFPass> {
                ? PreservedAnalyses::none()
                : PreservedAnalyses::all();
   }
+  static bool isRequired() { return true; }
 };
 struct MBAPass : PassInfoMixin<MBAPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
     return applyMBA(F) ? PreservedAnalyses::none() : PreservedAnalyses::all();
   }
+  static bool isRequired() { return true; }
 };
 struct OpaquePass : PassInfoMixin<OpaquePass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
@@ -645,6 +726,7 @@ struct OpaquePass : PassInfoMixin<OpaquePass> {
                ? PreservedAnalyses::none()
                : PreservedAnalyses::all();
   }
+  static bool isRequired() { return true; }
 };
 struct VMPass : PassInfoMixin<VMPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
@@ -652,6 +734,23 @@ struct VMPass : PassInfoMixin<VMPass> {
                ? PreservedAnalyses::none()
                : PreservedAnalyses::all();
   }
+  static bool isRequired() { return true; }
+};
+struct FuncSplitPass : PassInfoMixin<FuncSplitPass> {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
+    return applyFuncSplit(F, (unsigned)envInt("ANTI_REA_SEED", 0))
+               ? PreservedAnalyses::none()
+               : PreservedAnalyses::all();
+  }
+  static bool isRequired() { return true; }
+};
+struct NoisePass : PassInfoMixin<NoisePass> {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
+    return applyNoise(F, (unsigned)envInt("ANTI_REA_SEED", 0))
+               ? PreservedAnalyses::none()
+               : PreservedAnalyses::all();
+  }
+  static bool isRequired() { return true; }
 };
 
 } // namespace
@@ -668,6 +767,8 @@ llvmGetPassPluginInfo() {
                   if (Name == "mba") { FPM.addPass(MBAPass()); return true; }
                   if (Name == "opaque-predicates") { FPM.addPass(OpaquePass()); return true; }
                   if (Name == "vm-virtualize") { FPM.addPass(VMPass()); return true; }
+                  if (Name == "func-split") { FPM.addPass(FuncSplitPass()); return true; }
+                  if (Name == "data-flow-noise") { FPM.addPass(NoisePass()); return true; }
                   if (Name == "anti-rea") { FPM.addPass(AntiReaPass()); return true; }
                   return false;
                 });

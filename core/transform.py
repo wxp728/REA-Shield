@@ -22,13 +22,16 @@ STRAT_MAP = {
     "non_linear_mba": "mba",
     "opaque_predicates": "opaque",
     "code_virtualization": "virtualize",
+    "function_boundary_perturbation": "func_split",
+    "data_flow_noise": "noise",
 }
 # 走 IR 白名单的策略（虚拟化走独立白名单）
 _IR_STRATEGIES = {"control_flow_flattening", "mixed_boolean_arithmetic",
-                  "non_linear_mba", "opaque_predicates"}
+                  "non_linear_mba", "opaque_predicates",
+                  "function_boundary_perturbation", "data_flow_noise"}
 # 策略名 -> 覆盖需求，供 transform.log 记录
 SUPPORTED_REQ = {"cff": "FR-C1", "mba": "FR-C2", "opaque": "FR-C3",
-                 "virtualize": "FR-C7"}
+                 "virtualize": "FR-C7", "func_split": "FR-C4", "noise": "FR-C5"}
 
 _DEFAULT_LLVM_BIN = "/opt/anti-rea-toolchain/clang+llvm-18.1.8-x86_64-linux-gnu-ubuntu-18.04/bin"
 

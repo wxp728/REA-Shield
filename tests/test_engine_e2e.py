@@ -118,6 +118,49 @@ class TestEndToEnd(unittest.TestCase):
             self.assertTrue(report["overall_pass"], report)
             common.validate(report, "verification_report.schema.json")
 
+    def test_func_split_and_noise(self):
+        """FR-C4 函数边界扰动 / FR-C5 数据流噪声：生效且功能保持。"""
+        opt = _opt()
+        if not opt:
+            self.skipTest("无 opt")
+        plug = _find_plugin()
+        with tempfile.TemporaryDirectory() as t:
+            ir = os.path.join(t, "hello.ll")
+            subprocess.run([_clang(), "-O0", "-S", "-emit-llvm", HELLO, "-o", ir],
+                           check=True, capture_output=True)
+            env = dict(os.environ)
+            env["ANTI_REA_WHITELIST"] = "*"
+            env["ANTI_REA_STRATEGIES"] = "func_split,noise"
+            env["ANTI_REA_SEED"] = "4"
+            out = os.path.join(t, "prot.ll")
+            subprocess.run([opt, "-load-pass-plugin=" + plug,
+                            "-passes=reg2mem,anti-rea", ir, "-S", "-o", out],
+                           check=True, capture_output=True, env=env)
+            with open(out, encoding="utf-8") as fh:
+                text = fh.read()
+            self.assertIn("noise.k", text)                       # FR-C5
+            with open(ir, encoding="utf-8") as fh:
+                base = fh.read()
+            self.assertGreater(text.count("\ndefine "), base.count("\ndefine "))  # FR-C4
+
+            # 功能保持：clang 插件路径编译并运行，与基线一致
+            def build(src):
+                exe = os.path.join(t, os.path.basename(src) + ".exe")
+                subprocess.run([_clang(), "-O0", src, "-o", exe],
+                               check=True, capture_output=True)
+                return subprocess.run([exe], capture_output=True, text=True).stdout
+
+            env2 = dict(os.environ)
+            env2["ANTI_REA_WHITELIST"] = "*"
+            env2["ANTI_REA_STRATEGIES"] = "func_split,noise"
+            env2["ANTI_REA_SEED"] = "4"
+            prot_exe = os.path.join(t, "prot_exe")
+            subprocess.run([_clang(), "-O0", "-fpass-plugin=" + plug, HELLO,
+                            "-o", prot_exe], check=True, capture_output=True, env=env2)
+            base_out = build(HELLO)
+            prot_out = subprocess.run([prot_exe], capture_output=True, text=True).stdout
+            self.assertEqual(base_out, prot_out)
+
     def test_transform_markers_and_selectivity(self):
         opt = _opt()
         if not opt:
