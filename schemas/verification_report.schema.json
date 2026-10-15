@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anti-rea.dev/schemas/verification_report.schema.json",
+  "title": "Verification Report",
+  "description": "Anti-REA 评估验证层产出：功能保持与性能验证结果（对应 FR-E1 / FR-E2）。",
+  "type": "object",
+  "required": ["schema_version", "run_id", "functional_pass", "overall_pass"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+$" },
+    "run_id": { "type": "string" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "functional_pass": { "type": "boolean" },
+    "test_suite": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "total": { "type": "integer", "minimum": 0 },
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "skipped": { "type": "integer", "minimum": 0 },
+        "command": { "type": "string" }
+      }
+    },
+    "fuzz": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "iterations": { "type": "integer", "minimum": 0 },
+        "mismatches": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "performance_pass": { "type": "boolean" },
+    "overhead": { "type": "number", "minimum": 0 },
+    "detail": { "type": "array", "items": { "type": "string" } },
+    "overall_pass": { "type": "boolean" }
+  }
+}

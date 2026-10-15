@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anti-rea.dev/schemas/asset_manifest.schema.json",
+  "title": "Asset Manifest",
+  "description": "Anti-REA 输入分析层产出：工程敏感资产清单（对应 FR-A5）。",
+  "type": "object",
+  "required": ["schema_version", "project", "assets", "summary"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+$" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "run_id": { "type": "string" },
+    "project": {
+      "type": "object",
+      "required": ["language", "build_system", "target_platform"],
+      "additionalProperties": false,
+      "properties": {
+        "root": { "type": "string" },
+        "language": {
+          "type": "string",
+          "enum": ["c", "cpp", "rust", "python", "javascript", "typescript", "java", "dotnet", "mixed", "unknown"]
+        },
+        "build_system": {
+          "type": "string",
+          "enum": ["cmake", "cargo", "pip", "npm", "gradle", "maven", "make", "msbuild", "unknown"]
+        },
+        "target_platform": {
+          "type": "string",
+          "enum": ["linux-x86_64", "linux-arm64", "windows-x64", "macos-x86_64", "macos-arm64", "android", "wasm", "unknown"]
+        }
+      }
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "path", "type", "sensitivity", "skip_transform", "source"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "path": { "type": "string" },
+          "symbol": { "type": "string" },
+          "line": { "type": "integer", "minimum": 1 },
+          "type": {
+            "type": "string",
+            "enum": ["secret", "crypto", "license_check", "algorithm", "business_logic", "protocol", "ui", "util", "open_source", "unknown"]
+          },
+          "sensitivity": { "type": "string", "enum": ["P0", "P1", "P2", "P3"] },
+          "skip_transform": {
+            "type": "boolean",
+            "description": "为 true 时任何变换都必须跳过（如开源组件，对应 FR-A4 / CQ-01）。"
+          },
+          "evidence": { "type": "array", "items": { "type": "string" } },
+          "license": { "type": "string" },
+          "source": { "type": "string", "enum": ["auto", "manual"] },
+          "protection_hint": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "建议防护策略（策略决策层的输入提示）。"
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["total", "by_sensitivity"],
+      "additionalProperties": false,
+      "properties": {
+        "total": { "type": "integer", "minimum": 0 },
+        "by_sensitivity": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "P0": { "type": "integer", "minimum": 0 },
+            "P1": { "type": "integer", "minimum": 0 },
+            "P2": { "type": "integer", "minimum": 0 },
+            "P3": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "open_source_count": { "type": "integer", "minimum": 0 },
+        "refused": { "type": "boolean" },
+        "refusal_reason": { "type": "string" }
+      }
+    }
+  }
+}

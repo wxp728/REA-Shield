@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anti-rea.dev/schemas/eval_report.schema.json",
+  "title": "Evaluation Report",
+  "description": "Anti-REA 评估验证层产出：攻击模拟与量化评估结果（对应 FR-E6 / FR-E7，判定口径见 SRS NFR-02）。",
+  "type": "object",
+  "required": ["schema_version", "run_id", "metrics", "verdict"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+$" },
+    "run_id": { "type": "string" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "llm": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "provider": { "type": "string", "description": "不绑定供应商；记录实际使用的运行环境模型。" },
+        "model": { "type": "string" },
+        "session_context_window": { "type": "integer", "minimum": 1 },
+        "context_used_ratio": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "baseline": { "$ref": "#/$defs/measurement" },
+    "protected": { "$ref": "#/$defs/measurement" },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "token_ratio": { "type": "number", "minimum": 0, "description": "Token 消耗倍数（目标 ≥ 100x → 500x）。" },
+        "time_ratio": { "type": "number", "minimum": 0, "description": "分析时间倍数（目标 ≥ 10x）。" },
+        "name_recovery_accuracy": { "type": "number", "minimum": 0, "maximum": 1, "description": "函数名恢复准确率（目标 ≤ 0.20）。" },
+        "function_judgement_accuracy": { "type": "number", "minimum": 0, "maximum": 1, "description": "功能判断准确率（目标 ≤ 0.30）。" },
+        "vuln_discovery_rate": { "type": "number", "minimum": 0, "maximum": 1, "description": "漏洞发现率（目标 ≤ 0.10）。" },
+        "bin_similarity": { "type": "number", "minimum": 0, "maximum": 1, "description": "二进制相似度评分（目标 ≤ 0.55）。" },
+        "session_context_used_ratio": { "type": "number", "minimum": 0, "maximum": 1, "description": "独立会话上下文消耗比例（判定口径：≥ 0.90 未成功即通过）。" },
+        "rea_success": { "type": "boolean", "description": "LLM 是否成功还原（成功定义见 OI-07，S2 细化）。" }
+      }
+    },
+    "per_asset": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "sensitivity"],
+        "additionalProperties": false,
+        "properties": {
+          "path": { "type": "string" },
+          "sensitivity": { "type": "string", "enum": ["P0", "P1", "P2", "P3"] },
+          "overhead": { "type": "number", "minimum": 0 },
+          "size_growth": { "type": "number", "minimum": 0 }
+        }
+      }
+    },
+    "verdict": {
+      "type": "object",
+      "required": ["pass"],
+      "additionalProperties": false,
+      "properties": {
+        "pass": { "type": "boolean" },
+        "reasons": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "$defs": {
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "token_usage": { "type": "integer", "minimum": 0 },
+        "analysis_time_sec": { "type": "number", "minimum": 0 }
+      }
+    }
+  }
+}

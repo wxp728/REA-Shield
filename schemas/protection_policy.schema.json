@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anti-rea.dev/schemas/protection_policy.schema.json",
+  "title": "Protection Policy",
+  "description": "Anti-REA 策略决策层产出：防护策略组合（对应 FR-B6）。文件为 YAML，解析后按本 Schema 校验。",
+  "type": "object",
+  "required": ["schema_version", "target", "performance_budget", "assets"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+$" },
+    "seed": {
+      "type": "integer",
+      "description": "随机种子，保证可复现（NFR-04 / NFR-08）。"
+    },
+    "target": {
+      "type": "object",
+      "required": ["platform", "language", "build_system"],
+      "additionalProperties": false,
+      "properties": {
+        "platform": {
+          "type": "string",
+          "enum": ["linux-x86_64", "linux-arm64", "windows-x64", "macos-x86_64", "macos-arm64", "android", "wasm", "unknown"]
+        },
+        "language": { "type": "string" },
+        "build_system": { "type": "string" }
+      }
+    },
+    "performance_budget": {
+      "type": "object",
+      "required": ["max_overhead"],
+      "additionalProperties": false,
+      "properties": {
+        "max_overhead": { "type": "number", "minimum": 0, "maximum": 5, "description": "最大可接受开销，如 0.20 表示 20%（NFR-01）。" },
+        "target_overhead": { "type": "number", "minimum": 0, "maximum": 5 }
+      }
+    },
+    "compliance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "crypto_strength_tier": { "type": "string", "enum": ["A", "B", "C"] },
+        "target_market": { "type": "string" }
+      }
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "sensitivity", "strategies"],
+        "additionalProperties": false,
+        "properties": {
+          "path": { "type": "string" },
+          "sensitivity": { "type": "string", "enum": ["P0", "P1", "P2", "P3"] },
+          "strategies": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "code_virtualization",
+                "white_box_crypto",
+                "non_linear_mba",
+                "adversarial_inducement",
+                "control_flow_flattening",
+                "mixed_boolean_arithmetic",
+                "opaque_predicates",
+                "function_boundary_perturbation",
+                "data_flow_noise",
+                "identifier_renaming",
+                "string_encryption"
+              ]
+            }
+          },
+          "params": {
+            "type": "object",
+            "description": "变换参数，按策略类型取用；允许插件扩展自定义键。",
+            "properties": {
+              "order": { "type": "integer", "minimum": 1, "maximum": 4, "description": "MBA 阶数（FR-C2）。" },
+              "coverage": { "type": "number", "minimum": 0, "maximum": 1, "description": "虚拟化覆盖率（FR-C8）。" },
+              "noise_ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+              "flatten_depth": { "type": "integer", "minimum": 1 }
+            },
+            "additionalProperties": true
+          },
+          "mtd": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "enabled": { "type": "boolean" },
+              "variant_count": { "type": "integer", "minimum": 1, "maximum": 64 }
+            }
+          }
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "run_tests": { "type": "boolean" },
+        "test_command": { "type": "string" },
+        "abort_on_failure": { "type": "boolean" }
+      }
+    },
+    "build": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hooks": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "pre_transform": { "type": "string" },
+            "post_transform": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}
