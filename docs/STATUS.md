@@ -15,7 +15,7 @@
 
 ## 1. 一句话现状
 
-**S3 迭代 R2（核心防护能力）基本完成、待 M4 批准：** 在 R1 基础上新增代码虚拟化（FR-C7/C8）、白盒密码（FR-C10）、对抗诱导（FR-C9）、函数边界扰动（FR-C4）、数据流噪声（FR-C5）、变换插件 SPI（FR-C11）与构建集成插件（CMake/npm/Python 实测通过，Cargo 待 rust 环境；FR-D2…D5）。R2 出口「虚拟化 + 白盒 + 对抗诱导组合防护产物，功能测试通过」已由 `tests/test_engine_e2e.py::test_r2_combo_protection` 演示；**CI 全绿**。下一步：补齐"锚点移除"（字符串加密 / 标识符重命名）并按 `plan §5.4` 进入 R3 或做 M4 门评审。
+**S3 迭代 R2（核心防护能力）基本完成、待 M4 批准：** 在 R1 基础上新增代码虚拟化（FR-C7/C8）、白盒密码（FR-C10）、对抗诱导（FR-C9）、函数边界扰动（FR-C4）、数据流噪声（FR-C5）、变换插件 SPI（FR-C11）、构建集成插件（CMake/npm/Python 实测通过，Cargo 待 rust 环境；FR-D2…D5），以及**锚点移除**（字符串加密 + 标识符重命名，dd-03 §7，针对 REA 无脱混淆能力的结构性短板）。R2 出口「虚拟化 + 白盒 + 对抗诱导组合防护产物，功能测试通过」已由 `test_r2_combo_protection` 演示；**CI 全绿**。下一步：按 `plan §5.4` 进入 R3 或做 M4 门评审。
 
 ## 2. 里程碑状态（对照 `plan/anti-rea-project-plan.md` §1.2）
 
@@ -125,6 +125,7 @@ make ci           # 完整 CI 门禁
 | 函数扰动 + 数据流噪声 | 补充变换 Pass（FR-C4/C5） | `test_func_split_and_noise`：语义不变 + IR 指标变化 |
 | 构建集成插件 | CMake/Cargo/npm/Python（`integrations/`） | `test_integrations.py`：CMake/npm/Python 实测通过，Cargo 因无 rust 跳过（FR-D1…D5） |
 | 变换插件 SPI | `engine/spi/` + 示例插件 | `test_spi.py`：示例变换免改核心引擎；版本不兼容拒载（FR-C11） |
+| 锚点移除（字符串加密 + 标识符重命名） | `string-encrypt` / `ident-rename` 模块级 Pass | `test_anchor_removal`：明文串/符号消失且功能保持（dd-03 §7） |
 
 **R2 出口准则核对**：对 P0 资产产出「虚拟化 + 白盒 + 对抗诱导」组合防护产物，功能测试通过 ✅
 （`test_r2_combo_protection`）；插件 SPI 与构建集成样例工程均产出保护产物 ✅。
@@ -133,9 +134,9 @@ make ci           # 完整 CI 门禁
 
 **针对性设计输入**：`docs/analysis/rea-threat-analysis.md` 分析了对标 AI 逆向工具 REA
 （`github.com/morluto/rea` v6.5.0）的能力缺口——REA **无脱混淆能力**且证据模型 fail-closed，
-故优先补「锚点移除」（字符串加密 / 标识符重命名）。
+故优先补「锚点移除」（字符串加密 / 标识符重命名）——**已实现**。
 
-> **下一步**：完成字符串加密 / 标识符重命名后，按 `plan §5.4` 进入 **R3**（评估/进化/MCP），或先做 M4 门评审。
+> **下一步**：按 `plan §5.4` 进入 **R3**（评估/进化/MCP Server），或先做 M4 门评审。
 
 ## 7. 新环境准备（**已完成，记录实测**）
 

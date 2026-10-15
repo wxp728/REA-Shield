@@ -60,8 +60,10 @@ readiness）本质是**证据闭合流程**：必须关闭"义务账本（obliga
   "feature 识别"高度依赖明文串；加密后这些查询命中率骤降。
 - **标识符重命名**（`identifier_renaming`）：符号级重命名 + 调试信息剥离。破坏 `analyze_function` 的语义命名、
   caller/callee 推理与"human-readable 命名"依赖。
-- 现状：两者已在 `dd-03 §7` 设计、并在策略枚举 `strategy_templates.yaml` 中出现，但**尚未实现**（无独立 FR 编号，
-  属"变换框架/其余 IR 变换"范畴）。
+- 现状：两者已在 `dd-03 §7` 设计、并在策略枚举 `strategy_templates.yaml` 中出现，**已于 R2 实现**
+  （`string-encrypt` / `ident-rename` 模块级 Pass；示例见 `engine/README.md`、测试 `test_anchor_removal`）。
+  v0.1 以"移除 `strings`/符号线索"为目标（异或编码 + 运行期解码桩 + 符号改不透明名），
+  更强方案（查表/多态解码、调试信息剥离）列为后续增强。
 - 落地建议：R2 收尾或 R3 首个任务；作为 LLVM Pass（字符串加密需插入 decode 桩，注意与 CFF/VM 的顺序，
   参考 `dd-03 §6`：重命名 → 字符串加密 → 其余变换）。
 
@@ -88,8 +90,8 @@ readiness）本质是**证据闭合流程**：必须关闭"义务账本（obliga
 
 ## 6. 结论与建议动作
 
-1. **主攻方向确定为"移除锚点"**：优先实现 `string_encryption` 与 `identifier_renaming`；这是 REA 结构性短板
-   （无脱混淆能力）与我们成本模型的正交叠加。
+1. **主攻方向确定为"移除锚点"**：`string_encryption` 与 `identifier_renaming` 已于 R2 实现（见 §5-A 现状），
+   直接针对 REA 的结构性短板（无脱混淆能力）。下一步可在成本模型（DD-07）中量化其对 REA 静态闭合的影响。
 2. **既有变换不需改动，只需在成本模型里显式建模 REA 的 fail-closed 语义**（把"证据无法闭合"计为我们的成功信号）。
 3. **跨版本（MTD）与白盒是差异化壁垒**，继续保留并度量。
 4. **反运行期对抗**作为独立议题，经变更流程后再启动。

@@ -15,6 +15,8 @@
 | `func-split` | 函数边界扰动（CodeExtractor 外提基本块为新函数） | FR-C4 |
 | `data-flow-noise` | 数据流噪声（`(v+k)-k` 无副作用冗余运算） | FR-C5 |
 | `external-transforms` | 外部 SPI 插件宿主（加载 `ANTI_REA_EXTRA_PLUGINS`） | FR-C11 |
+| `string-encrypt` | 字符串加密（异或编码 + 运行期解码桩；模块级） | dd-03 §7 |
+| `ident-rename` | 标识符重命名（白名单函数改不透明符号；模块级） | dd-03 §7 |
 | `anti-rea` | 按 `ANTI_REA_STRATEGIES` 组合施加 | FR-C1…C5/C7 |
 
 ## 插件 SPI（FR-C11 / ADR-005）
@@ -31,7 +33,7 @@
 | :--- | :--- | :--- |
 | `ANTI_REA_WHITELIST` | IR 变换白名单（逗号分隔函数名）；`*` 表示全部；**空则不变换任何函数** | 空 |
 | `ANTI_REA_VMP_WHITELIST` | 虚拟化白名单；命中者只做 VM（不走 IR 变换） | 空 |
-| `ANTI_REA_STRATEGIES` | `cff,mba,opaque,virtualize,func_split,noise` 子集 | `cff,mba,opaque` |
+| `ANTI_REA_STRATEGIES` | `cff,mba,opaque,virtualize,func_split,noise,string_encrypt,rename` 子集 | `cff,mba,opaque` |
 | `ANTI_REA_SEED` | 随机种子（可复现，NFR-04/08） | `0` |
 | `ANTI_REA_MAX_BLOCKS` | CFF 最大基本块数，超过则跳过 | `256` |
 | `ANTI_REA_NOISE_RATIO` | 数据流噪声密度（0…1） | `1.0` |
@@ -50,6 +52,19 @@
 - **v0.1 边界**：仅整型（i1…i64）；支持算术/位运算/移位/比较/`select`/分支/`switch`/返回；
   暂不支持浮点、聚合、指针运算、全局内存与函数调用——不支持者**自动跳过并回退 IR 变换**，不中止构建。
 - **不变量**：i32 值在寄存器中按 32 位符号扩展；i32 无符号比较暂不支持（回退）。
+
+## 锚点移除：字符串加密 + 标识符重命名（dd-03 §7）
+
+针对 AI 逆向工具（REA 类）依赖的"明文串 + 符号名"锚点（见 `docs/analysis/rea-threat-analysis.md`）：
+
+- **`string_encrypt`**（模块级，流水线最先执行）：对**仅被白名单函数使用**的本转换义字节串常量做
+  逐字节异或编码（密钥流由 `seed` + 全局名派生），并在每个使用函数入口插入运行期解码桩
+  （`alloca` + 逐字节 `load/xor/store`），使用处改为指向解码缓冲区。
+- **`rename`**（模块级，流水线最后执行）：把白名单内的定义函数改名为不透明符号 `sub_<hash>`（保留 `main`）。
+
+> **v0.1 限制**：异或密钥流以编译期常量形式随解码指令出现，且不剥离调试信息；目标是**移除
+> `strings`/符号级线索、抬高 REA 的静态闭合成本**，而非密码学强度。更强方案（查表/多态解码、
+> 调试信息剥离）见 `docs/design/ddd/dd-03-llvm-transforms.md §7/§13`，列为后续增强。
 
 ## 构建
 

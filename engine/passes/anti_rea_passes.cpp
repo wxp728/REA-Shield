@@ -683,6 +683,133 @@ static bool applyNoise(Function &F, unsigned Seed) {
   return changed;
 }
 
+// ------------------------- 标识符重命名（dd-03 §7）-------------------------
+static uint64_t fnv1a(StringRef S, uint64_t Seed) {
+  uint64_t H = 1469598103934665603ULL ^ Seed;
+  for (unsigned char C : S) {
+    H ^= C;
+    H *= 1099511628211ULL;
+  }
+  return H;
+}
+
+static std::string opaqueName(StringRef Base, const char *Prefix, unsigned Seed) {
+  char Buf[40];
+  snprintf(Buf, sizeof(Buf), "%s_%016llx", Prefix,
+           (unsigned long long)fnv1a(Base, Seed));
+  return std::string(Buf);
+}
+
+// 将白名单内的定义函数改名为不透明符号（保留 main 与外部可见性），配合后续剥离调试信息。
+static bool applyRename(Module &M, unsigned Seed) {
+  bool Changed = false;
+  std::vector<Function *> Fs;
+  for (Function &F : M)
+    if (!F.isDeclaration()) Fs.push_back(&F);
+  for (Function *F : Fs) {
+    if (F->getName() == "main") continue;
+    if (F->hasFnAttribute("anti-rea-nosplit")) { /* 仍可改名 */ }
+    if (!whitelisted(F->getName())) continue;
+    F->setName(opaqueName(F->getName(), "sub", Seed));
+    Changed = true;
+  }
+  return Changed;
+}
+
+// ------------------------- 字符串加密（dd-03 §7）-------------------------
+static uint8_t ksNext(uint64_t &State) {
+  State = State * 6364136223846793005ULL + 1442695040888963407ULL;
+  return (uint8_t)(State >> 33);
+}
+
+// 对"仅被白名单函数使用的本地字节串常量"做异或编码，并在使用处插入运行期解码桩。
+static bool applyStringEncrypt(Module &M, unsigned Seed) {
+  LLVMContext &Ctx = M.getContext();
+  std::vector<GlobalVariable *> Targets;
+  for (GlobalVariable &G : M.globals()) {
+    if (!G.hasInitializer() || !G.hasLocalLinkage()) continue;
+    if (G.getName().ends_with(".enc")) continue;
+    auto *CDA = dyn_cast<ConstantDataArray>(G.getInitializer());
+    if (!CDA || !CDA->getElementType()->isIntegerTy(8)) continue;
+    if (G.use_empty()) continue;
+    bool AllIn = true;
+    for (User *U : G.users()) {
+      auto *I = dyn_cast<Instruction>(U);
+      if (!I || !whitelisted(I->getFunction()->getName())) { AllIn = false; break; }
+    }
+    if (AllIn) Targets.push_back(&G);
+  }
+  if (Targets.empty()) return false;
+
+  bool Changed = false;
+  for (GlobalVariable *G : Targets) {
+    auto *CDA = cast<ConstantDataArray>(G->getInitializer());
+    StringRef Raw = CDA->getRawDataValues();
+    unsigned N = (unsigned)Raw.size();
+    if (N == 0 || N > 4096) continue;
+
+    uint64_t St = fnv1a(G->getName(), Seed);
+    std::vector<uint8_t> Enc(N), Key(N);
+    for (unsigned i = 0; i < N; ++i) {
+      Key[i] = ksNext(St);
+      Enc[i] = (uint8_t)Raw[i] ^ Key[i];
+    }
+    Type *ArrTy = G->getValueType(); // [N x i8]
+    G->setInitializer(ConstantDataArray::get(Ctx, ArrayRef<uint8_t>(Enc)));
+    std::string NewName = G->getName().str() + ".enc";
+    G->setName(NewName);
+
+    // 按使用函数分组，逐函数插入解码桩
+    std::map<Function *, AllocaInst *> Bufs;
+    std::vector<Instruction *> Users;
+    for (User *U : G->users())
+      if (auto *I = dyn_cast<Instruction>(U)) Users.push_back(I);
+
+    for (Instruction *I : Users) {
+      Function *F = I->getFunction();
+      AllocaInst *Buf = nullptr;
+      auto It = Bufs.find(F);
+      if (It != Bufs.end()) {
+        Buf = It->second;
+      } else {
+        IRBuilder<> B(&*F->getEntryBlock().getFirstInsertionPt());
+        Buf = B.CreateAlloca(ArrTy, nullptr, G->getName() + ".buf");
+        for (unsigned i = 0; i < N; ++i) {
+          Value *Src = B.CreateGEP(ArrTy, G, {B.getInt64(0), B.getInt64(i)});
+          LoadInst *L = B.CreateLoad(IntegerType::get(Ctx, 8), Src);
+          Value *X = B.CreateXor(L, ConstantInt::get(IntegerType::get(Ctx, 8), Key[i]));
+          Value *Dst = B.CreateGEP(ArrTy, Buf, {B.getInt64(0), B.getInt64(i)});
+          B.CreateStore(X, Dst);
+        }
+        Bufs[F] = Buf;
+      }
+      I->replaceUsesOfWith(G, Buf);
+    }
+    Changed = true;
+  }
+  return Changed;
+}
+
+// 模块级变换 Pass
+struct RenamePass : PassInfoMixin<RenamePass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
+    if (!strategySet().count("rename")) return PreservedAnalyses::all();
+    return applyRename(M, (unsigned)envInt("ANTI_REA_SEED", 0))
+               ? PreservedAnalyses::none()
+               : PreservedAnalyses::all();
+  }
+  static bool isRequired() { return true; }
+};
+struct StringEncryptPass : PassInfoMixin<StringEncryptPass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
+    if (!strategySet().count("string_encrypt")) return PreservedAnalyses::all();
+    return applyStringEncrypt(M, (unsigned)envInt("ANTI_REA_SEED", 0))
+               ? PreservedAnalyses::none()
+               : PreservedAnalyses::all();
+  }
+  static bool isRequired() { return true; }
+};
+
 // ------------------------- 组合 Pass -------------------------
 struct AntiReaPass : public PassInfoMixin<AntiReaPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
@@ -845,15 +972,25 @@ llvmGetPassPluginInfo() {
                     MPM.addPass(ExternalPluginPass());
                     return true;
                   }
+                  if (Name == "string-encrypt") {
+                    MPM.addPass(StringEncryptPass());
+                    return true;
+                  }
+                  if (Name == "ident-rename") {
+                    MPM.addPass(RenamePass());
+                    return true;
+                  }
                   return false;
                 });
-            // clang -fpass-plugin 路径：在流水线末端挂 reg2mem + anti-rea + 外部插件宿主
+            // clang -fpass-plugin 路径：末端挂 [字符串加密] -> reg2mem+anti-rea -> [重命名] -> 外部插件
             PB.registerOptimizerLastEPCallback(
                 [](ModulePassManager &MPM, OptimizationLevel) {
+                  MPM.addPass(StringEncryptPass());
                   FunctionPassManager FPM;
                   FPM.addPass(RegToMemPass());
                   FPM.addPass(AntiReaPass());
                   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+                  MPM.addPass(RenamePass());
                   MPM.addPass(ExternalPluginPass());
                 });
           }};

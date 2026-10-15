@@ -161,6 +161,59 @@ class TestEndToEnd(unittest.TestCase):
             prot_out = subprocess.run([prot_exe], capture_output=True, text=True).stdout
             self.assertEqual(base_out, prot_out)
 
+    def test_anchor_removal(self):
+        """字符串加密 + 标识符重命名：移除 REA 的明文串/符号锚点，且功能保持。"""
+        opt = _opt()
+        if not opt:
+            self.skipTest("无 opt")
+        plug = _find_plugin()
+        with tempfile.TemporaryDirectory() as t:
+            ir = os.path.join(t, "h.ll")
+            subprocess.run([_clang(), "-O1", "-S", "-emit-llvm", HELLO, "-o", ir],
+                           check=True, capture_output=True)
+            env = dict(os.environ)
+            env["ANTI_REA_WHITELIST"] = "*"
+            env["ANTI_REA_STRATEGIES"] = "string_encrypt,rename"
+            env["ANTI_REA_SEED"] = "5"
+
+            # 字符串加密：IR 层出现编码全局与解码异或；明文格式串消失
+            se = os.path.join(t, "se.ll")
+            subprocess.run([opt, "-load-pass-plugin=" + plug,
+                            "-passes=string-encrypt", ir, "-S", "-o", se],
+                           check=True, capture_output=True, env=env)
+            with open(se, encoding="utf-8") as fh:
+                setext = fh.read()
+            self.assertIn(".enc", setext)
+            self.assertIn("xor i8", setext)
+            self.assertNotIn('%d %d %d', setext)
+
+            # 标识符重命名：白名单函数名不再出现
+            rn = os.path.join(t, "rn.ll")
+            subprocess.run([opt, "-load-pass-plugin=" + plug,
+                            "-passes=ident-rename", ir, "-S", "-o", rn],
+                           check=True, capture_output=True, env=env)
+            with open(rn, encoding="utf-8") as fh:
+                rntext = fh.read()
+            self.assertNotIn("@secret_mix", rntext)
+            self.assertIn("@sub_", rntext)
+
+            # 功能保持 + 二进制锚点移除
+            def build(src, extra):
+                exe = os.path.join(t, "x." + str(len(os.listdir(t))))
+                subprocess.run([_clang(), "-O1", "-fpass-plugin=" + plug, src, "-o", exe],
+                               check=True, capture_output=True, env=extra)
+                return exe
+
+            prot = build(HELLO, env)
+            base = build(HELLO, dict(os.environ))
+            out_b = subprocess.run([base], capture_output=True, text=True).stdout
+            out_p = subprocess.run([prot], capture_output=True, text=True).stdout
+            self.assertEqual(out_b, out_p)
+            strs = subprocess.run(["strings", prot], capture_output=True, text=True).stdout
+            self.assertNotIn("%d %d %d", strs)
+            nm = subprocess.run(["nm", prot], capture_output=True, text=True).stdout
+            self.assertNotIn("secret_mix", nm)
+
     def test_transform_markers_and_selectivity(self):
         opt = _opt()
         if not opt:
