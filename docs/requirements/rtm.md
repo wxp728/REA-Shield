@@ -2,11 +2,13 @@
 
 ## 文档信息
 
-- **文档版本**：v1.2
+- **文档版本**：v1.3
 - **创建日期**：2026-10-15
-- **阶段**：S0 立项与需求分析（交付物 RQ-07）
-- **上游依据**：`SRS.md` v1.0、`use-cases.md` v1.0、`plan/anti-rea-project-plan.md` v1.0
+- **阶段**：S0 立项与需求分析（交付物 RQ-07）；**v1.3 由 S2 测试计划回填设计锚点**
+- **上游依据**：`SRS.md` v1.2、`use-cases.md` v1.0、`plan/anti-rea-project-plan.md` v1.1、`docs/design/ddd/dd-09-test-plan.md`
 - **用途**：建立「需求 ↔ 用例 ↔ 设计模块 ↔ 计划测试用例 ↔ 里程碑」的双向追踪，保证无需求落空、无测试无源。
+
+> **变更记录**：v1.3（2026-10-15，S2）——按 `plan §4.2` M2 出口要求，确认「计划测试用例」为实际用例编号（`TC-*`，见 `dd-09-test-plan.md`），并新增 §1.0「设计文档锚点」映射；**未变更任何 FR/NFR/CQ 条目内容**。
 
 ## 追踪口径
 
@@ -72,6 +74,20 @@
 | FR-G1 | 统一产物目录 | Must | UC-01 | 报告产物 · §3.7 | TC-G1 | R3 | 基线 |
 | FR-G2 | 可复现元数据 | Should | UC-01 | 报告产物 · §3.7 | TC-G2 | R3 | 基线 |
 | FR-G3 | 变更对比 | Could | — | 报告产物 · §3.7 | TC-G3 | R3 | 基线 |
+
+### 1.1 设计文档锚点（S2 回填）
+
+> 「计划测试用例」即实际用例编号，详见 `docs/design/ddd/dd-09-test-plan.md`。
+
+| 需求区间 | 设计锚点 | 需求区间 | 设计锚点 |
+| :--- | :--- | :--- | :--- |
+| FR-A1…A7 | `ddd/dd-01-scanner.md` | FR-C7/C8 | `ddd/dd-04-virtualization.md` |
+| FR-B1…B6 | `ddd/dd-02-strategy.md` | FR-C9 | `ddd/dd-05-adversarial.md` |
+| FR-C1…C6/C11/C12 | `ddd/dd-03-llvm-transforms.md` | FR-C10 | `ddd/dd-06-wbc.md` |
+| FR-D1/D6/D7 | `ddd/e2e-scenario.md`、`interfaces.md §3/§4` | FR-E1…E8 | `ddd/dd-07-evaluation.md` |
+| FR-D2…D5 | 待补（构建集成详细设计，S3 前） | FR-F1…F4 | `ddd/dd-08-adaptive.md` |
+| FR-G1/G2 | `ddd/dd-07-evaluation.md` §7、`ddd/e2e-scenario.md` §5 | FR-G3 | 待补（变更对比，S3 前） |
+| NFR-01…11 | 各 `dd-*.md` 对应性能/复现/平台小节 + `dd-09-test-plan.md` §6 | CQ-01…05 | `ddd/dd-09-test-plan.md` §7 |
 
 ---
 

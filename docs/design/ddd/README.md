@@ -25,7 +25,7 @@
 | `dd-06-wbc.md` | 白盒密码详细设计 | DD-06 | ✅ 初稿 |
 | `dd-07-evaluation.md` | 评估层详细设计 | DD-07 | ✅ 初稿 |
 | `dd-08-adaptive.md` | 自适应引擎详细设计 | DD-08 | ✅ 初稿 |
-| `dd-09-test-plan.md` | 测试计划（覆盖全部 FR） | DD-09 | ⬜ 待产出 |
+| `dd-09-test-plan.md` | 测试计划（覆盖全部 FR） | DD-09 | ✅ 初稿 |
 | `dd-10-review.md` | 详细设计评审记录 | DD-10 | ⬜ 待产出 |
 
 ## 2. 编写顺序与依赖
