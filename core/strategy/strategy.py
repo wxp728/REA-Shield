@@ -34,6 +34,8 @@ def _match(asset: dict, project: dict, rules: list[dict], default: str) -> str:
 
 def plan(manifest: dict, budget: dict | None = None, seed: int | None = None) -> dict:
     """依据资产清单与预算生成 protection_policy（dict）。"""
+    if not isinstance(manifest, dict) or not isinstance(manifest.get("assets"), list):
+        raise ValueError("E_INVALID_INPUT: manifest.assets 缺失或非数组")
     budget = budget or {}
     templates, rules, default = _load_templates()
     project = manifest.get("project", {})
