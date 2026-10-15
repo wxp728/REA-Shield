@@ -21,8 +21,8 @@
 | `dd-02-strategy.md` | 策略引擎详细设计 | DD-02 | ✅ 初稿 |
 | `dd-03-llvm-transforms.md` | LLVM 变换详细设计 | DD-03 | ✅ 初稿 |
 | `dd-04-virtualization.md` | 虚拟化引擎与 ISA 规范 | DD-04 | ✅ 初稿 |
-| `dd-05-adversarial.md` | 对抗诱导详细设计 | DD-05 | ⬜ 待产出 |
-| `dd-06-wbc.md` | 白盒密码详细设计 | DD-06 | ⬜ 待产出 |
+| `dd-05-adversarial.md` | 对抗诱导详细设计 | DD-05 | ✅ 初稿 |
+| `dd-06-wbc.md` | 白盒密码详细设计 | DD-06 | ✅ 初稿 |
 | `dd-07-evaluation.md` | 评估层详细设计 | DD-07 | ⬜ 待产出 |
 | `dd-08-adaptive.md` | 自适应引擎详细设计 | DD-08 | ⬜ 待产出 |
 | `dd-09-test-plan.md` | 测试计划（覆盖全部 FR） | DD-09 | ⬜ 待产出 |
