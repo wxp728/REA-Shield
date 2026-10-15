@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "anti-rea"
+version = "0.1.0"
+description = "Anti-REA Skill：AI Agent 可调用的代码反逆向加固引擎（R1 骨架）"
+requires-python = ">=3.11"
+dependencies = [
+    "jsonschema>=4.0",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "ruff", "black"]
+
+[project.scripts]
+anti-rea = "core.cli:main"
+
+[tool.setuptools]
+packages = ["core", "core.scanner", "core.strategy", "core.evaluate"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]

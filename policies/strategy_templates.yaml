@@ -1,0 +1,16 @@
+version: 1
+templates:
+  - id: P0-combo
+    match: { sensitivity: P0 }
+    strategies: [code_virtualization, white_box_crypto, non_linear_mba, adversarial_inducement]
+    params: { coverage: 0.5, order: 4 }
+    mtd: { enabled: true, variant_count: 8 }
+  - id: P1-combo
+    match: { sensitivity: P1 }
+    strategies: [control_flow_flattening, mixed_boolean_arithmetic, opaque_predicates]
+  - id: P2-light
+    match: { sensitivity: P2 }
+    strategies: [identifier_renaming, string_encryption]
+  - id: P3-none
+    match: { sensitivity: P3 }
+    strategies: []

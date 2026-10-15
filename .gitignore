@@ -25,3 +25,12 @@ poc/poc4-wbc/wbc_aes
 __pycache__/
 *.pyc
 .DS_Store
+
+# S3 构建产物
+engine/build/
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/

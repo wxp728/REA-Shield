@@ -1,0 +1,11 @@
+# 策略匹配规则（FR-B2）。按顺序匹配，首个命中生效；skip_transform 优先。
+rules:
+  - when: { skip_transform: true }
+    use: P3-none
+  - when: { sensitivity: P0 }
+    use: P0-combo
+  - when: { sensitivity: P1 }
+    use: P1-combo
+  - when: { sensitivity: P2 }
+    use: P2-light
+default: P3-none
