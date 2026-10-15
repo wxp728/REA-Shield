@@ -15,14 +15,18 @@
 
 ## 1. 一句话现状
 
-**S3 迭代 R3（评估 / 进化 / MCP / 产物管理）已完成，M4/M5 均已批准：** 在 R2 基础上新增
-**评估验证层**（静态/动态/跨版本攻击模拟、六项指标 + 时间序列库、OI-07 判定、回归检测 FR-E3…E8）、
-**自适应策略引擎**（DEAP 遗传进化 + 弱点调整 + 策略知识库迁移 FR-F1…F4）、**MCP Server**
-（stdio JSON-RPC 2.0，7 工具 FR-D6）、**报告与产物管理**（统一目录 + 可复现元数据 + 变更对比 FR-G1…G3）。
-`make ci` 全绿，**56 项自动化用例全部通过**。下一步：按 `plan §6` 进入 **S4（M6 验证）**。
+**S4 系统集成与验证（M6 质量门）已完成：** 依 `plan §6.1` 验证类型矩阵实现并实测通过——
+**差分 fuzz 10⁵ 随机输入零差异**（NFR-03）、**性能开销落在 NFR-01 预算内**、
+**对抗效果内置判定通过且独立工具（objdump/Ghidra）交叉验证不矛盾**、
+**同输入同种子产物逐位一致**（NFR-04/08）、**异常输入受控 + 超时受控 + 大工程可扩展**（NFR-07）、
+**兼容性矩阵**（linux-x86_64 五组合实测 + aarch64/riscv64/wasm32/windows-gnu IR 层探针）、
+**安全自检 SBOM**（NFR-09/CQ-01）。报告见 `docs/release/`（STR / 性能基线 / 对抗评估 /
+兼容性矩阵 / 文档验证 / SBOM / 缺陷清单）。**S3（R1/R2/R3）与 S4 全部完成，CI 全绿。**
+下一步：按 `plan §7` 进入 **S5（Beta 试点）**。
 
-> **未量化项**（留待 S4/S5）：NFR-02 的 **Token 消耗倍数 ≥ 100x** 需真实 LLM 会话（CQ-05 出站控制 + 多模型）；
-> 无 LLM 时评估降级 `static_only`（OI-07 §D5），以可复现的**静态代理指标**作为替代门禁。
+> **未量化项**（留待 S5）：NFR-02 的 **Token 消耗倍数 ≥ 100x** 与**外部第三方红队**结论
+> 需真实 LLM 会话（CQ-05 出站控制 + 多模型）；无 LLM 时评估降级 `static_only`（OI-07 §D5），
+> 以可复现的**静态代理指标 + 独立工具交叉验证**作为替代门禁。
 
 ## 2. 里程碑状态（对照 `plan/anti-rea-project-plan.md` §1.2）
 
@@ -34,7 +38,9 @@
 | **M3 编码 R1** | ✅ 已通过 | 脚手架 + Scanner/Strategy MVP + CFF/MBA/谓词 + 端到端流水线；tag `m3-r1` |
 | **M4 编码 R2** | ✅ 已通过 | 虚拟化/白盒/对抗/函数扰动/数据流噪声/SPI/构建集成；tag `m4-r2` |
 | **M5 编码 R3** | ✅ 已完成 | 评估/进化/MCP/产物管理；`make ci` 全绿；tag `m5-frozen` |
-| M6–M8 验证 / 试点 / 发布 | ⬜ 未开始 | — |
+| **M6 验证 S4** | ✅ 已完成 | 差分 fuzz/性能/对抗/可复现/稳健/兼容/安全/文档验证全绿；报告 `docs/release/` |
+| M7 试点 S5 | ⬜ 未开始 | 真实工程灰度试用 + 发布准备 |
+| M8 发布 S6 | ⬜ 未开始 | v1.0 制品发布与支持渠道 |
 
 ## 3. 已完成交付物清单
 
@@ -77,6 +83,10 @@
 | S3·R3 | MCP Server（stdio JSON-RPC 2.0，7 工具） | `core/mcp/server.py`（+ `anti-rea-mcp` 脚本） | v0.1 |
 | S3·R3 | 报告与产物管理：统一目录 + 可复现元数据 + 变更对比 | `core/report.py`、CLI `report/diff/attack_sim/regress/evolve` | v0.1 |
 | S3·R3 | R3 自动化用例 | `tests/{test_evaluation,test_adaptive,test_mcp}.py` | — |
+| S4 | 验证工具集：差分 fuzz/性能/独立交叉/可复现/稳健/兼容 | `core/verify/{differential,overhead,independent,reproducibility,robustness,matrix}.py` | v0.1 |
+| S4 | S4 运行器 + SBOM/安全自检 | `tools/run_s4.py`、`tools/sbom.py`、`tools/ghidra_functions.py` | v0.1 |
+| S4 | S4 报告与数据（STR/性能/对抗/兼容/文档验证/SBOM/缺陷） | `docs/release/*` | v1.0 |
+| S4 | S4 自动化用例 | `tests/test_verify_s4.py` | — |
 | S2+ | REA 对手分析（针对性设计输入，非需求） | `docs/analysis/rea-threat-analysis.md` | v0.1 |
 
 ## 4. 已决决策（**不要重新讨论**）
@@ -185,6 +195,30 @@ python -m core.mcp            # 或 anti-rea-mcp（stdio MCP Server）
 
 > **下一步**：按 `plan §6` 进入 **S4（M6 验证）**。
 
+### 6.3 阶段 S4：系统集成与验证（M6 质量门，已完成）
+
+对照 `plan §6.1` 验证类型矩阵，运行器 `python tools/run_s4.py`（完整 `--n 100000`）：
+
+| 验证类型 | 结果 | 证据 / 实现 |
+| :--- | :--- | :--- |
+| 端到端集成 | 通过 | `tests/test_engine_e2e.py`、`test_mcp.py` |
+| 回归测试（功能保持） | 通过 | `verify()` 差分 + WBC 自洽 + 对抗变体等价 |
+| **差分 fuzz** | **10⁵ 输入零差异** | `core/verify/differential.py`（批式投喂 + 定位） |
+| 性能基准 | 最差开销 0.042 ≤ 预算 | `core/verify/overhead.py`（NFR-01：P0≤40%/P1≤15%/P2≤5%） |
+| 对抗效果（内置） | 判定通过（相似度 0.40 ≤ 0.55） | `attack_sim` + `eval_report.json` |
+| 对抗效果（独立） | objdump/Ghidra 交叉验证**不矛盾** | `core/verify/independent.py`、`tools/ghidra_functions.py` |
+| 兼容性 | linux-x86_64 五组合 + 4 目标 IR 探针 | `core/verify/matrix.py` |
+| 稳健性 | 异常输入受控 / 超时受控 / 大工程可扩展 | `core/verify/robustness.py` |
+| 可复现性 | 同输入同种子**产物逐位一致** | `core/verify/reproducibility.py` |
+| 安全自检 | SBOM 齐全、无未授权组件 | `tools/sbom.py`、`docs/release/sbom.json` |
+| 文档验证 | 6 条文档命令全部通过 | `tools/run_s4.py::doc_verification` |
+
+**M6 出口准则核对**：功能全绿、差分 fuzz 10⁵ 无差异、性能在预算内、对抗内置达标且独立验证不矛盾、
+无未修复 P0/P1、SBOM 完整、文档可复现 —— 除「Token 消耗倍数 ≥ 100x」「外部第三方红队」两项
+（需真实 LLM，CQ-05）外**全部达成**；报告见 `docs/release/`。
+
+> **下一步**：按 `plan §7` 进入 **S5（Beta 试点）**。
+
 ## 7. 新环境准备（**已完成，记录实测**）
 
 本项目 PoC 环境已在 **RHEL 系 Linux（x86_64）** 上搭建完成：
@@ -210,11 +244,11 @@ python -m core.mcp            # 或 anti-rea-mcp（stdio MCP Server）
 **建议开场提示词：**
 
 > 请阅读仓库根目录 `README.md` 与 `docs/STATUS.md`，了解 Anti-REA Skill 项目的当前进度；
-> M0/M1/M2/M3/M4/M5 均已通过（tag `m0-baseline` / `m1-architecture` / `m2-design` / `m3-r1` / `m4-r2` / `m5-frozen`），
-> **S3 迭代 R3 已完成**（评估验证层 + 自适应策略引擎 + MCP Server + 报告产物管理，`make ci` 全绿，56 用例通过）。
-> 请按 `plan/anti-rea-project-plan.md §6` 进入 **S4（M6 验证）**。
+> M0–M6 均已通过（tag `m0-baseline` / `m1-architecture` / `m2-design` / `m3-r1` / `m4-r2` / `m5-frozen`），
+> **S3（R1/R2/R3）与 S4（系统验证，M6）已完成**（`make ci` 全绿；S4 报告见 `docs/release/`）。
+> 请按 `plan/anti-rea-project-plan.md §7` 进入 **S5（Beta 试点）**。
 > 注意：需求已基线（tag `m0-baseline`），变更须走变更流程；所有跨模块数据须过 `schemas/` 校验；
-> NFR-02 的 Token 倍数 ≥ 100x 需真实 LLM 会话（CQ-05 出站控制），无 LLM 时降级 `static_only`。
+> NFR-02 的 Token 倍数 ≥ 100x 与外部第三方红队结论需真实 LLM（CQ-05），列为 S5 行动项。
 
 **接手顺序**：`README.md` → `docs/STATUS.md`（本文）→ `plan/anti-rea-project-plan.md`（§5 S3）→ `engine/README.md` → `core/cli.py`。
 
