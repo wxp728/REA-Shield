@@ -1,7 +1,8 @@
-"""Anti-REA 评估验证层（Evaluation v0.1，R1 MVP）。
+"""Anti-REA 评估验证层（Evaluation v0.1，R1/R2）。
 
 设计：docs/design/ddd/dd-07-evaluation.md
-覆盖：FR-E1（功能保持，差分验证）、FR-E2（性能基准，粗测）。
+覆盖：FR-E1（功能保持，差分验证）、FR-E2（性能基准，粗测）；
+      R2 追加：白盒自洽（FR-C10）与对抗诱导变体等价（FR-C9）验证。
 攻击模拟（FR-E3…E8）留待 R3。
 """
 from __future__ import annotations
@@ -18,6 +19,42 @@ def _run(exe: str, args: list[str]) -> tuple[int, str, float]:
     p = subprocess.run([exe, *args], capture_output=True, text=True)
     dt = time.perf_counter() - t0
     return p.returncode, (p.stdout or "") + (p.stderr or ""), dt
+
+
+def _verify_wbc(artifacts_dir: str, meta: dict, detail: list) -> bool:
+    wbc_meta = meta.get("wbc")
+    if not wbc_meta:
+        return True
+    from .. import wbc
+    st = wbc.selftest(os.path.dirname(wbc_meta["path"]))
+    ok = bool(st["pass"])
+    no_const = wbc.check_no_key_constant(
+        st["exe"], wbc.derive_key(meta.get("seed", 0)))
+    ok = ok and no_const
+    detail.append("WBC(AES-128) 加解密自洽: %s" % ("ok" if st["pass"] else "FAIL"))
+    detail.append("WBC 无明文密钥常量: %s" % ("ok" if no_const else "FAIL"))
+    return ok
+
+
+def _verify_variants(artifacts_dir: str, meta: dict, baseline_out: str,
+                     baseline_rc: int, detail: list) -> tuple[bool, int, int]:
+    """对每个诱导变体做差分验证（FR-C9）。返回 (ok, iterations, mismatches)。"""
+    adv = meta.get("adversarial")
+    if not adv:
+        return True, 0, 0
+    from ..transform import _clang
+    clang = _clang()
+    total = len(adv["variants"])
+    mismatches = 0
+    for v in adv["variants"]:
+        exe = v["path"] + ".exe"
+        subprocess.run([clang, "-O0", v["path"], "-o", exe],
+                       check=True, capture_output=True)
+        p = subprocess.run([exe], capture_output=True, text=True)
+        if p.returncode != baseline_rc or (p.stdout or "") != baseline_out:
+            mismatches += 1
+    detail.append("对抗诱导变体功能等价: %d/%d 通过" % (total - mismatches, total))
+    return mismatches == 0, total, mismatches
 
 
 def verify(artifacts_dir: str, args: list[str] | None = None,
@@ -43,14 +80,23 @@ def verify(artifacts_dir: str, args: list[str] | None = None,
     else:
         detail = ["输出不一致: baseline rc=%d protected rc=%d" % (rc_b, rc_p)]
 
+    # R2：白盒自洽 + 对抗诱导变体等价
+    functional_pass = _verify_wbc(artifacts_dir, meta, detail) and functional_pass
+    var_ok, iters, mismatches = _verify_variants(
+        artifacts_dir, meta, out_b, rc_b, detail)
+    functional_pass = var_ok and functional_pass
+
+    total = 1 + iters
+    passed = total - mismatches - (0 if functional_pass else 1)
     report = {
         "schema_version": common.SCHEMA_VERSION,
         "run_id": run_id,
         "generated_at": common.now_iso(),
         "functional_pass": functional_pass,
-        "test_suite": {"total": 1, "passed": 1 if functional_pass else 0,
-                       "failed": 0 if functional_pass else 1, "skipped": 0,
-                       "command": "differential: baseline vs protected"},
+        "test_suite": {"total": total, "passed": max(0, passed),
+                       "failed": total - max(0, passed), "skipped": 0,
+                       "command": "differential: baseline vs protected (+wbc,variants)"},
+        "fuzz": {"iterations": iters, "mismatches": mismatches},
         "performance_pass": performance_pass,
         "overhead": round(overhead, 4),
         "detail": detail,

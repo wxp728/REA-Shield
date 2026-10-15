@@ -12,6 +12,8 @@ import subprocess
 
 from . import common
 from .scanner import scanner
+from . import wbc
+from . import adversarial
 
 # policy 策略名 -> 引擎插件策略名
 STRAT_MAP = {
@@ -139,8 +141,6 @@ def protect(policy: dict, sources: list[str], out_dir: str, root: str = ".",
     for a in policy.get("assets", []):
         log_lines.append("asset %s sens=%s strategies=%s" %
                          (a["path"], a["sensitivity"], ",".join(a.get("strategies", []))))
-    with open(os.path.join(out_dir, "transform.log"), "w", encoding="utf-8") as fh:
-        fh.write("\n".join(log_lines) + "\n")
 
     metadata = {
         "run_id": policy.get("_run_id", ""),
@@ -154,5 +154,21 @@ def protect(policy: dict, sources: list[str], out_dir: str, root: str = ".",
         "protected_exe": os.path.abspath(protected_exe),
         "offline": offline,
     }
+
+    # 组合防护：白盒密码（FR-C10）与对抗诱导（FR-C9）产物
+    strat_set = {s for a in policy.get("assets", []) for s in a.get("strategies", [])}
+    if "white_box_crypto" in strat_set:
+        metadata["wbc"] = wbc.generate(os.path.join(out_dir, "wbc"), seed=seed)
+        log_lines.append("white_box_crypto: alg=aes-128 seed=%d" % seed)
+    if "adversarial_inducement" in strat_set:
+        syms = sorted({a.get("symbol") for a in policy.get("assets", []) if a.get("symbol")})
+        vc = int(policy.get("variant_count") or 3)
+        metadata["adversarial"] = adversarial.generate_variants(
+            sources[0], os.path.join(out_dir, "adversarial"), syms,
+            count=max(1, min(vc, 64)), seed=seed)
+        log_lines.append("adversarial_inducement: variants=%d seed=%d" % (vc, seed))
+
+    with open(os.path.join(out_dir, "transform.log"), "w", encoding="utf-8") as fh:
+        fh.write("\n".join(log_lines) + "\n")
     common.write_json(os.path.join(out_dir, "metadata.json"), metadata)
     return metadata

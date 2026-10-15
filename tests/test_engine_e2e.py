@@ -103,6 +103,21 @@ class TestEndToEnd(unittest.TestCase):
             prot = subprocess.run([vm_exe], capture_output=True, text=True).stdout
             self.assertEqual(base, prot)                    # 功能保持（FR-C8）
 
+    def test_r2_combo_protection(self):
+        """组合防护（虚拟化 + 白盒 + 对抗诱导）功能测试通过（R2 出口）。"""
+        with tempfile.TemporaryDirectory() as out:
+            manifest = scan(SAMPLES)
+            policy = plan(manifest, {"max_overhead": 0.5}, seed=7)
+            policy["_run_id"] = manifest["run_id"]
+            meta = protect(policy, [P0_SECRET], out, root=SAMPLES, seed=7)
+            self.assertIn("virtualize", meta["strategies"])
+            self.assertTrue(meta.get("wbc"))
+            self.assertTrue(meta.get("adversarial"))
+            report = verify(out)
+            self.assertTrue(report["functional_pass"], report)
+            self.assertTrue(report["overall_pass"], report)
+            common.validate(report, "verification_report.schema.json")
+
     def test_transform_markers_and_selectivity(self):
         opt = _opt()
         if not opt:
