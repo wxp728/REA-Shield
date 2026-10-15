@@ -1,0 +1,101 @@
+{
+  "schema_version": "1.0",
+  "seed": 20261015,
+  "target": {
+    "platform": "linux-x86_64",
+    "language": "c",
+    "build_system": "cmake"
+  },
+  "performance_budget": {
+    "max_overhead": 0.2,
+    "target_overhead": 0.2
+  },
+  "assets": [
+    {
+      "path": "src/crypto/keymgr.c",
+      "sensitivity": "P0",
+      "strategies": [
+        "white_box_crypto",
+        "non_linear_mba",
+        "mixed_boolean_arithmetic",
+        "identifier_renaming"
+      ],
+      "params": {
+        "coverage": 0.4349,
+        "order": 3,
+        "noise_ratio": 0.5549,
+        "flatten_depth": 4
+      }
+    },
+    {
+      "path": "src/core/license.c",
+      "sensitivity": "P0",
+      "strategies": [
+        "adversarial_inducement",
+        "control_flow_flattening",
+        "identifier_renaming"
+      ],
+      "params": {
+        "coverage": 0.4671,
+        "order": 4,
+        "noise_ratio": 1.0,
+        "flatten_depth": 5
+      }
+    },
+    {
+      "path": "src/core/engine.c",
+      "sensitivity": "P1",
+      "strategies": [
+        "adversarial_inducement",
+        "opaque_predicates",
+        "function_boundary_perturbation",
+        "identifier_renaming",
+        "string_encryption"
+      ],
+      "params": {
+        "coverage": 0.213,
+        "order": 3,
+        "noise_ratio": 0.3882,
+        "flatten_depth": 1
+      }
+    },
+    {
+      "path": "src/net/protocol.c",
+      "sensitivity": "P1",
+      "strategies": [
+        "non_linear_mba",
+        "adversarial_inducement",
+        "function_boundary_perturbation",
+        "identifier_renaming",
+        "string_encryption"
+      ],
+      "params": {
+        "coverage": 0.8687,
+        "order": 2,
+        "noise_ratio": 0.7973,
+        "flatten_depth": 3
+      }
+    },
+    {
+      "path": "src/util/strings.c",
+      "sensitivity": "P2",
+      "strategies": [
+        "non_linear_mba",
+        "adversarial_inducement",
+        "function_boundary_perturbation",
+        "data_flow_noise",
+        "identifier_renaming"
+      ],
+      "params": {
+        "coverage": 0.9712,
+        "order": 3,
+        "noise_ratio": 0.7368,
+        "flatten_depth": 1
+      }
+    }
+  ],
+  "verification": {
+    "run_tests": true,
+    "abort_on_failure": true
+  }
+}

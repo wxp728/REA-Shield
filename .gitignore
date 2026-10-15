@@ -1,0 +1,27 @@
+# 构建产物（不入库）
+*.o
+*.so
+*.a
+*.dylib
+
+# PoC 构建与运行产物
+poc/poc1-llvm-pass/sample_plain
+poc/poc1-llvm-pass/sample_cff
+poc/poc1-llvm-pass/sample_cff_opt
+poc/poc1-llvm-pass/sample.ll
+poc/poc1-llvm-pass/sample_cff.ll
+poc/poc2-ghidra-headless/build/
+poc/poc2-ghidra-headless/out/
+poc/poc2-ghidra-headless/samples/sample_O0
+poc/poc2-ghidra-headless/samples/sample_O2
+poc/poc2-ghidra-headless/samples/sample_stripped
+poc/poc2-ghidra-headless/samples/*_ghidra/
+poc/poc2-ghidra-headless/samples/*.gpr
+poc/poc2-ghidra-headless/samples/*.rep/
+poc/poc3-deap/__pycache__/
+poc/poc4-wbc/wbc_aes
+
+# 通用
+__pycache__/
+*.pyc
+.DS_Store
