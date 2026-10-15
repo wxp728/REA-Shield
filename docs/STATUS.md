@@ -15,7 +15,7 @@
 
 ## 1. 一句话现状
 
-**S3 迭代 R1（基础骨架 + 基础变换）已完成：** 可构建的 LLVM 变换插件（CFF/MBA/不透明谓词 + 白名单）、`core`（Scanner/Strategy/Transform/Evaluate + CLI）、端到端流水线 `scan→plan→protect→verify` 跑通，**CI 全绿、功能保持通过**。下一步经 M3 批准后进入 R2（虚拟化 + 白盒 + 对抗诱导 + 构建集成）。
+**S3 迭代 R2（核心防护能力）基本完成、待 M4 批准：** 在 R1 基础上新增代码虚拟化（FR-C7/C8）、白盒密码（FR-C10）、对抗诱导（FR-C9）、函数边界扰动（FR-C4）、数据流噪声（FR-C5）、变换插件 SPI（FR-C11）与构建集成插件（CMake/npm/Python 实测通过，Cargo 待 rust 环境；FR-D2…D5）。R2 出口「虚拟化 + 白盒 + 对抗诱导组合防护产物，功能测试通过」已由 `tests/test_engine_e2e.py::test_r2_combo_protection` 演示；**CI 全绿**。下一步：补齐"锚点移除"（字符串加密 / 标识符重命名）并按 `plan §5.4` 进入 R3 或做 M4 门评审。
 
 ## 2. 里程碑状态（对照 `plan/anti-rea-project-plan.md` §1.2）
 
@@ -24,8 +24,9 @@
 | **M0 需求基线** | ✅ 已通过 | tag `m0-baseline`；47 FR + 11 NFR + 5 CQ 已基线 |
 | **M1 架构基线** | ✅ 已通过 | HLD / 接口 / ADR / Schema 已产出；**PoC-1…4 全部通过**；tag `m1-architecture` |
 | **M2 设计基线** | ✅ 已通过 | tag `m2-design`；S2 交付物完成（`docs/design/ddd/`），评审见 `dd-10-review.md` |
-| **M3 编码 R1** | 🟡 待批准 | 脚手架 + Scanner/Strategy MVP + CFF/MBA/谓词 + 端到端流水线；CI 全绿（见 §6） |
-| M4–M5 编码 R2/R3 | ⬜ 未开始 | R2 虚拟化/白盒/对抗/构建集成；R3 评估/进化/MCP |
+| **M3 编码 R1** | ✅ 已通过 | 脚手架 + Scanner/Strategy MVP + CFF/MBA/谓词 + 端到端流水线；tag `m3-r1` |
+| **M4 编码 R2** | 🟡 待批准 | 虚拟化/白盒/对抗/函数扰动/数据流噪声/SPI/构建集成；CI 全绿（见 §6） |
+| M5 编码 R3 | ⬜ 未开始 | R3 评估/进化/MCP |
 | M6–M8 验证 / 试点 / 发布 | ⬜ 未开始 | — |
 
 ## 3. 已完成交付物清单
@@ -56,6 +57,14 @@
 | S3·R1 | 策略模板库与匹配规则（YAML） | `policies/strategy_templates.yaml`、`policies/match_rules.yaml` | v1 |
 | S3·R1 | 单元/集成测试 + 端到端样例 | `tests/`（`test_scanner.py`、`test_strategy.py`、`test_engine_e2e.py`、`samples/hello.c`） | — |
 | S3·R1 | 构建与 CI（CMake/Makefile/ci.sh/pre-commit） | `engine/CMakeLists.txt`、`Makefile`、`ci/ci.sh`、`.pre-commit-config.yaml` | — |
+| S3·R2 | 代码虚拟化引擎（VM ISA + 解释器 + lowering） | `engine/vm/vm_isa.h`、`engine/vm/vm_interp.c`、`engine/passes/anti_rea_passes.cpp`（`applyVM`） | v0.1 |
+| S3·R2 | 白盒密码（AES-128 查找表编码 + 自检 + 无明文密钥校验） | `core/wbc/wbc.py` | v0.1 |
+| S3·R2 | 对抗诱导生成器（功能保持变体） | `core/adversarial/generator.py` | v0.1 |
+| S3·R2 | 函数边界扰动（FR-C4）+ 数据流噪声（FR-C5） | `engine/passes/anti_rea_passes.cpp`（`applyFuncSplit`/`applyNoise`） | v0.1 |
+| S3·R2 | 变换插件 SPI（FR-C11）+ 示例插件 | `engine/spi/transform_plugin.h`、`plugins/example-transform/` | v1 |
+| S3·R2 | 构建集成插件（CMake/npm/Python 已测；Cargo 待 rust） | `integrations/`（`anti-rea` 驱动 + 四类插件 + 样例） | v0.1 |
+| S3·R2 | Scanner 轻量数据流分级（FR-A4 增强） | `core/scanner/scanner.py`（`secret_schedule` → P0） | — |
+| S2+ | REA 对手分析（针对性设计输入，非需求） | `docs/analysis/rea-threat-analysis.md` | v0.1 |
 
 ## 4. 已决决策（**不要重新讨论**）
 
@@ -102,7 +111,31 @@ make ci           # 完整 CI 门禁
 
 **R1 出口准则核对**：对简单 C 工程（`tests/samples/hello.c`）施加 CFF+MBA 后功能测试通过 ✅；`asset_manifest` / `protection_policy` 均过 Schema ✅；端到端一条命令跑通 ✅。
 
-> **下一步**：人工批准 M3 后进入 **R2 核心防护能力**——虚拟化引擎（DD-04）、白盒密码（DD-06）、对抗诱导（DD-05）、函数扰动/数据流噪声、构建集成插件（FR-D2…D5）、插件 SPI（FR-C11）；见 `plan §5.3`。
+> **M3 已通过**（tag `m3-r1`）。
+
+### 6.1 迭代 R2（核心防护能力，完成、待 M4 批准）
+
+对照 `plan §5.3`：
+
+| 任务 | 交付物 | 证据 |
+| :--- | :--- | :--- |
+| 代码虚拟化引擎 | VMP Engine v0.1（`engine/vm/`） | `test_vm_virtualization_pipeline`：虚拟化后功能与基线一致（FR-C7/C8） |
+| 白盒密码模块 | White-Box Crypto v0.1（`core/wbc/`） | `test_wbc.py`：加解密自洽、密钥不以明文常量驻留（FR-C10） |
+| 对抗性诱导生成器 | Adversarial Generator v0.1（`core/adversarial/`） | `test_adversarial.py`：变体功能保持（FR-C9） |
+| 函数扰动 + 数据流噪声 | 补充变换 Pass（FR-C4/C5） | `test_func_split_and_noise`：语义不变 + IR 指标变化 |
+| 构建集成插件 | CMake/Cargo/npm/Python（`integrations/`） | `test_integrations.py`：CMake/npm/Python 实测通过，Cargo 因无 rust 跳过（FR-D1…D5） |
+| 变换插件 SPI | `engine/spi/` + 示例插件 | `test_spi.py`：示例变换免改核心引擎；版本不兼容拒载（FR-C11） |
+
+**R2 出口准则核对**：对 P0 资产产出「虚拟化 + 白盒 + 对抗诱导」组合防护产物，功能测试通过 ✅
+（`test_r2_combo_protection`）；插件 SPI 与构建集成样例工程均产出保护产物 ✅。
+
+**运行方式**：`make build` / `make test` / `make e2e` / `make ci`（见 Makefile）。
+
+**针对性设计输入**：`docs/analysis/rea-threat-analysis.md` 分析了对标 AI 逆向工具 REA
+（`github.com/morluto/rea` v6.5.0）的能力缺口——REA **无脱混淆能力**且证据模型 fail-closed，
+故优先补「锚点移除」（字符串加密 / 标识符重命名）。
+
+> **下一步**：完成字符串加密 / 标识符重命名后，按 `plan §5.4` 进入 **R3**（评估/进化/MCP），或先做 M4 门评审。
 
 ## 7. 新环境准备（**已完成，记录实测**）
 
@@ -129,9 +162,9 @@ make ci           # 完整 CI 门禁
 **建议开场提示词：**
 
 > 请阅读仓库根目录 `README.md` 与 `docs/STATUS.md`，了解 Anti-REA Skill 项目的当前进度；
-> M0/M1/M2 均已通过（tag `m0-baseline` / `m1-architecture` / `m2-design`），
-> **S3 迭代 R1 已完成**（LLVM 变换插件 + `core` + 端到端流水线，`make ci` 全绿）。
-> 请确认/批准 M3 后，按 `plan/anti-rea-project-plan.md §5.3` 进入 **迭代 R2**（虚拟化/白盒/对抗诱导/构建集成）。
+> M0/M1/M2/M3 均已通过（tag `m0-baseline` / `m1-architecture` / `m2-design` / `m3-r1`），
+> **S3 迭代 R2 已完成、待 M4 批准**（虚拟化 + 白盒 + 对抗诱导 + 函数扰动/噪声 + SPI + 构建集成，`make ci` 全绿）。
+> 请确认/批准 M4 后，按 `plan/anti-rea-project-plan.md §5.4` 进入 **迭代 R3**（评估/进化/MCP）。
 > 注意：需求已基线（tag `m0-baseline`），变更须走变更流程；所有跨模块数据须过 `schemas/` 校验。
 
 **接手顺序**：`README.md` → `docs/STATUS.md`（本文）→ `plan/anti-rea-project-plan.md`（§5 S3）→ `engine/README.md` → `core/cli.py`。
@@ -163,7 +196,10 @@ make ci           # 完整 CI 门禁
 | 各模块详细设计（DD-01…DD-09 + 构建集成） | `docs/design/ddd/dd-*.md` |
 | 详细设计评审（M2 门） | `docs/design/ddd/dd-10-review.md` |
 | 「REA 成功」判定口径（OI-07）/ MTD 签名（OI-05） | `docs/design/ddd/decisions/` |
-| LLVM 变换插件（CFF/MBA/谓词 + 白名单） | `engine/passes/anti_rea_passes.cpp`、`engine/README.md` |
+| LLVM 变换插件（CFF/MBA/谓词/虚拟化/扰动/噪声 + 白名单） | `engine/passes/anti_rea_passes.cpp`、`engine/vm/`、`engine/README.md` |
+| 变换插件 SPI 契约 + 示例插件 | `engine/spi/transform_plugin.h`、`plugins/` |
+| 构建集成（CMake/Cargo/npm/Python） | `integrations/` |
+| REA 对手分析（针对性设计输入） | `docs/analysis/rea-threat-analysis.md` |
 | Python 核心（Scanner/Strategy/Transform/Evaluate） | `core/` |
 | CLI 入口 | `core/cli.py` |
 | 策略模板库 / 匹配规则 | `policies/` |

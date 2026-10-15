@@ -12,7 +12,16 @@
 | `mba` | 非线性 MBA（加法/异或恒等式） | FR-C2 |
 | `opaque-predicates` | 不透明谓词（恒真守卫，抗折叠） | FR-C3 |
 | `vm-virtualize` | 代码虚拟化（整型叶子函数 → 自定义 ISA 字节码） | FR-C7/C8 |
-| `anti-rea` | 按 `ANTI_REA_STRATEGIES` 组合施加 | FR-C1/C2/C3/C7 |
+| `func-split` | 函数边界扰动（CodeExtractor 外提基本块为新函数） | FR-C4 |
+| `data-flow-noise` | 数据流噪声（`(v+k)-k` 无副作用冗余运算） | FR-C5 |
+| `external-transforms` | 外部 SPI 插件宿主（加载 `ANTI_REA_EXTRA_PLUGINS`） | FR-C11 |
+| `anti-rea` | 按 `ANTI_REA_STRATEGIES` 组合施加 | FR-C1…C5/C7 |
+
+## 插件 SPI（FR-C11 / ADR-005）
+
+第三方变换以共享库提供 `anti_rea_spi_version()` + `anti_rea_register_plugin()`（契约见
+`engine/spi/transform_plugin.h`）；宿主校验 `SPI_VERSION`，不匹配即拒载（`E_PLUGIN_INCOMPATIBLE`）。
+示例见 `plugins/example-transform/`（构建为 `engine/build/libanti_rea_example_plugin.so`）。
 
 ## 白名单（选择性变换，FR-C6）
 
@@ -22,9 +31,11 @@
 | :--- | :--- | :--- |
 | `ANTI_REA_WHITELIST` | IR 变换白名单（逗号分隔函数名）；`*` 表示全部；**空则不变换任何函数** | 空 |
 | `ANTI_REA_VMP_WHITELIST` | 虚拟化白名单；命中者只做 VM（不走 IR 变换） | 空 |
-| `ANTI_REA_STRATEGIES` | `cff,mba,opaque,virtualize` 子集 | `cff,mba,opaque` |
+| `ANTI_REA_STRATEGIES` | `cff,mba,opaque,virtualize,func_split,noise` 子集 | `cff,mba,opaque` |
 | `ANTI_REA_SEED` | 随机种子（可复现，NFR-04/08） | `0` |
 | `ANTI_REA_MAX_BLOCKS` | CFF 最大基本块数，超过则跳过 | `256` |
+| `ANTI_REA_NOISE_RATIO` | 数据流噪声密度（0…1） | `1.0` |
+| `ANTI_REA_EXTRA_PLUGINS` | 外部 SPI 插件 `.so` 路径（逗号分隔） | 空 |
 
 > 白名单外的代码**零变换**（字节级不变）。
 
@@ -46,7 +57,8 @@
 LLVM=/opt/anti-rea-toolchain/clang+llvm-18.1.8-x86_64-linux-gnu-ubuntu-18.04
 cmake -S engine -B engine/build -DLLVM_DIR=$LLVM/lib/cmake/llvm -DCMAKE_BUILD_TYPE=Release
 cmake --build engine/build -j
-# 产物：engine/build/anti_rea_passes.so 与 engine/build/vm_interp.bc
+# 产物：engine/build/anti_rea_passes.so、engine/build/vm_interp.bc、
+#       engine/build/libanti_rea_example_plugin.so（SPI 示例）
 ```
 
 ## 用法

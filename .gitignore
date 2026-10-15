@@ -34,3 +34,8 @@ dist/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# 集成样例运行产物
+integrations/*/example/anti-rea/
+integrations/*/example/target/
+integrations/python/example/*.so
