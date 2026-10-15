@@ -8,14 +8,14 @@
 | :--- | :--- |
 | 日期 | 2026-10-15 |
 | 分支 | `master` |
-| 基线 tag | `m0-baseline`（M0 需求基线）、`m1-architecture`（M1 架构基线） |
+| 基线 tag | `m0-baseline`（M0 需求基线）、`m1-architecture`（M1 架构基线）、`m2-design`（M2 设计基线） |
 | 远端 | `git@gitee.com:wxp728/anti-rea.git` |
 | 最近提交 | 见 `git log -1`（本文件随该提交一并推送） |
 | 工作区 | 干净（无未提交改动） |
 
 ## 1. 一句话现状
 
-**S2 详细设计交付物已完成（DD-01…DD-10 + 构建集成补充设计 + OI-05/OI-07 落定），评审建议通过 M2（待人工技术负责人批准）。** 尚未开始编码，下一步进入 S3。
+**S3 迭代 R1（基础骨架 + 基础变换）已完成：** 可构建的 LLVM 变换插件（CFF/MBA/不透明谓词 + 白名单）、`core`（Scanner/Strategy/Transform/Evaluate + CLI）、端到端流水线 `scan→plan→protect→verify` 跑通，**CI 全绿、功能保持通过**。下一步经 M3 批准后进入 R2（虚拟化 + 白盒 + 对抗诱导 + 构建集成）。
 
 ## 2. 里程碑状态（对照 `plan/anti-rea-project-plan.md` §1.2）
 
@@ -23,8 +23,9 @@
 | :--- | :--- | :--- |
 | **M0 需求基线** | ✅ 已通过 | tag `m0-baseline`；47 FR + 11 NFR + 5 CQ 已基线 |
 | **M1 架构基线** | ✅ 已通过 | HLD / 接口 / ADR / Schema 已产出；**PoC-1…4 全部通过**；tag `m1-architecture` |
-| **M2 设计基线** | 🟡 待批准 | S2 交付物完成（`docs/design/ddd/`）；评审建议通过（`dd-10-review.md`），待人工批准后打 tag `m2-design` |
-| M3–M5 编码迭代 | ⬜ 未开始 | R1 / R2 / R3 |
+| **M2 设计基线** | ✅ 已通过 | tag `m2-design`；S2 交付物完成（`docs/design/ddd/`），评审见 `dd-10-review.md` |
+| **M3 编码 R1** | 🟡 待批准 | 脚手架 + Scanner/Strategy MVP + CFF/MBA/谓词 + 端到端流水线；CI 全绿（见 §6） |
+| M4–M5 编码 R2/R3 | ⬜ 未开始 | R2 虚拟化/白盒/对抗/构建集成；R3 评估/进化/MCP |
 | M6–M8 验证 / 试点 / 发布 | ⬜ 未开始 | — |
 
 ## 3. 已完成交付物清单
@@ -50,6 +51,11 @@
 | S2 | 详细设计评审记录（M2 门） | `docs/design/ddd/dd-10-review.md` | v1.0 |
 | S2 | 决策：OI-07（REA 成功判定）/ OI-05（MTD 变体与签名） | `docs/design/ddd/decisions/*` | v1.0 |
 | S2 | 测试计划 + RTM 设计锚点回填 | `docs/design/ddd/dd-09-test-plan.md`、`docs/requirements/rtm.md` v1.3 | — |
+| S3·R1 | LLVM 变换插件（CFF/MBA/谓词 + 白名单） | `engine/`（`passes/anti_rea_passes.cpp`） | v0.1 |
+| S3·R1 | Python 核心：Scanner/Strategy/Transform/Evaluate + CLI | `core/` | v0.1 |
+| S3·R1 | 策略模板库与匹配规则（YAML） | `policies/strategy_templates.yaml`、`policies/match_rules.yaml` | v1 |
+| S3·R1 | 单元/集成测试 + 端到端样例 | `tests/`（`test_scanner.py`、`test_strategy.py`、`test_engine_e2e.py`、`samples/hello.c`） | — |
+| S3·R1 | 构建与 CI（CMake/Makefile/ci.sh/pre-commit） | `engine/CMakeLists.txt`、`Makefile`、`ci/ci.sh`、`.pre-commit-config.yaml` | — |
 
 ## 4. 已决决策（**不要重新讨论**）
 
@@ -72,19 +78,31 @@
 | OI-06 | 是否引入 RISC-V 后端 | 后续版本 |
 | ~~OI-07~~ | ~~「REA 成功」的判定标准 + 独立会话上下文窗口口径~~ | ✅ **已决（S2）** → 见 `docs/design/ddd/decisions/OI-07-rea-success-criteria.md` |
 
-## 6. 当前阶段：S2 详细设计（交付完成，待 M2 批准）
+## 6. 当前阶段：S3 编码实现 · 迭代 R1（完成，待 M3 批准）
 
-M1 已通过（4 项 PoC 结论见 `poc-plan.md §6`、`ADR.md`）。S2 交付物落在 **`docs/design/ddd/`**，已全部产出：
+**M2 已通过**（tag `m2-design`）。R1 交付物（对照 `plan §5.2`）：
 
-- ✅ `README.md`（索引/任务追踪）、`e2e-scenario.md`（端到端主线）；
-- ✅ 各模块详细设计：`dd-01-scanner.md`、`dd-02-strategy.md`、`dd-03-llvm-transforms.md`、`dd-04-virtualization.md`、`dd-05-adversarial.md`、`dd-06-wbc.md`、`dd-07-evaluation.md`、`dd-08-adaptive.md`、`dd-build-integration.md`（FR-D*/G* 补充）；
-- ✅ `dd-09-test-plan.md`（覆盖 47 FR + 11 NFR + 5 CQ，RTM v1.3 已回填设计锚点）；
-- ✅ 决策：`decisions/OI-07-rea-success-criteria.md`、`decisions/OI-05-mtd-signing.md`；
-- ✅ `dd-10-review.md`：**评审结论 = 满足 M2 出口准则，建议通过（待人工技术负责人批准）**。
+| 任务 | 交付物 | 证据 |
+| :--- | :--- | :--- |
+| 项目脚手架 + CI | 可构建骨架 + `ci/ci.sh` | `make build` / `bash ci/ci.sh` 全绿 |
+| 资产扫描 MVP | Scanner v0.1（`core/scanner/`） | 对 `tests/samples` 产出合规 `asset_manifest.json`（FR-A1/A2/A3/A5/A6） |
+| 策略引擎 MVP | Strategy Engine v0.1（`core/strategy/` + `policies/`） | 产出合规 `protection_policy.yaml`（FR-B1/B2/B6） |
+| LLVM CFF + MBA + 谓词 | Transform Engine v0.1（`engine/`） | 三种变换生效且功能保持（FR-C1/C2/C3） |
+| 选择性变换 | 白名单（函数级） | 名单外函数零变换（FR-C6） |
+| 最小端到端流水线 | `core/cli.py` | `scan→plan→protect→verify` 一条命令跑通 |
 
-**M2 出口准则核对**：每模块设计「换人可实现」（✅）；关键算法有伪代码+复杂度+正确性论证（✅ 12 项）；测试计划覆盖 100% FR（✅ 47/47）；评审无阻塞问题（✅）。
+**运行方式**：
 
-> **下一步**：人工批准 M2 后打 tag `m2-design`，进入 **S3 编码实现（R1 基础骨架与基础变换，M3）**。S3 前置行动项见 `dd-10-review.md §7`（基准题库、检测器选型、参数标定）。
+```sh
+make build        # 构建 engine/build/anti_rea_passes.so
+make test         # 单元 + 集成测试（7 用例）
+make e2e          # scan → plan → protect → verify
+make ci           # 完整 CI 门禁
+```
+
+**R1 出口准则核对**：对简单 C 工程（`tests/samples/hello.c`）施加 CFF+MBA 后功能测试通过 ✅；`asset_manifest` / `protection_policy` 均过 Schema ✅；端到端一条命令跑通 ✅。
+
+> **下一步**：人工批准 M3 后进入 **R2 核心防护能力**——虚拟化引擎（DD-04）、白盒密码（DD-06）、对抗诱导（DD-05）、函数扰动/数据流噪声、构建集成插件（FR-D2…D5）、插件 SPI（FR-C11）；见 `plan §5.3`。
 
 ## 7. 新环境准备（**已完成，记录实测**）
 
@@ -111,12 +129,12 @@ M1 已通过（4 项 PoC 结论见 `poc-plan.md §6`、`ADR.md`）。S2 交付�
 **建议开场提示词：**
 
 > 请阅读仓库根目录 `README.md` 与 `docs/STATUS.md`，了解 Anti-REA Skill 项目的当前进度；
-> M1 架构门禁已通过（4 项 PoC），S2 详细设计交付物已完成（见 `docs/design/ddd/`），
-> 评审建议通过 M2（见 `docs/design/ddd/dd-10-review.md`）。请确认/批准 M2 后打 tag `m2-design`，
-> 再按 `plan/anti-rea-project-plan.md §5` 进入 **S3 编码实现（R1）**。
+> M0/M1/M2 均已通过（tag `m0-baseline` / `m1-architecture` / `m2-design`），
+> **S3 迭代 R1 已完成**（LLVM 变换插件 + `core` + 端到端流水线，`make ci` 全绿）。
+> 请确认/批准 M3 后，按 `plan/anti-rea-project-plan.md §5.3` 进入 **迭代 R2**（虚拟化/白盒/对抗诱导/构建集成）。
 > 注意：需求已基线（tag `m0-baseline`），变更须走变更流程；所有跨模块数据须过 `schemas/` 校验。
 
-**接手顺序**：`README.md` → `docs/STATUS.md`（本文）→ `docs/design/ddd/README.md`（S2 索引）→ `docs/design/ddd/dd-10-review.md` → `plan/anti-rea-project-plan.md`（§5 S3）。
+**接手顺序**：`README.md` → `docs/STATUS.md`（本文）→ `plan/anti-rea-project-plan.md`（§5 S3）→ `engine/README.md` → `core/cli.py`。
 
 ## 9. 约定与注意事项
 
@@ -145,5 +163,10 @@ M1 已通过（4 项 PoC 结论见 `poc-plan.md §6`、`ADR.md`）。S2 交付�
 | 各模块详细设计（DD-01…DD-09 + 构建集成） | `docs/design/ddd/dd-*.md` |
 | 详细设计评审（M2 门） | `docs/design/ddd/dd-10-review.md` |
 | 「REA 成功」判定口径（OI-07）/ MTD 签名（OI-05） | `docs/design/ddd/decisions/` |
+| LLVM 变换插件（CFF/MBA/谓词 + 白名单） | `engine/passes/anti_rea_passes.cpp`、`engine/README.md` |
+| Python 核心（Scanner/Strategy/Transform/Evaluate） | `core/` |
+| CLI 入口 | `core/cli.py` |
+| 策略模板库 / 匹配规则 | `policies/` |
+| 构建 / CI / 测试 | `Makefile`、`ci/ci.sh`、`tests/` |
 | PoC 可执行代码与证据 | `poc/` |
 | 数据契约 | `schemas/*.schema.json` |

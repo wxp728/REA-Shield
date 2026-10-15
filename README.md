@@ -4,14 +4,15 @@
 
 ## 仓库现状
 
-本仓库当前处于**规划与设计阶段**（尚未开始编码）。
+本仓库处于**编码实现阶段**（S3 迭代 R1 已完成，待 M3 批准）。
 
 | 阶段 | 状态 |
 | :--- | :--- |
 | S0 立项与需求分析 | ✅ 完成（M0 需求基线已批准，tag `m0-baseline`） |
-| S1 概要设计 | ✅ 完成（设计交付物 + **4 项 PoC 全部通过**，M1 架构门禁通过，tag `m1-architecture`） |
-| S2 详细设计 | ✅ 完成（DD-01…DD-10 + 构建集成；评审建议通过 **M2**，待人工批准 tag `m2-design`） |
-| S3 及以后 | ⬜ 未开始 |
+| S1 概要设计 | ✅ 完成（设计交付物 + **4 项 PoC 全部通过**，tag `m1-architecture`） |
+| S2 详细设计 | ✅ 完成（DD-01…DD-10 + 构建集成，tag `m2-design`） |
+| S3 编码实现 · R1 | ✅ 完成（脚手架 + CFF/MBA/谓词 + Scanner/Strategy + 端到端流水线；待 M3 批准） |
+| S3 编码实现 · R2/R3 | ⬜ 未开始（虚拟化/白盒/对抗诱导/评估/进化/MCP） |
 
 > **接手请先读 [`docs/STATUS.md`](docs/STATUS.md)**（项目状态与交接说明），再按其中的「下一步」继续。
 
@@ -47,6 +48,24 @@ anti-rea/
 │   ├── protection_policy.schema.json
 │   ├── verification_report.schema.json
 │   └── eval_report.schema.json
+├── engine/                   # S3 变换引擎（LLVM Pass 插件）
+│   ├── CMakeLists.txt
+│   ├── README.md
+│   └── passes/anti_rea_passes.cpp    # CFF / MBA / 不透明谓词 / 白名单
+├── core/                     # S3 编排核心（Python）
+│   ├── scanner/              #   输入分析层（Scanner v0.1）
+│   ├── strategy/             #   策略决策层（Strategy Engine v0.1）
+│   ├── evaluate/             #   评估验证层（差分验证 v0.1）
+│   ├── transform.py          #   变换执行（调用 engine 插件）
+│   ├── common.py             #   Schema 校验 / run_id / IO
+│   └── cli.py                #   CLI 入口（scan/plan/protect/verify/report）
+├── policies/                 # 策略模板库 + 匹配规则
+├── integrations/             # 构建集成（CMake/Cargo/npm/Python/MCP，R2+）
+├── plugins/                  # 变换插件 SPI（R2+）
+├── benchmarks/               # 攻击模拟基准题库（R3）
+├── tests/                    # 单测 / 集成测试 + 样例
+├── ci/ci.sh                  # CI 门禁
+├── Makefile                  # build / test / e2e / ci
 └── poc/                      # S1 技术选型 PoC（可执行代码与证据）
     ├── poc1-llvm-pass/       #   LLVM Pass：控制流平坦化（CFF）
     ├── poc2-ghidra-headless/ #   Ghidra Headless（PyGhidra）批量反编译
@@ -67,6 +86,7 @@ anti-rea/
 | 查技术取舍理由 | `docs/design/ADR.md` |
 | 看 PoC 方案与结论 | `docs/design/poc-plan.md`、`poc/` |
 | 看详细设计 / 端到端场景 | `docs/design/ddd/README.md`、`docs/design/ddd/e2e-scenario.md` |
+| 构建与运行（R1） | `engine/README.md`、`Makefile`（`make build/test/e2e/ci`） |
 | 继续做去风险验证 | `docs/design/poc-plan.md` |
 
 ## 约定
