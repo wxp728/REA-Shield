@@ -2,13 +2,14 @@
 
 ## 文档信息
 
-- **文档版本**：v1.3
+- **文档版本**：v1.4
 - **创建日期**：2026-10-15
-- **阶段**：S0 立项与需求分析（交付物 RQ-07）；**v1.3 由 S2 测试计划回填设计锚点**
+- **阶段**：S0 立项与需求分析（交付物 RQ-07）；**v1.3 由 S2 测试计划回填设计锚点；v1.4 由 R3 回填实现状态（§1.2）**
 - **上游依据**：`SRS.md` v1.2、`use-cases.md` v1.0、`plan/anti-rea-project-plan.md` v1.1、`docs/design/ddd/dd-09-test-plan.md`
 - **用途**：建立「需求 ↔ 用例 ↔ 设计模块 ↔ 计划测试用例 ↔ 里程碑」的双向追踪，保证无需求落空、无测试无源。
 
 > **变更记录**：v1.3（2026-10-15，S2）——按 `plan §4.2` M2 出口要求，确认「计划测试用例」为实际用例编号（`TC-*`，见 `dd-09-test-plan.md`），并新增 §1.0「设计文档锚点」映射；**未变更任何 FR/NFR/CQ 条目内容**。
+> v1.4（2026-10-16，R3 完成）——新增 §1.2「实现状态回填」，标注各 FR 的代码位置与自动化用例；**仍未变更任何 FR/NFR/CQ 条目内容**。
 
 ## 追踪口径
 
@@ -88,6 +89,43 @@
 | FR-D2…D5 | 待补（构建集成详细设计，S3 前） | FR-F1…F4 | `ddd/dd-08-adaptive.md` |
 | FR-G1/G2 | `ddd/dd-07-evaluation.md` §7、`ddd/e2e-scenario.md` §5 | FR-G3 | 待补（变更对比，S3 前） |
 | NFR-01…11 | 各 `dd-*.md` 对应性能/复现/平台小节 + `dd-09-test-plan.md` §6 | CQ-01…05 | `ddd/dd-09-test-plan.md` §7 |
+
+### 1.2 实现状态回填（R3 完成时，2026-10-16）
+
+> 依 `plan §4.2`，追踪列的**回填**不改动任何 FR/NFR/CQ 条目内容。状态口径：
+> **已实现** = 代码 + 自动化用例通过；**待 S4** = 需真实 LLM 会话 / 平台矩阵 / 试点数据方可量化验收。
+
+| 需求区间 | 实现位置 | 自动化用例 | 状态 |
+| :--- | :--- | :--- | :--- |
+| FR-A1…A7 | `core/scanner/scanner.py` | `test_scanner.py` | 已实现（R1/R2） |
+| FR-B1…B6 | `core/strategy/strategy.py` | `test_strategy.py` | 已实现（R1/R2） |
+| FR-C1…C6 | `engine/passes/anti_rea_passes.cpp` | `test_engine_e2e.py`、`test_wbc.py` | 已实现（R1/R2） |
+| FR-C7/C8 | `engine/`（VM ISA + 解释器）、`core/transform.py` | `test_engine_e2e.py` | 已实现（R2） |
+| FR-C9 | `core/adversarial/generator.py` | `test_adversarial.py` | 已实现（R2） |
+| FR-C10 | `core/wbc/wbc.py` | `test_wbc.py` | 已实现（R2） |
+| FR-C11 | `engine/spi/transform_plugin.h`、`plugins/` | `test_spi.py` | 已实现（R2） |
+| FR-C12 | 变换后语义/差分校验（`core/evaluate/evaluate.py`） | `test_engine_e2e.py` | 已实现（R2/R3） |
+| FR-D1 | `core/cli.py` | `test_engine_e2e.py`、CI e2e | 已实现（R2） |
+| FR-D2…D5 | `integrations/{cmake,cargo,npm,python}` | `test_integrations.py` | 已实现（R2；Cargo 见 `integrations/README.md` 限制） |
+| FR-D6 | `core/mcp/server.py`（7 工具） | `test_mcp.py` | 已实现（R3） |
+| FR-D7 | `integrations/anti_rea.py`（`--abort-on-failure`） | `test_integrations.py` | 已实现（R2） |
+| FR-E1/E2 | `core/evaluate/evaluate.py` | `test_engine_e2e.py`、`test_evaluation.py` | 已实现（R1/R3） |
+| FR-E3 | `core/evaluate/{attack_sim,llm}.py` | `test_evaluation.py`、`test_mcp.py` | 已实现（R3；LLM 会话待 CQ-05 配置） |
+| FR-E4 | `core/evaluate/attack_sim.py::dynamic_sim` | `test_evaluation.py` | 已实现（R3，best-effort，工具缺失即降级） |
+| FR-E5 | `core/evaluate/attack_sim.py::crossver_sim` | `test_evaluation.py` | 已实现（R3） |
+| FR-E6 | `core/evaluate/{metrics,timeseries}.py` | `test_evaluation.py` | 已实现（R3；`token_ratio`/`time_ratio` 需 LLM 实测） |
+| FR-E7 | `core/report.py`（json/md/html） | `test_evaluation.py` | 已实现（R3） |
+| FR-E8 | `core/evaluate/regression.py` | `test_evaluation.py` | 已实现（R3） |
+| FR-F1 | `core/evaluate/metrics.py::aggregate` + `llm.py`（多模型） | `test_evaluation.py` | 已实现（R3；多模型并行为接口预留） |
+| FR-F2 | `core/adaptive/weakness.py` | `test_adaptive.py` | 已实现（R3） |
+| FR-F3 | `core/adaptive/{engine,genome}.py`（DEAP） | `test_adaptive.py` | 已实现（R3） |
+| FR-F4 | `core/adaptive/knowledge.py` | `test_adaptive.py` | 已实现（R3） |
+| FR-G1 | `core/report.py::layout_ok`、统一产物目录 | `test_evaluation.py` | 已实现（R3） |
+| FR-G2 | `core/transform.py`（指纹/策略哈希）、`core/report.py` | `test_evaluation.py` | 已实现（R3） |
+| FR-G3 | `core/report.py::diff`、CLI `diff` | `test_evaluation.py` | 已实现（R3） |
+
+> **未量化验收项（留待 S4/S5）**：NFR-02 的 **Token 消耗倍数 ≥ 100x** 需真实 LLM 会话（CQ-05 出站控制 + 多模型）；
+> 平台矩阵（NFR-05）与 EDR 兼容（CQ-04）需 S4/S5 环境。已实现 `static_only` 降级即可复现的**静态代理指标**作为替代门禁。
 
 ---
 

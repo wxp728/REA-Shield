@@ -6,16 +6,23 @@
 
 | 项 | 值 |
 | :--- | :--- |
-| 日期 | 2026-10-15 |
+| 日期 | 2026-10-16 |
 | 分支 | `master` |
-| 基线 tag | `m0-baseline`（M0 需求基线）、`m1-architecture`（M1 架构基线）、`m2-design`（M2 设计基线） |
+| 基线 tag | `m0-baseline`（M0 需求基线）、`m1-architecture`（M1 架构基线）、`m2-design`（M2 设计基线）、`m3-r1`（M3 R1）、`m4-r2`（M4 R2）、`m5-frozen`（M5 R3） |
 | 远端 | `git@gitee.com:wxp728/anti-rea.git` |
 | 最近提交 | 见 `git log -1`（本文件随该提交一并推送） |
 | 工作区 | 干净（无未提交改动） |
 
 ## 1. 一句话现状
 
-**S3 迭代 R2（核心防护能力）基本完成、待 M4 批准：** 在 R1 基础上新增代码虚拟化（FR-C7/C8）、白盒密码（FR-C10）、对抗诱导（FR-C9）、函数边界扰动（FR-C4）、数据流噪声（FR-C5）、变换插件 SPI（FR-C11）、构建集成插件（CMake/npm/Python 实测通过，Cargo 待 rust 环境；FR-D2…D5），以及**锚点移除**（字符串加密 + 标识符重命名，dd-03 §7，针对 REA 无脱混淆能力的结构性短板）。R2 出口「虚拟化 + 白盒 + 对抗诱导组合防护产物，功能测试通过」已由 `test_r2_combo_protection` 演示；**CI 全绿**。下一步：按 `plan §5.4` 进入 R3 或做 M4 门评审。
+**S3 迭代 R3（评估 / 进化 / MCP / 产物管理）已完成，M4/M5 均已批准：** 在 R2 基础上新增
+**评估验证层**（静态/动态/跨版本攻击模拟、六项指标 + 时间序列库、OI-07 判定、回归检测 FR-E3…E8）、
+**自适应策略引擎**（DEAP 遗传进化 + 弱点调整 + 策略知识库迁移 FR-F1…F4）、**MCP Server**
+（stdio JSON-RPC 2.0，7 工具 FR-D6）、**报告与产物管理**（统一目录 + 可复现元数据 + 变更对比 FR-G1…G3）。
+`make ci` 全绿，**56 项自动化用例全部通过**。下一步：按 `plan §6` 进入 **S4（M6 验证）**。
+
+> **未量化项**（留待 S4/S5）：NFR-02 的 **Token 消耗倍数 ≥ 100x** 需真实 LLM 会话（CQ-05 出站控制 + 多模型）；
+> 无 LLM 时评估降级 `static_only`（OI-07 §D5），以可复现的**静态代理指标**作为替代门禁。
 
 ## 2. 里程碑状态（对照 `plan/anti-rea-project-plan.md` §1.2）
 
@@ -25,8 +32,8 @@
 | **M1 架构基线** | ✅ 已通过 | HLD / 接口 / ADR / Schema 已产出；**PoC-1…4 全部通过**；tag `m1-architecture` |
 | **M2 设计基线** | ✅ 已通过 | tag `m2-design`；S2 交付物完成（`docs/design/ddd/`），评审见 `dd-10-review.md` |
 | **M3 编码 R1** | ✅ 已通过 | 脚手架 + Scanner/Strategy MVP + CFF/MBA/谓词 + 端到端流水线；tag `m3-r1` |
-| **M4 编码 R2** | 🟡 待批准 | 虚拟化/白盒/对抗/函数扰动/数据流噪声/SPI/构建集成；CI 全绿（见 §6） |
-| M5 编码 R3 | ⬜ 未开始 | R3 评估/进化/MCP |
+| **M4 编码 R2** | ✅ 已通过 | 虚拟化/白盒/对抗/函数扰动/数据流噪声/SPI/构建集成；tag `m4-r2` |
+| **M5 编码 R3** | ✅ 已完成 | 评估/进化/MCP/产物管理；`make ci` 全绿；tag `m5-frozen` |
 | M6–M8 验证 / 试点 / 发布 | ⬜ 未开始 | — |
 
 ## 3. 已完成交付物清单
@@ -64,6 +71,12 @@
 | S3·R2 | 变换插件 SPI（FR-C11）+ 示例插件 | `engine/spi/transform_plugin.h`、`plugins/example-transform/` | v1 |
 | S3·R2 | 构建集成插件（CMake/npm/Python 已测；Cargo 待 rust） | `integrations/`（`anti-rea` 驱动 + 四类插件 + 样例） | v0.1 |
 | S3·R2 | Scanner 轻量数据流分级（FR-A4 增强） | `core/scanner/scanner.py`（`secret_schedule` → P0） | — |
+| S3·R3 | 评估验证层：攻击模拟（静态/动态/跨版本）+ 六项指标 + 时间序列 + 判定 | `core/evaluate/{attack_sim,metrics,static_features,llm,timeseries,regression}.py` | v0.1 |
+| S3·R3 | 攻击模拟基准题库 + Schema | `schemas/benchmark.schema.json`、`benchmarks/*.yaml` | v1 |
+| S3·R3 | 自适应策略引擎：遗传进化 + 弱点调整 + 策略知识库迁移 | `core/adaptive/{engine,genome,weakness,knowledge}.py` | v0.1 |
+| S3·R3 | MCP Server（stdio JSON-RPC 2.0，7 工具） | `core/mcp/server.py`（+ `anti-rea-mcp` 脚本） | v0.1 |
+| S3·R3 | 报告与产物管理：统一目录 + 可复现元数据 + 变更对比 | `core/report.py`、CLI `report/diff/attack_sim/regress/evolve` | v0.1 |
+| S3·R3 | R3 自动化用例 | `tests/{test_evaluation,test_adaptive,test_mcp}.py` | — |
 | S2+ | REA 对手分析（针对性设计输入，非需求） | `docs/analysis/rea-threat-analysis.md` | v0.1 |
 
 ## 4. 已决决策（**不要重新讨论**）
@@ -138,6 +151,40 @@ make ci           # 完整 CI 门禁
 
 > **下一步**：按 `plan §5.4` 进入 **R3**（评估/进化/MCP Server），或先做 M4 门评审。
 
+> **M4 已通过**（tag `m4-r2`）。
+
+### 6.2 迭代 R3（评估 / 进化 / MCP / 产物管理，已完成）
+
+对照 `plan §5.4`：
+
+| 任务 | 交付物 | 证据 |
+| :--- | :--- | :--- |
+| 评估框架 v0.1 | `core/evaluate/`（静态特征 + 六项指标 + 时间序列） | `test_evaluation.py`：指标计算、`static_only` 判定、基线产物判不通过（FR-E1/E2/E6） |
+| 攻击模拟 | `attack_sim`（静态 / 动态 / 跨版本）+ 基准题库 | 端到端 `eval_report` 过 Schema；`mode=all` 时无工具/无上一版本自动降级（FR-E3/E4/E5） |
+| 保护报告 | `core/report.py`（json / md / html 一致） | `test_report_three_formats_and_diff`（FR-E7） |
+| 回归检测 | `core/evaluate/regression.py` + CLI `regress` | 首跑无历史不退化；`compare` 检测指标退化与未达标（FR-E8） |
+| 自适应引擎 v0.1 | `core/adaptive/`（DEAP 进化 + 弱点调整 + 知识库） | `test_adaptive.py`：进化不劣化、同 seed 确定、弱点一键调整、迁移推荐（FR-F1…F4） |
+| MCP Server | `core/mcp/server.py`（7 工具）+ `anti-rea-mcp` | `test_mcp.py`：协议 + Agent 全流程 `scan→…→evolve`（FR-D6） |
+| 报告与产物 | 统一目录 / 可复现元数据 / 变更对比 | `test_evaluation.py`：目录定位、指纹/策略哈希、`diff`（FR-G1…G3） |
+
+**R3 出口准则核对（`plan §5.4`）**：全部 FR 实现且有自动化用例 ✅；`strings` 无关的静态攻击模拟 ✅
+（仅依赖 `nm`/`strings` 无关的结构特征 + ground truth）；**Token 消耗倍数 ≥ 100x** ⏳
+需真实 LLM 会话（CQ-05），当前以 `static_only` 可复现代理指标替代——见 `docs/requirements/rtm.md §1.2`。
+
+**运行方式**：`make build` / `make test` / `make e2e` / `make ci`。
+攻击模拟与报告（示例）：
+
+```sh
+python -m core.cli attack_sim build/run --benchmark benchmarks/bench-crypto-001.yaml --db build/metrics.db
+python -m core.cli regress    build/run --benchmark benchmarks/bench-crypto-001.yaml --db build/metrics.db
+python -m core.cli report     build/run --format all
+python -m core.cli diff       build/run.A build/run.B
+python -m core.cli evolve     build/run/asset_manifest.json -o build/evolved --kb build/kb.json
+python -m core.mcp            # 或 anti-rea-mcp（stdio MCP Server）
+```
+
+> **下一步**：按 `plan §6` 进入 **S4（M6 验证）**。
+
 ## 7. 新环境准备（**已完成，记录实测**）
 
 本项目 PoC 环境已在 **RHEL 系 Linux（x86_64）** 上搭建完成：
@@ -163,10 +210,11 @@ make ci           # 完整 CI 门禁
 **建议开场提示词：**
 
 > 请阅读仓库根目录 `README.md` 与 `docs/STATUS.md`，了解 Anti-REA Skill 项目的当前进度；
-> M0/M1/M2/M3 均已通过（tag `m0-baseline` / `m1-architecture` / `m2-design` / `m3-r1`），
-> **S3 迭代 R2 已完成、待 M4 批准**（虚拟化 + 白盒 + 对抗诱导 + 函数扰动/噪声 + SPI + 构建集成，`make ci` 全绿）。
-> 请确认/批准 M4 后，按 `plan/anti-rea-project-plan.md §5.4` 进入 **迭代 R3**（评估/进化/MCP）。
-> 注意：需求已基线（tag `m0-baseline`），变更须走变更流程；所有跨模块数据须过 `schemas/` 校验。
+> M0/M1/M2/M3/M4/M5 均已通过（tag `m0-baseline` / `m1-architecture` / `m2-design` / `m3-r1` / `m4-r2` / `m5-frozen`），
+> **S3 迭代 R3 已完成**（评估验证层 + 自适应策略引擎 + MCP Server + 报告产物管理，`make ci` 全绿，56 用例通过）。
+> 请按 `plan/anti-rea-project-plan.md §6` 进入 **S4（M6 验证）**。
+> 注意：需求已基线（tag `m0-baseline`），变更须走变更流程；所有跨模块数据须过 `schemas/` 校验；
+> NFR-02 的 Token 倍数 ≥ 100x 需真实 LLM 会话（CQ-05 出站控制），无 LLM 时降级 `static_only`。
 
 **接手顺序**：`README.md` → `docs/STATUS.md`（本文）→ `plan/anti-rea-project-plan.md`（§5 S3）→ `engine/README.md` → `core/cli.py`。
 

@@ -4,7 +4,7 @@
 
 ## 仓库现状
 
-本仓库处于**编码实现阶段**（S3 迭代 R2 已完成、待 M4 批准）。
+本仓库处于**编码实现阶段**（S3 迭代 R1/R2/R3 全部完成，M4/M5 已批准）。
 
 | 阶段 | 状态 |
 | :--- | :--- |
@@ -12,8 +12,8 @@
 | S1 概要设计 | ✅ 完成（设计交付物 + **4 项 PoC 全部通过**，tag `m1-architecture`） |
 | S2 详细设计 | ✅ 完成（DD-01…DD-10 + 构建集成，tag `m2-design`） |
 | S3 编码实现 · R1 | ✅ 完成（脚手架 + CFF/MBA/谓词 + Scanner/Strategy + 端到端流水线，tag `m3-r1`） |
-| S3 编码实现 · R2 | 🟡 完成待批（虚拟化/白盒/对抗诱导/函数扰动/噪声/SPI/构建集成） |
-| S3 编码实现 · R3 | ⬜ 未开始（评估/进化/MCP） |
+| S3 编码实现 · R2 | ✅ 完成（虚拟化/白盒/对抗诱导/函数扰动/噪声/SPI/构建集成，tag `m4-r2`） |
+| S3 编码实现 · R3 | ✅ 完成（评估验证/自适应进化/MCP Server/报告产物，tag `m5-frozen`） |
 
 > **接手请先读 [`docs/STATUS.md`](docs/STATUS.md)**（项目状态与交接说明），再按其中的「下一步」继续。
 
@@ -48,18 +48,22 @@ anti-rea/
 │   ├── asset_manifest.schema.json
 │   ├── protection_policy.schema.json
 │   ├── verification_report.schema.json
-│   └── eval_report.schema.json
+│   ├── eval_report.schema.json
+│   └── benchmark.schema.json
 ├── engine/                   # S3 变换引擎（LLVM Pass 插件）
 │   ├── CMakeLists.txt
 │   ├── README.md
-│   └── passes/anti_rea_passes.cpp    # CFF / MBA / 不透明谓词 / 白名单
+│   └── passes/anti_rea_passes.cpp    # CFF / MBA / 不透明谓词 / 白名单 / 虚拟化 / 锚点移除
 ├── core/                     # S3 编排核心（Python）
 │   ├── scanner/              #   输入分析层（Scanner v0.1）
 │   ├── strategy/             #   策略决策层（Strategy Engine v0.1）
-│   ├── evaluate/             #   评估验证层（差分验证 v0.1）
+│   ├── evaluate/             #   评估验证层（差分验证 + 攻击模拟 + 指标/时间序列/回归）
+│   ├── adaptive/             #   自适应策略引擎（DEAP 进化 + 弱点调整 + 知识库）
+│   ├── mcp/                  #   MCP Server（stdio JSON-RPC 2.0，7 工具）
 │   ├── transform.py          #   变换执行（调用 engine 插件）
+│   ├── report.py             #   报告与产物管理（统一目录/元数据/变更对比）
 │   ├── common.py             #   Schema 校验 / run_id / IO
-│   └── cli.py                #   CLI 入口（scan/plan/protect/verify/report）
+│   └── cli.py                #   CLI 入口（scan/plan/protect/verify/report/attack_sim/regress/diff/evolve）
 ├── policies/                 # 策略模板库 + 匹配规则
 ├── integrations/             # 构建集成（CMake/Cargo/npm/Python/MCP，R2+）
 ├── plugins/                  # 变换插件 SPI（R2+）
