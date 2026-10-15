@@ -8,25 +8,23 @@
 | :--- | :--- |
 | 日期 | 2026-10-16 |
 | 分支 | `master` |
-| 基线 tag | `m0-baseline`（M0 需求基线）、`m1-architecture`（M1 架构基线）、`m2-design`（M2 设计基线）、`m3-r1`（M3 R1）、`m4-r2`（M4 R2）、`m5-frozen`（M5 R3） |
+| 基线 tag | `m0-baseline`（M0 需求基线）、`m1-architecture`（M1 架构基线）、`m2-design`（M2 设计基线）、`m3-r1`（M3 R1）、`m4-r2`（M4 R2）、`m5-frozen`（M5 R3）、`m6-verified`（M6 验证）、`m7-pilot`（M7 试点） |
 | 远端 | `git@gitee.com:wxp728/anti-rea.git` |
 | 最近提交 | 见 `git log -1`（本文件随该提交一并推送） |
 | 工作区 | 干净（无未提交改动） |
 
 ## 1. 一句话现状
 
-**S4 系统集成与验证（M6 质量门）已完成：** 依 `plan §6.1` 验证类型矩阵实现并实测通过——
-**差分 fuzz 10⁵ 随机输入零差异**（NFR-03）、**性能开销落在 NFR-01 预算内**、
-**对抗效果内置判定通过且独立工具（objdump/Ghidra）交叉验证不矛盾**、
-**同输入同种子产物逐位一致**（NFR-04/08）、**异常输入受控 + 超时受控 + 大工程可扩展**（NFR-07）、
-**兼容性矩阵**（linux-x86_64 五组合实测 + aarch64/riscv64/wasm32/windows-gnu IR 层探针）、
-**安全自检 SBOM**（NFR-09/CQ-01）。报告见 `docs/release/`（STR / 性能基线 / 对抗评估 /
-兼容性矩阵 / 文档验证 / SBOM / 缺陷清单）。**S3（R1/R2/R3）与 S4 全部完成，CI 全绿。**
-下一步：按 `plan §7` 进入 **S5（Beta 试点）**。
+**S5 Beta 试点（M7）已完成：** 3 个**不同语言 / 构建系统 / 敏感度**的试点工程
+（C/CMake/P0、C++/Make/P1、Python C 扩展/build_ext/P2）**均按文档独立完成保护闭环**——
+功能保持通过、对抗判定通过（内置 + 独立工具不矛盾）；改进项清单、合规审查结论、
+发布清单（Go/No-Go）、安装/升级指南均已产出（`docs/release/`、`docs/INSTALL.md`）。
+**S3（R1/R2/R3）、S4（M6）、S5（M7）全部完成，CI 全绿（69 用例）。**
+下一步：按 `plan §8` 进入 **S6（正式发布 v1.0，M8）**。
 
-> **未量化项**（留待 S5）：NFR-02 的 **Token 消耗倍数 ≥ 100x** 与**外部第三方红队**结论
-> 需真实 LLM 会话（CQ-05 出站控制 + 多模型）；无 LLM 时评估降级 `static_only`（OI-07 §D5），
-> 以可复现的**静态代理指标 + 独立工具交叉验证**作为替代门禁。
+> **两项条件项**（随发布说明披露，S7 持续补测）：NFR-02 的 **Token 消耗倍数 ≥ 100x**
+> 与**外部第三方红队结论**需真实 LLM 会话（CQ-05 出站控制 + 多模型）；无 LLM 时评估降级
+> `static_only`（OI-07 §D5），以可复现的**静态代理指标 + 独立工具交叉验证**作为替代门禁。
 
 ## 2. 里程碑状态（对照 `plan/anti-rea-project-plan.md` §1.2）
 
@@ -38,9 +36,9 @@
 | **M3 编码 R1** | ✅ 已通过 | 脚手架 + Scanner/Strategy MVP + CFF/MBA/谓词 + 端到端流水线；tag `m3-r1` |
 | **M4 编码 R2** | ✅ 已通过 | 虚拟化/白盒/对抗/函数扰动/数据流噪声/SPI/构建集成；tag `m4-r2` |
 | **M5 编码 R3** | ✅ 已完成 | 评估/进化/MCP/产物管理；`make ci` 全绿；tag `m5-frozen` |
-| **M6 验证 S4** | ✅ 已完成 | 差分 fuzz/性能/对抗/可复现/稳健/兼容/安全/文档验证全绿；报告 `docs/release/` |
-| M7 试点 S5 | ⬜ 未开始 | 真实工程灰度试用 + 发布准备 |
-| M8 发布 S6 | ⬜ 未开始 | v1.0 制品发布与支持渠道 |
+| **M6 验证 S4** | ✅ 已完成 | 差分 fuzz/性能/对抗/可复现/稳健/兼容/安全/文档验证全绿；报告 `docs/release/`；tag `m6-verified` |
+| **M7 试点 S5** | ✅ 已完成 | 3 试点（C/C++/Python-ext）独立闭环；改进/合规/发布清单/安装指南；tag `m7-pilot` |
+| M8 发布 S6 | ⬜ 未开始 | v1.0 版本冻结/构建/发布说明/支持渠道 |
 
 ## 3. 已完成交付物清单
 
@@ -87,6 +85,11 @@
 | S4 | S4 运行器 + SBOM/安全自检 | `tools/run_s4.py`、`tools/sbom.py`、`tools/ghidra_functions.py` | v0.1 |
 | S4 | S4 报告与数据（STR/性能/对抗/兼容/文档验证/SBOM/缺陷） | `docs/release/*` | v1.0 |
 | S4 | S4 自动化用例 | `tests/test_verify_s4.py` | — |
+| S5 | Beta 试点工程 ×3（C/C++/Python C 扩展） | `pilots/{crypto-lib,protocol-svc,python-ext}/` | — |
+| S5 | 试点运行器 + 报告 | `tools/run_s5.py`、`docs/release/pilot-report.md` | v1.0 |
+| S5 | 改进项 / 合规审查 / 发布清单（Go-No-Go） | `docs/release/{improvements,compliance-review,release-checklist}.md` | v1.0 |
+| S5 | 安装与升级指南 | `docs/INSTALL.md` | v1.0 |
+| S5 | 试点自动化用例 | `tests/test_pilots.py` | — |
 | S2+ | REA 对手分析（针对性设计输入，非需求） | `docs/analysis/rea-threat-analysis.md` | v0.1 |
 
 ## 4. 已决决策（**不要重新讨论**）
@@ -219,6 +222,24 @@ python -m core.mcp            # 或 anti-rea-mcp（stdio MCP Server）
 
 > **下一步**：按 `plan §7` 进入 **S5（Beta 试点）**。
 
+### 6.4 阶段 S5：Beta 试点（M7，已完成）
+
+对照 `plan §7.1`，运行器 `python tools/run_s5.py`：
+
+| 试点 | 语言 / 构建 | 敏感度 | 功能保持 | 对抗判定 | 独立闭环 | 证据 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `crypto-lib` | C / CMake | P0 | 通过 | 通过 | 是 | `docs/release/pilot-report.md` |
+| `protocol-svc` | C++ / Make | P1 | 通过 | 通过 | 是 | 同上 |
+| `python-ext` | Python C 扩展 / build_ext | P2 | 通过 | 通过 | 是 | 同上 |
+
+**M7 出口准则核对**：
+- ≥ 2 个真实工程**独立完成保护闭环** ✅（3 个，覆盖三种语言/构建系统/敏感度）；
+- 试点 P0/P1 缺陷清零 ✅（改进项 I-01…I-06 闭环，`docs/release/improvements.md`）；
+- 安装体验顺畅 ✅（`docs/INSTALL.md`，从零跑通闭环）；发布 checklist 与合规审查 ✅
+  （`docs/release/release-checklist.md`、`compliance-review.md`；CQ-04/05 记为观察项）。
+
+> **下一步**：按 `plan §8` 进入 **S6（正式发布 v1.0）**。
+
 ## 7. 新环境准备（**已完成，记录实测**）
 
 本项目 PoC 环境已在 **RHEL 系 Linux（x86_64）** 上搭建完成：
@@ -244,11 +265,11 @@ python -m core.mcp            # 或 anti-rea-mcp（stdio MCP Server）
 **建议开场提示词：**
 
 > 请阅读仓库根目录 `README.md` 与 `docs/STATUS.md`，了解 Anti-REA Skill 项目的当前进度；
-> M0–M6 均已通过（tag `m0-baseline` / `m1-architecture` / `m2-design` / `m3-r1` / `m4-r2` / `m5-frozen`），
-> **S3（R1/R2/R3）与 S4（系统验证，M6）已完成**（`make ci` 全绿；S4 报告见 `docs/release/`）。
-> 请按 `plan/anti-rea-project-plan.md §7` 进入 **S5（Beta 试点）**。
+> M0–M7 均已通过（tag `m0-baseline` / `m1-architecture` / `m2-design` / `m3-r1` / `m4-r2` / `m5-frozen` / `m6-verified` / `m7-pilot`），
+> **S3（R1/R2/R3）、S4（验证）、S5（试点）已完成**（`make ci` 全绿；S4/S5 报告见 `docs/release/`）。
+> 请按 `plan/anti-rea-project-plan.md §8` 进入 **S6（正式发布 v1.0，M8）**。
 > 注意：需求已基线（tag `m0-baseline`），变更须走变更流程；所有跨模块数据须过 `schemas/` 校验；
-> NFR-02 的 Token 倍数 ≥ 100x 与外部第三方红队结论需真实 LLM（CQ-05），列为 S5 行动项。
+> NFR-02 的 Token 倍数 ≥ 100x 与外部第三方红队结论需真实 LLM（CQ-05），作为发布条件项随发布说明披露。
 
 **接手顺序**：`README.md` → `docs/STATUS.md`（本文）→ `plan/anti-rea-project-plan.md`（§5 S3）→ `engine/README.md` → `core/cli.py`。
 

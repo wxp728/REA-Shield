@@ -1,0 +1,6 @@
+id: bench-python-ext
+language: c
+description: S5 试点 3 基准（pilots/python-ext）
+license: MIT
+targets:
+  - { symbol: secret_key_schedule, name: secret_key_schedule, category: crypto }

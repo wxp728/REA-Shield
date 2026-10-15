@@ -15,7 +15,7 @@
 | S3 编码实现 · R2 | ✅ 完成（虚拟化/白盒/对抗诱导/函数扰动/噪声/SPI/构建集成，tag `m4-r2`） |
 | S3 编码实现 · R3 | ✅ 完成（评估验证/自适应进化/MCP Server/报告产物，tag `m5-frozen`） |
 | S4 系统集成与验证 | ✅ 完成（差分 fuzz 10⁵ / 性能 / 对抗（内置+独立）/ 可复现 / 稳健 / 兼容 / SBOM；报告 `docs/release/`） |
-| S5 Beta 试点 | ⬜ 未开始 |
+| S5 Beta 试点 | ✅ 完成（3 试点 C/C++/Python-ext 独立闭环；改进/合规/发布清单/安装指南） |
 | S6 正式发布 v1.0 | ⬜ 未开始 |
 
 > **接手请先读 [`docs/STATUS.md`](docs/STATUS.md)**（项目状态与交接说明），再按其中的「下一步」继续。
@@ -68,8 +68,10 @@ anti-rea/
 │   ├── report.py             #   报告与产物管理（统一目录/元数据/变更对比）
 │   ├── common.py             #   Schema 校验 / run_id / IO
 │   └── cli.py                #   CLI 入口（scan/plan/protect/verify/report/attack_sim/regress/diff/evolve）
-├── tools/                    # S4 验证与发布工具（run_s4.py / sbom.py / ghidra_functions.py）
-├── docs/release/             # S4 验证与发布产物（STR/性能/对抗/兼容/SBOM/缺陷）
+├── tools/                    # S4/S5 验证与发布工具（run_s4.py / run_s5.py / sbom.py / ghidra_functions.py）
+├── pilots/                   # S5 Beta 试点工程（crypto-lib / protocol-svc / python-ext）
+├── docs/release/             # S4/S5 验证与发布产物（STR/性能/对抗/兼容/SBOM/试点/发布清单）
+├── docs/INSTALL.md           # 安装与升级指南
 ├── policies/                 # 策略模板库 + 匹配规则
 ├── integrations/             # 构建集成（CMake/Cargo/npm/Python/MCP，R2+）
 ├── plugins/                  # 变换插件 SPI（R2+）

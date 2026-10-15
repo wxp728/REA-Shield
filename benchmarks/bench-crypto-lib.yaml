@@ -1,0 +1,7 @@
+id: bench-crypto-lib
+language: c
+description: S5 试点 1 基准（pilots/crypto-lib）
+license: MIT
+targets:
+  - { symbol: secret_key_schedule, name: secret_key_schedule, category: crypto }
+  - { symbol: verify_license, name: verify_license, category: license_check }

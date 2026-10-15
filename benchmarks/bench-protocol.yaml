@@ -1,0 +1,7 @@
+id: bench-protocol
+language: cpp
+description: S5 试点 2 基准（pilots/protocol-svc）
+license: MIT
+targets:
+  - { symbol: secret_decode_frame, name: secret_decode_frame, category: crypto }
+  - { symbol: derive_frame, name: derive_frame, category: algorithm }

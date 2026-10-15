@@ -42,9 +42,9 @@ _SECRET_PATTERNS = [
     re.compile(r"sk-[A-Za-z0-9]{20,}"),
     re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
 ]
-# 简易 C/C++ 函数定义（返回类型 名称(参数) {）
+# 简易 C/C++ 函数定义（返回类型 名称(参数) {）；容许 extern "C" 前缀（C++ 导出）
 _FUNC_RE = re.compile(
-    r"^[A-Za-z_][\w \t\*]*?\b([A-Za-z_]\w*)\s*\([^;{]*\)\s*\{", re.M)
+    r"^(?:extern\s*\"C\"\s*)?[A-Za-z_][\w \t\*]*?\b([A-Za-z_]\w*)\s*\([^;{]*\)\s*\{", re.M)
 
 _TYPE_WEIGHT = {
     "secret": 1.00, "crypto": 0.95, "license_check": 0.90, "algorithm": 0.80,

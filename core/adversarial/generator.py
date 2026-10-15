@@ -75,11 +75,12 @@ def generate_variants(src_path: str, out_dir: str, symbols: list[str] | None = N
     with open(src_path, encoding="utf-8") as fh:
         src = fh.read()
     symbols = symbols or []
-    stem = os.path.splitext(os.path.basename(src_path))[0]
+    stem, ext = os.path.splitext(os.path.basename(src_path))
+    ext = ext or ".c"          # 保留源语言扩展名（.cpp 需按 C++ 编译）
     variants = []
     for i in range(count):
         text = build_variant(src, symbols, i, seed)
-        vp = os.path.join(out_dir, "%s.induce%d.c" % (stem, i))
+        vp = os.path.join(out_dir, "%s.induce%d%s" % (stem, i, ext))
         with open(vp, "w", encoding="utf-8") as fh:
             fh.write(text)
         variants.append({"index": i, "path": vp, "operators":
