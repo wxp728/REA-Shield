@@ -15,7 +15,7 @@
 
 ## 1. 一句话现状
 
-**规划与设计已到 S1，并通过 M1 架构门禁（4 项 PoC 全部通过）；尚未开始编码。** 下一步是进入 **S2 详细设计**。
+**规划与设计已到 S1 并通过 M1 架构门禁（4 项 PoC 全部通过）；S2 详细设计已启动。** 已完成 DDD 索引、端到端 Agent 调用场景（`docs/design/ddd/e2e-scenario.md`）与 OI-07 落定；下一步推进 DD-01…DD-09 各模块详细设计与测试计划。尚未开始编码。
 
 ## 2. 里程碑状态（对照 `plan/anti-rea-project-plan.md` §1.2）
 
@@ -23,7 +23,7 @@
 | :--- | :--- | :--- |
 | **M0 需求基线** | ✅ 已通过 | tag `m0-baseline`；47 FR + 11 NFR + 5 CQ 已基线 |
 | **M1 架构基线** | ✅ 已通过 | HLD / 接口 / ADR / Schema 已产出；**PoC-1…4 全部通过**；tag `m1-architecture` |
-| **M2 设计基线** | ⬜ 未开始 | 下一步：S2 详细设计（DD-01…DD-10） |
+| **M2 设计基线** | 🟡 进行中 | S2 详细设计已启动：DDD 索引 + 端到端场景主线 + OI-07 已落定；余 DD-01…DD-10 |
 | M3–M5 编码迭代 | ⬜ 未开始 | R1 / R2 / R3 |
 | M6–M8 验证 / 试点 / 发布 | ⬜ 未开始 | — |
 
@@ -44,6 +44,9 @@
 | S1 | 数据契约 Schema ×4 | `schemas/*.schema.json` | — |
 | S1 | **PoC 可执行代码与证据** | `poc/poc1-llvm-pass/`、`poc/poc2-ghidra-headless/`、`poc/poc3-deap/`、`poc/poc4-wbc/` | — |
 | S1 | 环境安装记录脚本 | `poc/setup_env.sh` | — |
+| S2 | 详细设计索引（任务追踪 / M2 出口映射） | `docs/design/ddd/README.md` | v1.0 |
+| S2 | **端到端场景**：AI 经 MCP 调用 skill（集成主线） | `docs/design/ddd/e2e-scenario.md` | v1.0 |
+| S2 | 决策：OI-07「REA 成功」判定 + 会话上下文口径 | `docs/design/ddd/decisions/OI-07-rea-success-criteria.md` | v1.0 |
 
 ## 4. 已决决策（**不要重新讨论**）
 
@@ -52,6 +55,7 @@
 | OI-01 | 产物目标平台含 Windows x64 = Must；工具自身原生 Windows = Should（优先 Linux/WSL2） | SRS NFR-05、ADR-007 |
 | OI-02 | 白盒密码 v1.0 走**自研查找表编码**；Chow 留作增强；由 PoC-4 复核 | SRS §8.2、ADR-003（**PoC-4 通过**） |
 | OI-03 | 评估 LLM **不绑定供应商**，用运行环境 LLM；判定 = 独立会话**上下文消耗 ≥ 90% 仍未成功 REA 即通过**；同时保留 Token 倍数指标 | SRS NFR-02/FR-E3/FR-F1、ADR-004 |
+| OI-07 | 「REA 成功」定义（S1 功能判断 >0.30 / S2 函数名恢复 >0.20 / S3 等价还原 / S4 关键信息提取，任一即成功）；独立会话**上下文 ≤90% 未出现成功信号即通过**；无 LLM 降级 `static_only` | `docs/design/ddd/decisions/OI-07-rea-success-criteria.md`（S2 落定，未改需求） |
 
 架构侧另见 `docs/design/ADR.md`（ADR-001…007，均已回写 PoC 结论）。
 
@@ -62,11 +66,16 @@
 | OI-04 | 出口管制目标市场清单与加密强度分级 | S5 |
 | OI-05 | MTD 变体上限与制品签名 / 分发方式 | S2 |
 | OI-06 | 是否引入 RISC-V 后端 | 后续版本 |
-| OI-07 | 「REA 成功」的判定标准 + 独立会话上下文窗口口径 | **S2 详细设计**（重要：NFR-02 判定依赖它） |
+| ~~OI-07~~ | ~~「REA 成功」的判定标准 + 独立会话上下文窗口口径~~ | ✅ **已决（S2）** → 见 `docs/design/ddd/decisions/OI-07-rea-success-criteria.md` |
 
-## 6. 下一步：进入 S2 详细设计（M1 后的第一要务）
+## 6. 当前阶段：S2 详细设计（进行中）
 
-M1 已通过（4 项 PoC 结论见 `poc-plan.md §6`、`ADR.md`）。按 `plan/anti-rea-project-plan.md §4` 开展 S2：
+M1 已通过（4 项 PoC 结论见 `poc-plan.md §6`、`ADR.md`）。S2 交付物落在 **`docs/design/ddd/`**：
+
+- ✅ 已产出：`README.md`（任务追踪 + M2 出口映射）、`e2e-scenario.md`（端到端 Agent 调用主线）、`decisions/OI-07-rea-success-criteria.md`（OI-07 落定）；
+- ⬜ 待产出：`dd-01-scanner.md` … `dd-08-adaptive.md`、`dd-09-test-plan.md`、`dd-10-review.md`（见 `ddd/README.md` 的索引与编写顺序）。
+
+按 `plan/anti-rea-project-plan.md §4` 继续各模块详细设计：
 
 | 任务 | 内容 | 必须回答的设计点（节选） |
 | :--- | :--- | :--- |
@@ -83,7 +92,7 @@ M1 已通过（4 项 PoC 结论见 `poc-plan.md §6`、`ADR.md`）。按 `plan/a
 
 **M2 出口准则**：每模块设计「换人可实现」；关键算法有伪代码+复杂度+正确性论证；测试计划覆盖 100% FR（RTM「测试」列填实）；评审无阻塞问题。
 
-> 具体化 **OI-07**（REA 成功判定 + 上下文窗口口径）是本阶段关键前置，NFR-02 判定依赖它。
+> **OI-07 已落定**（见 `docs/design/ddd/decisions/OI-07-rea-success-criteria.md`），NFR-02 判定可执行；后续 DD-07 据此设计会话编排与计量。
 
 ## 7. 新环境准备（**已完成，记录实测**）
 
@@ -111,8 +120,8 @@ M1 已通过（4 项 PoC 结论见 `poc-plan.md §6`、`ADR.md`）。按 `plan/a
 
 > 请阅读仓库根目录 `README.md` 与 `docs/STATUS.md`，了解 Anti-REA Skill 项目的当前进度；
 > M1 架构门禁已通过（4 项 PoC 全部通过，见 `docs/design/poc-plan.md §6` 与 `docs/design/ADR.md`）。
-> 请按 `plan/anti-rea-project-plan.md §4` 开始 **S2 详细设计**（DD-01…DD-10），
-> 首先细化 **OI-07**（REA 成功判定标准 + 独立会话上下文窗口口径），并产出 DDD 与覆盖全部 FR 的测试计划，最终过 M2 门禁。
+> S2 详细设计已启动（见 `docs/design/ddd/README.md`）：端到端场景与 OI-07 已落定，
+> 请按 `plan/anti-rea-project-plan.md §4` 继续 **DD-01…DD-09** 各模块详细设计与测试计划，最终过 M2 门禁。
 > 注意：需求已基线（tag `m0-baseline`），变更须走变更流程；所有跨模块数据须过 `schemas/` 校验。
 
 **接手顺序**：`README.md` → `docs/STATUS.md`（本文）→ `plan/anti-rea-project-plan.md`（§4 S2）→ `docs/design/HLD.md` → `docs/design/interfaces.md`。
@@ -139,5 +148,8 @@ M1 已通过（4 项 PoC 结论见 `poc-plan.md §6`、`ADR.md`）。按 `plan/a
 | 模块接口 / MCP / CLI / SPI / 错误码 | `docs/design/interfaces.md` |
 | 技术取舍理由 | `docs/design/ADR.md` |
 | PoC 方案与结论 | `docs/design/poc-plan.md` |
+| S2 详细设计索引 / 任务追踪 | `docs/design/ddd/README.md` |
+| 端到端 Agent 调用场景（S2 主线） | `docs/design/ddd/e2e-scenario.md` |
+| 「REA 成功」判定口径（OI-07） | `docs/design/ddd/decisions/OI-07-rea-success-criteria.md` |
 | PoC 可执行代码与证据 | `poc/` |
 | 数据契约 | `schemas/*.schema.json` |
