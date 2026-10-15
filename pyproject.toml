@@ -17,9 +17,19 @@ dev = ["pytest>=7", "ruff", "black"]
 
 [project.scripts]
 anti-rea = "core.cli:main"
+anti-rea-mcp = "core.mcp.server:main"
 
 [tool.setuptools]
-packages = ["core", "core.scanner", "core.strategy", "core.evaluate"]
+packages = [
+    "core",
+    "core.scanner",
+    "core.strategy",
+    "core.evaluate",
+    "core.wbc",
+    "core.adversarial",
+    "core.adaptive",
+    "core.mcp",
+]
 
 [tool.ruff]
 line-length = 100

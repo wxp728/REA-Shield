@@ -1,7 +1,8 @@
-"""Anti-REA CLI（FR-D1，R1 MVP）。
+"""Anti-REA CLI（FR-D1）。
 
-子命令：scan / plan / protect / verify / report
-设计：docs/design/ddd/dd-build-integration.md §3
+子命令：scan / plan / protect / verify / report（SRS §4.1）+
+扩展：attack_sim（FR-E3）/ regress（FR-E8）/ diff（FR-G3）/ evolve（FR-F3）。
+设计：docs/design/ddd/dd-build-integration.md §3 / dd-07 / dd-08。
 退出码：0 成功、1 一般错误、2 验证失败、3 拒绝执行。
 """
 from __future__ import annotations
@@ -16,6 +17,8 @@ from .scanner import scan as _scan
 from .strategy import plan as _plan
 from .transform import protect as _protect
 from .evaluate import verify as _verify
+from .evaluate import attack_sim as _attack_sim
+from . import report as _report
 
 EXIT_OK, EXIT_ERR, EXIT_VERIFY, EXIT_REFUSED = 0, 1, 2, 3
 
@@ -47,7 +50,7 @@ def _cmd_plan(args) -> int:
 
 def _cmd_protect(args) -> int:
     policy = common.read_yaml(args.policy)
-    policy["_run_id"] = args.run_id or ""
+    policy["_run_id"] = args.run_id or policy.get("run_id") or common.new_run_id(args.seed)
     sources = args.source
     if not sources:
         # 缺省：策略资产路径解析为源文件
@@ -72,18 +75,68 @@ def _cmd_verify(args) -> int:
 
 
 def _cmd_report(args) -> int:
-    meta = common.read_json(os.path.join(args.run, "metadata.json"))
-    lines = ["# Anti-REA 保护报告", "", "run_id: %s" % meta.get("run_id", ""),
-             "strategies: %s" % ",".join(meta.get("strategies", [])),
-             "whitelist: %s" % ",".join(meta.get("whitelist", []))]
-    md = "\n".join(lines) + "\n"
-    out = os.path.join(args.run, "report.md")
-    with open(out, "w", encoding="utf-8") as fh:
-        fh.write(md)
-    if args.format == "json":
-        common.write_json(os.path.join(args.run, "report.json"),
-                          {"run_id": meta.get("run_id", ""), "markdown": md})
+    out = _report.generate(args.run, args.format if args.format != "all" else "md")
     print("report -> %s" % out)
+    return EXIT_OK
+
+
+def _cmd_attack_sim(args) -> int:
+    report = _attack_sim(args.artifacts, benchmark=args.benchmark,
+                         allow_llm=args.allow_llm, mode=args.mode, db=args.db)
+    out = os.path.join(args.artifacts, "eval_report.json")
+    if args.json:
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+    else:
+        print("attack_sim: verdict_pass=%s -> %s" %
+              (report["verdict"]["pass"], out))
+    return EXIT_OK if report["verdict"]["pass"] else EXIT_VERIFY
+
+
+def _cmd_diff(args) -> int:
+    result = _report.diff(args.run_a, args.run_b)
+    print("diff: %d 指标差异, %d 产物变更 -> %s" %
+          (len(result["metrics"]), len(result["artifacts"]["changed"]),
+           os.path.join(args.run_b, "diff_report.json")))
+    return EXIT_OK
+
+
+def _cmd_regress(args) -> int:
+    from .evaluate import regression
+    result = regression.regress(args.artifacts, args.db, args.benchmark,
+                                mode=args.mode, allow_llm=args.allow_llm)
+    if args.json:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    else:
+        print("regress: degraded=%s (%d 退化, %d 未达标) -> %s" %
+              (result["degraded"], len(result["regressions"]),
+               len(result["target_violations"]),
+               os.path.join(args.artifacts, "regression_report.json")))
+    return EXIT_VERIFY if result["degraded"] else EXIT_OK
+
+
+def _cmd_evolve(args) -> int:
+    from .adaptive import evolve as _evolve, knowledge
+    manifest = common.read_json(args.manifest)
+    assets = [{"path": a["path"], "type": a.get("type", "business_logic"),
+               "sensitivity": a.get("sensitivity", "P3")}
+              for a in manifest.get("assets", []) if not a.get("skip_transform")]
+    if not assets:
+        print("evolve: 无可用资产", file=sys.stderr)
+        return EXIT_ERR
+    res = _evolve(assets, seed=args.seed, pop=args.pop, gens=args.gens)
+    policy = res["best_policy"]
+    os.makedirs(args.out, exist_ok=True)
+    out = os.path.join(args.out, "protection_policy.yaml")
+    common.write_yaml(out, policy)
+    if args.kb:
+        sig = knowledge.signature(manifest.get("target", {}).get("language", ""), assets)
+        knowledge.save(args.kb, {"signature": sig, "seed": args.seed,
+                                 "fitness": res["best_fitness"], "policy": policy})
+    if args.json:
+        print(json.dumps(res, ensure_ascii=False, indent=2))
+    else:
+        print("evolve: best_fitness=%.4f initial=%.4f non_degrade=%s -> %s" %
+              (res["best_fitness"], res["initial_fitness"], res["non_degrade"], out))
     return EXIT_OK
 
 
@@ -123,10 +176,45 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--json", action="store_true")
     s.set_defaults(func=_cmd_verify)
 
-    s = sub.add_parser("report", help="生成保护报告")
+    s = sub.add_parser("report", help="生成保护报告（json/md/html）")
     s.add_argument("run")
-    s.add_argument("--format", choices=["md", "json"], default="md")
+    s.add_argument("--format", choices=["md", "json", "html", "all"], default="md")
     s.set_defaults(func=_cmd_report)
+
+    s = sub.add_parser("attack_sim", help="攻击模拟，产出 eval_report.json")
+    s.add_argument("artifacts")
+    s.add_argument("--benchmark", default=None)
+    s.add_argument("--mode", choices=["static", "dynamic", "crossver", "all"],
+                   default="static")
+    s.add_argument("--allow-llm", action="store_true")
+    s.add_argument("--db", default=None, help="指标时间序列 SQLite 路径")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=_cmd_attack_sim)
+
+    s = sub.add_parser("diff", help="对比两次运行（FR-G3）")
+    s.add_argument("run_a")
+    s.add_argument("run_b")
+    s.set_defaults(func=_cmd_diff)
+
+    s = sub.add_parser("regress", help="回归检测：重跑攻击模拟并比对历史（FR-E8）")
+    s.add_argument("artifacts")
+    s.add_argument("--benchmark", default=None)
+    s.add_argument("--db", required=True, help="指标时间序列 SQLite 路径")
+    s.add_argument("--mode", choices=["static", "dynamic", "crossver", "all"],
+                   default="static")
+    s.add_argument("--allow-llm", action="store_true")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=_cmd_regress)
+
+    s = sub.add_parser("evolve", help="策略遗传进化（FR-F3），产出 protection_policy.yaml")
+    s.add_argument("manifest")
+    s.add_argument("-o", "--out", default=".")
+    s.add_argument("--seed", type=int, default=20261016)
+    s.add_argument("--pop", type=int, default=None)
+    s.add_argument("--gens", type=int, default=None)
+    s.add_argument("--kb", default=None, help="策略知识库 JSON 路径（FR-F4）")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=_cmd_evolve)
     return p
 
 

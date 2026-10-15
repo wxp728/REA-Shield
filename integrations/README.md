@@ -14,7 +14,7 @@
 | Cargo | `cargo/example/build.rs` | `build.rs` | `cargo/example/` |
 | npm | `npm/anti-rea-protect.js` | `scripts.postbuild` | `npm/example/` |
 | Python | `python/anti_rea_build_ext.py` | `build_ext` | `python/example/` |
-| MCP Server | `mcp/`（见 `core/mcp/`） | stdio JSON-RPC | — |
+| MCP Server | `core/mcp/server.py` | stdio JSON-RPC（7 工具） | `anti-rea-mcp` / `python -m core.mcp` |
 
 ## 已知限制
 
