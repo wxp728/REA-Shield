@@ -23,6 +23,7 @@
  */
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -700,7 +701,7 @@ static std::string opaqueName(StringRef Base, const char *Prefix, unsigned Seed)
   return std::string(Buf);
 }
 
-// 将白名单内的定义函数改名为不透明符号（保留 main 与外部可见性），配合后续剥离调试信息。
+// 将白名单内的定义函数改名为不透明符号（保留 main 与外部可见性），并按需剥离调试信息。
 static bool applyRename(Module &M, unsigned Seed) {
   bool Changed = false;
   std::vector<Function *> Fs;
@@ -708,7 +709,6 @@ static bool applyRename(Module &M, unsigned Seed) {
     if (!F.isDeclaration()) Fs.push_back(&F);
   for (Function *F : Fs) {
     if (F->getName() == "main") continue;
-    if (F->hasFnAttribute("anti-rea-nosplit")) { /* 仍可改名 */ }
     if (!whitelisted(F->getName())) continue;
     F->setName(opaqueName(F->getName(), "sub", Seed));
     Changed = true;
@@ -716,11 +716,24 @@ static bool applyRename(Module &M, unsigned Seed) {
   return Changed;
 }
 
-// ------------------------- 字符串加密（dd-03 §7）-------------------------
-static uint8_t ksNext(uint64_t &State) {
-  State = State * 6364136223846793005ULL + 1442695040888963407ULL;
-  return (uint8_t)(State >> 33);
+// 剥离调试信息（配合重命名，防止符号/行号恢复）
+static bool stripDebug(Module &M) {
+  bool Changed = false;
+  for (Function &F : M) {
+    if (stripDebugInfo(F)) Changed = true;
+  }
+  if (NamedMDNode *CU = M.getNamedMetadata("llvm.dbg.cu")) {
+    CU->eraseFromParent();
+    Changed = true;
+  }
+  return Changed;
 }
+
+// ------------------------- 字符串加密（dd-03 §7）-------------------------
+// 密钥流：LCG 递推（编码端与运行期解码端使用同一递推，故密钥不以相邻常量出现）。
+static constexpr uint64_t KS_A = 6364136223846793005ULL;
+static constexpr uint64_t KS_B = 1442695040888963407ULL;
+static constexpr unsigned KS_RUNTIME_MAX = 256; // 超过则退化为常量密钥（控制 IR 规模）
 
 // 对"仅被白名单函数使用的本地字节串常量"做异或编码，并在使用处插入运行期解码桩。
 static bool applyStringEncrypt(Module &M, unsigned Seed) {
@@ -748,12 +761,17 @@ static bool applyStringEncrypt(Module &M, unsigned Seed) {
     unsigned N = (unsigned)Raw.size();
     if (N == 0 || N > 4096) continue;
 
-    uint64_t St = fnv1a(G->getName(), Seed);
+    uint64_t St = fnv1a(G->getName(), Seed) | 1ULL;
     std::vector<uint8_t> Enc(N), Key(N);
-    for (unsigned i = 0; i < N; ++i) {
-      Key[i] = ksNext(St);
-      Enc[i] = (uint8_t)Raw[i] ^ Key[i];
+    {
+      uint64_t S = St;
+      for (unsigned i = 0; i < N; ++i) {
+        S = S * KS_A + KS_B;
+        Key[i] = (uint8_t)(S >> 33);
+        Enc[i] = (uint8_t)Raw[i] ^ Key[i];
+      }
     }
+    bool Runtime = (N <= KS_RUNTIME_MAX);
     Type *ArrTy = G->getValueType(); // [N x i8]
     G->setInitializer(ConstantDataArray::get(Ctx, ArrayRef<uint8_t>(Enc)));
     std::string NewName = G->getName().str() + ".enc";
@@ -765,6 +783,8 @@ static bool applyStringEncrypt(Module &M, unsigned Seed) {
     for (User *U : G->users())
       if (auto *I = dyn_cast<Instruction>(U)) Users.push_back(I);
 
+    IntegerType *I8 = IntegerType::get(Ctx, 8);
+    IntegerType *I64 = IntegerType::get(Ctx, 64);
     for (Instruction *I : Users) {
       Function *F = I->getFunction();
       AllocaInst *Buf = nullptr;
@@ -774,10 +794,27 @@ static bool applyStringEncrypt(Module &M, unsigned Seed) {
       } else {
         IRBuilder<> B(&*F->getEntryBlock().getFirstInsertionPt());
         Buf = B.CreateAlloca(ArrTy, nullptr, G->getName() + ".buf");
+        Value *Cur;
+        if (Runtime) {
+          // 从可变全局加载种子（volatile 防常量折叠/GVN），运行期递推密钥流
+          auto *KS = new GlobalVariable(
+              M, I64, false, GlobalValue::PrivateLinkage,
+              ConstantInt::get(I64, St), G->getName() + ".ks");
+          KS->setAlignment(Align(8));
+          Cur = B.CreateLoad(I64, KS, /*isVolatile=*/true);
+        }
         for (unsigned i = 0; i < N; ++i) {
+          Value *K;
+          if (Runtime) {
+            Cur = B.CreateAdd(B.CreateMul(Cur, ConstantInt::get(I64, KS_A)),
+                              ConstantInt::get(I64, KS_B));
+            K = B.CreateTrunc(B.CreateLShr(Cur, ConstantInt::get(I64, 33)), I8);
+          } else {
+            K = ConstantInt::get(I8, Key[i]);
+          }
           Value *Src = B.CreateGEP(ArrTy, G, {B.getInt64(0), B.getInt64(i)});
-          LoadInst *L = B.CreateLoad(IntegerType::get(Ctx, 8), Src);
-          Value *X = B.CreateXor(L, ConstantInt::get(IntegerType::get(Ctx, 8), Key[i]));
+          LoadInst *L = B.CreateLoad(I8, Src);
+          Value *X = B.CreateXor(L, K);
           Value *Dst = B.CreateGEP(ArrTy, Buf, {B.getInt64(0), B.getInt64(i)});
           B.CreateStore(X, Dst);
         }
@@ -794,9 +831,9 @@ static bool applyStringEncrypt(Module &M, unsigned Seed) {
 struct RenamePass : PassInfoMixin<RenamePass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
     if (!strategySet().count("rename")) return PreservedAnalyses::all();
-    return applyRename(M, (unsigned)envInt("ANTI_REA_SEED", 0))
-               ? PreservedAnalyses::none()
-               : PreservedAnalyses::all();
+    bool Changed = applyRename(M, (unsigned)envInt("ANTI_REA_SEED", 0));
+    if (envInt("ANTI_REA_STRIP_DEBUG", 1) != 0) Changed = stripDebug(M) || Changed;
+    return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
   }
   static bool isRequired() { return true; }
 };
