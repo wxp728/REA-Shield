@@ -97,7 +97,7 @@ anti-rea-mcp        # stdio JSON-RPC，暴露 7 个工具
 | `plan` | 生成策略 `protection_policy.yaml` | `manifest`, `budget` |
 | `protect` | 施加变换，产出保护产物 | `policy`, `root`, `sources` |
 | `verify` | 差分验证功能保持 | `artifacts` |
-| `attack_sim` | 攻击模拟，产出 `eval_report.json` | `artifacts`, `mode` |
+| `attack_sim` | 攻击模拟，产出 `eval_report.json`（`--allow-llm` 走真实 LLM 会话判定，见 [`docs/INSTALL.md`](docs/INSTALL.md)） | `artifacts`, `mode`, `allow_llm` |
 | `report` | 生成人读保护报告 | `run` |
 | `evolve` | 策略遗传进化（DEAP） | `manifest` |
 

@@ -16,6 +16,7 @@
 | :--- | :--- | :--- |
 | `bench-hello.yaml` | `tests/samples/hello.c` | `add` / `classify` / `secret_mix` |
 | `bench-crypto-001.yaml` | `tests/samples/p0_secret.c` | `secret_schedule` / `secret_roundtrip`（P0） |
+| `bench-crypto-module.yaml` |  `src/common/crypto_algorithm/` | SM4/SM3/DET-SM4 核心函数（crypto，实测用例） |
 
 ## 目录约定
 

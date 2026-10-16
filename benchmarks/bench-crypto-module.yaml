@@ -1,0 +1,11 @@
+id: bench-crypto-module
+language: c
+description: C 加密模块基准（src/common/crypto_algorithm，SM4/SM3/DET-SM4 核心函数）
+license: proprietary
+targets:
+  - { symbol: sm4_set_key_encrypt, name: sm4_set_key_encrypt, category: crypto }
+  - { symbol: sm4_ecb_encrypt, name: sm4_ecb_encrypt, category: crypto }
+  - { symbol: sm4_cbc_encrypt, name: sm4_cbc_encrypt, category: crypto }
+  - { symbol: sm3_hash, name: sm3_hash, category: crypto }
+  - { symbol: det_sm4_encrypt, name: det_sm4_encrypt, category: crypto }
+  - { symbol: det_sm4_decrypt, name: det_sm4_decrypt, category: crypto }

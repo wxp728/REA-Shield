@@ -83,6 +83,19 @@ export ANTI_REA_CLANG=/usr/lib/llvm-18/bin/clang
 | `ANTI_REA_LLM_CMD` / `ANTI_REA_LLM_ENDPOINT` 等 | 接入真实 LLM 会话（攻击模拟） |
 | `ANTI_REA_ROOT` | wheel 安装场景下指向含 `schemas/`、`policies/` 的目录 |
 
+### LLM 会话判定（FR-E3，可选）
+
+`attack_sim --allow-llm` 会经 `core.evaluate.llm` 开**独立会话**，对 baseline / protected 各做一次
+同协议逆向，产出 `token_ratio` / `time_ratio` / `name_recovery_accuracy` / `function_judgement_accuracy`
+等（判定口径见 `docs/design/ddd/decisions/OI-07-rea-success-criteria.md`）。两种出站方式二选一：
+
+- **本地命令钩子** `ANTI_REA_LLM_CMD`：stdin 收提示词、stdout 回 `{"output":...,"tokens_used":...}`。
+  本机 OpenCode 可直接用：`export ANTI_REA_LLM_CMD="$PWD/tools/opencode_llm_hook.sh"`。
+- **OpenAI 兼容 HTTP**：`ANTI_REA_LLM_ENDPOINT`（`/chat/completions`）+ `ANTI_REA_LLM_MODEL`
+  （+ 可选 `ANTI_REA_LLM_KEY`）。
+
+未配置时自动降级 `static_only`（OI-07 §D5）。会话窗口经 `ANTI_REA_LLM_WINDOW` 指定（默认 128000）。
+
 ## 3. 快速上手（保护闭环）
 
 ```sh
