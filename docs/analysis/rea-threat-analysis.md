@@ -56,8 +56,9 @@ readiness）本质是**证据闭合流程**：必须关闭"义务账本（obliga
 ## 5. 针对性对策（按性价比排序）
 
 ### A. 移除 REA 的锚点 —— **最高优先**
-- **字符串加密**（`string_encryption`）：常量串异或/查表编码 + 运行期解码桩。REA 的 `strings` 搜索、IOC 定位、
-  "feature 识别"高度依赖明文串；加密后这些查询命中率骤降。
+- **字符串加密**（`string_encryption`）：常量串异或/查表编码 + 运行期解码桩；并含**常数编码**，把算法
+  指纹立即数（SM4 FK / SM3 IV 等 `#define` 常量）收进运行期解码的常量池——REA 的 `strings` 搜索、字节
+  特征扫描、IOC 定位、"feature 识别"高度依赖明文串与明文常量；加密后这些查询命中率骤降。
 - **标识符重命名**（`identifier_renaming`）：符号级重命名 + 调试信息剥离。破坏 `analyze_function` 的语义命名、
   caller/callee 推理与"human-readable 命名"依赖。
 - 现状：两者已在 `dd-03 §7` 设计、并在策略枚举 `strategy_templates.yaml` 中出现，**已于 R2 实现**

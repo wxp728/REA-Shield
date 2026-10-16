@@ -48,7 +48,7 @@ flowchart LR
 | 次序 | Pass | 理由 |
 | :--- | :--- | :--- |
 | 1 | identifier_renaming | 先改符号名，避免后续分析依赖原语义名 |
-| 2 | string_encryption | 常量串尽早加密，防止后续把明文串下沉/合并 |
+| 2 | string_encryption | 常量串尽早加密，防止后续把明文串下沉/合并；同 pass 内先做**常数编码**（可疑整型立即数进本函数常量池，运行期解码；开关 `ANTI_REA_CONST_ENCODE`，默认开） |
 | 3 | function_boundary_perturbation | 拆分/合并改变 CFG，须在平坦化前 |
 | 4 | **reg2mem** | CFF 前置（约束 2） |
 | 5 | control_flow_flattening | CFG 重构 |

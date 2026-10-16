@@ -30,6 +30,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/NoFolder.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
@@ -762,6 +763,26 @@ static constexpr unsigned KS_RUNTIME_MAX = 256; // 超过则退化为常量密�
 // 对"仅被白名单函数使用的本地整型常量数组"做异或编码，并在使用处插入运行期解码桩。
 // 覆盖字节串，也覆盖算法常数表（SM4 的 S 盒 i8[256]、CK 轮常量 i32[32] 等）——
 // 后者是算法身份的强指纹（经验记录 gap#7）。
+// 判断值 V 是否只被白名单函数使用；穿透 ConstantExpr（如常量折叠后的 GEP）递归检查。
+static bool usedOnlyInWhitelisted(const Value *Root, const Value *V,
+                                  std::set<const Value *> &Seen) {
+  if (!Seen.insert(V).second) return true;   // 已访问（防环）
+  for (const User *U : V->users()) {
+    if (auto *I = dyn_cast<Instruction>(U)) {
+      if (!whitelisted(I->getFunction()->getName())) return false;
+    } else if (auto *GEP = dyn_cast<GEPOperator>(U)) {
+      // 常量索引 GEP 会被折叠成 ConstantExpr。只有「基址正是常量池根」的**单层**
+      // GEP 才能在替换时用相同索引在解码缓冲上重建（见下方改写）；嵌套常量表达式、
+      // 非 GEP 的常量表达式一律保守跳过该全局。
+      if (V != Root || GEP->getPointerOperand() != Root) return false;
+      if (!usedOnlyInWhitelisted(Root, U, Seen)) return false;
+    } else {
+      return false;   // 其它用户（如嵌入在初始化器里）不可判定 -> 保守跳过
+    }
+  }
+  return true;
+}
+
 static bool applyStringEncrypt(Module &M, unsigned Seed) {
   LLVMContext &Ctx = M.getContext();
   std::vector<GlobalVariable *> Targets;
@@ -775,11 +796,8 @@ static bool applyStringEncrypt(Module &M, unsigned Seed) {
     unsigned BW = ET->getBitWidth();
     if (BW != 8 && BW != 16 && BW != 32 && BW != 64) continue;
     if (G.use_empty()) continue;
-    bool AllIn = true;
-    for (User *U : G.users()) {
-      auto *I = dyn_cast<Instruction>(U);
-      if (!I || !whitelisted(I->getFunction()->getName())) { AllIn = false; break; }
-    }
+    std::set<const Value *> Seen;
+    bool AllIn = usedOnlyInWhitelisted(&G, &G, Seen);
     if (AllIn) Targets.push_back(&G);
   }
   if (Targets.empty()) return false;
@@ -812,10 +830,25 @@ static bool applyStringEncrypt(Module &M, unsigned Seed) {
     G->setName(NewName);
 
     // 按使用函数分组，逐函数插入解码桩（逐元素）
+    // 收集（可穿过嵌套 ConstantExpr）使用 G 的指令——常量索引 GEP 会被折叠为
+    // ConstantExpr，必须一并改写，否则将读到编码后的原始字节。
     std::map<Function *, AllocaInst *> Bufs;
     std::vector<Instruction *> Users;
-    for (User *U : G->users())
-      if (auto *I = dyn_cast<Instruction>(U)) Users.push_back(I);
+    {
+      std::vector<const Value *> Work{G};
+      std::set<const Value *> Seen{G};
+      while (!Work.empty()) {
+        const Value *V = Work.back();
+        Work.pop_back();
+        for (const User *U : V->users()) {
+          if (auto *I = dyn_cast<Instruction>(U)) {
+            Users.push_back(const_cast<Instruction *>(I));
+          } else if (isa<ConstantExpr>(U) && Seen.insert(U).second) {
+            Work.push_back(U);
+          }
+        }
+      }
+    }
 
     IntegerType *I64 = IntegerType::get(Ctx, 64);
     for (Instruction *I : Users) {
@@ -867,9 +900,104 @@ static bool applyStringEncrypt(Module &M, unsigned Seed) {
         }
         Bufs[F] = Buf;
       }
-      I->replaceUsesOfWith(G, Buf);
+      // 直接使用 G 的操作数替换为解码缓冲 Buf；经「常量索引 GEP 常量表达式」使用 G 的
+      // 操作数不能整体替换（会丢索引 -> 恒读元素 0），必须在 Buf 上用**相同索引**重建 GEP。
+      for (unsigned Op = 0, NOps = I->getNumOperands(); Op < NOps; ++Op) {
+        Value *O = I->getOperand(Op);
+        if (O == G) {
+          I->setOperand(Op, Buf);
+          continue;
+        }
+        auto *GEP = dyn_cast<GEPOperator>(O);
+        if (GEP && GEP->getPointerOperand() == G) {
+          IRBuilder<> NB(I);
+          SmallVector<Value *, 8> Idx(GEP->idx_begin(), GEP->idx_end());
+          Value *New = NB.CreateGEP(GEP->getSourceElementType(), Buf, Idx, "",
+                                    GEP->isInBounds());
+          I->setOperand(Op, New);
+        }
+      }
     }
     Changed = true;
+  }
+  return Changed;
+}
+
+// 可参与常数编码的指令：跳过「操作数必须保持常量」或有特殊约束的指令
+// （PHI/GEP/switch/extractvalue/insertvalue/landingpad/alloca/call 系列/catchpad）。
+static bool constEncodableInst(const Instruction &I) {
+  return !isa<PHINode>(I) && !isa<GetElementPtrInst>(I) && !isa<SwitchInst>(I) &&
+         !isa<ExtractValueInst>(I) && !isa<InsertValueInst>(I) &&
+         !isa<LandingPadInst>(I) && !isa<AllocaInst>(I) && !isa<CallBase>(I) &&
+         !isa<CatchPadInst>(I) && !isa<CleanupPadInst>(I);
+}
+
+// 常数编码：把白名单函数里「可疑的整型立即数」（算法指纹，如 SM4 FK 0xa3b1bac6、
+// SM3 IV 0x7380166f）收进本函数的本地常量池，用运行期解码的载荷替换立即数；池随后由
+// applyStringEncrypt 的整型数组编码进一步异或——同时隐藏「立即数」与「池字节」。
+// 逐函数建池：解码桩只为「本函数实际用到」的常量付出代价，避免跨函数放大代码体积。
+// 跳过小常数（<0x10000）与 2^k-1 掩码；单池上限 256 个元素（<=2KB，仍在编码器的 4KB 内）。
+static bool applyConstantEncode(Module &M, unsigned Seed) {
+  LLVMContext &Ctx = M.getContext();
+  IntegerType *I64 = IntegerType::get(Ctx, 64);
+  bool Changed = false;
+
+  for (Function &F : M) {
+    if (F.isDeclaration() || !whitelisted(F.getName())) continue;
+
+    // 1) 收集本函数的候选立即数
+    std::map<uint64_t, unsigned> Cands;
+    for (BasicBlock &BB : F) {
+      for (Instruction &I : BB) {
+        if (!constEncodableInst(I)) continue;
+        for (const Use &U : I.operands()) {
+          auto *CI = dyn_cast<ConstantInt>(U.get());
+          if (!CI) continue;
+          unsigned W = CI->getType()->getIntegerBitWidth();
+          if (W < 32 || W > 64) continue;
+          uint64_t V = CI->getZExtValue();
+          if (V < 0x10000ULL) continue;        // 小常数不值得编码
+          if ((V & (V + 1)) == 0) continue;    // 2^k-1 掩码
+          auto It = Cands.find(V);
+          if (It == Cands.end() || It->second < W) Cands[V] = W;
+        }
+      }
+    }
+    if (Cands.empty()) continue;
+
+    std::vector<uint64_t> Vals;
+    for (auto &KV : Cands) Vals.push_back(KV.first);
+    if (Vals.size() > 256) Vals.resize(256);     // 稳定截断（按值升序）
+
+    std::map<uint64_t, unsigned> Idx;
+    for (unsigned i = 0; i < Vals.size(); ++i) Idx[Vals[i]] = i;
+
+    ArrayType *ArrTy = ArrayType::get(I64, Vals.size());
+    auto *Pool = new GlobalVariable(
+        M, ArrTy, /*isConstant=*/true, GlobalValue::PrivateLinkage,
+        ConstantDataArray::get(Ctx, ArrayRef<uint64_t>(Vals)),
+        opaqueName("cpool_" + F.getName().str(), "dat", Seed));
+
+    // 2) 用「解码缓冲的载荷」替换池中常量（NoFolder：GEP 保持为指令，避免被折成常量表达式）
+    for (BasicBlock &BB : F) {
+      for (Instruction &I : BB) {
+        if (!constEncodableInst(I)) continue;
+        for (unsigned Op = 0, NOps = I.getNumOperands(); Op < NOps; ++Op) {
+          auto *CI = dyn_cast<ConstantInt>(I.getOperand(Op));
+          if (!CI) continue;
+          auto It = Idx.find(CI->getZExtValue());
+          if (It == Idx.end()) continue;
+          IRBuilder<NoFolder> B(&I);
+          Value *Gep = B.CreateGEP(ArrTy, Pool, {B.getInt64(0), B.getInt64(It->second)});
+          Value *Ld = B.CreateLoad(I64, Gep);
+          Value *Cv = (CI->getType()->getIntegerBitWidth() == 64)
+                          ? Ld
+                          : B.CreateTrunc(Ld, CI->getType());
+          I.setOperand(Op, Cv);
+          Changed = true;
+        }
+      }
+    }
   }
   return Changed;
 }
@@ -887,9 +1015,13 @@ struct RenamePass : PassInfoMixin<RenamePass> {
 struct StringEncryptPass : PassInfoMixin<StringEncryptPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
     if (!strategySet().count("string_encrypt")) return PreservedAnalyses::all();
-    return applyStringEncrypt(M, (unsigned)envInt("ANTI_REA_SEED", 0))
-               ? PreservedAnalyses::none()
-               : PreservedAnalyses::all();
+    unsigned Seed = (unsigned)envInt("ANTI_REA_SEED", 0);
+    bool Changed = false;
+    // 先编码可疑立即数（生成常量池），再由字节/整型数组编码把池一并加密。
+    if (envInt("ANTI_REA_CONST_ENCODE", 1) != 0)
+      Changed = applyConstantEncode(M, Seed) || Changed;
+    Changed = applyStringEncrypt(M, Seed) || Changed;
+    return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
   }
   static bool isRequired() { return true; }
 };
