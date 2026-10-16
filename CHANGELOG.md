@@ -3,6 +3,19 @@
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [Unreleased]
+
+### 变更（S7 首轮 · 条件项补测）
+
+- **实战红队验证闭环**：对某真实生产 C 工程（约 10 万行 / 59 编译单元 / Linux x86_64 `.so`，
+  经构建注入全范围保护）完成独立 LLM 会话红队 + Ghidra 交叉验证——内部符号 0 残留、
+  特征字符串 -98%、整库指令 5.4×、核心函数反编译失败、函数名恢复 0.00，**源码级泄漏被阻断**；
+  记录见 `docs/release/s7-field-report.md`，README 增「实战验证」小节（匿名化）。
+- **NFR-02「Token 倍数 ≥ 100x」子项废弃**：两轮实测恒 ≈1.0，评估认定该指标在固定单轮提示
+  协议下不可测且与防护效果解耦，不再作为验收门禁（保留「上下文消耗 ≥90% 未成功即通过」
+  会话判定子项）；`docs/requirements/rtm.md` / `docs/STATUS.md` / `docs/release/RELEASE-1.0.0.md`
+  已同步标注（SRS 条目内容未改，需求已基线）。
+
 ## [1.0.0] — 2026-10-16
 
 首个正式版本。REA-Shield Skill 是一个 AI Agent 可调用的**代码反逆向加固工具链**，

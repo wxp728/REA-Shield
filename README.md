@@ -18,6 +18,32 @@
 >
 > Built with the assistance of Opencode + DeepSeek V4.1 Flash Free.
 
+## Field validation (real-world REA test)
+
+Validated end-to-end against a **real production codebase** (not a toy sample), anonymized:
+
+| Dimension | What was tested |
+| :--- | :--- |
+| Target | ~100 KLOC of **C** (C99) business code — SQL statement processors, crypto schedulers, key/column caches, hardware crypto-device adapters, streaming COPY encryption |
+| Platform / artifact | **Linux x86_64**, shipped as a **shared library (`.so`)** with soname + version-script export control, dynamically loaded by a real client program |
+| Scope | 8 modules / **59 translation units**, injected via the project's own Makefile (compiler-wrapper build injection; target sources untouched — out-of-tree build) |
+| Method | Same `clang -O2` for baseline & protected (sole difference = transform plugin); functional check by running real queries against a live server; REA attack simulated by **independent fresh-context LLM red-team sessions** (fixed neutral prompt + binary evidence, fixed scorer) cross-checked with **Ghidra** headless decompilation |
+
+Protection effect (baseline → protected):
+
+| Signal | Result |
+| :--- | :--- |
+| Local symbols in `.symtab` | 2,412 → **0** (stripped; internal names unrecoverable) |
+| Project-identifying strings | 4,295 → **87** (-98%) |
+| Whole-library instruction count | 228K → 1.23M (**5.4×**; worst hot function **13.2×**) |
+| Ghidra decompilation of a core crypto-orchestration function | baseline: 778 lines of readable pseudocode → protected: **decompilation fails** (flattening + opaque predicates + virtualization) |
+| Independent LLM red team — function-name recovery | **0.00** (session saw zero symbols); it could only guess functional *categories* from the remaining public API names |
+| Functional regression | **None** — byte-identical results against the live server |
+
+**Conclusion**: source-level leakage (names / control flow / embedded constants) is blocked; recovery cost rises from ~half a day (baseline) to multiple expert-days. The only remaining static clues are the **public API export names** — the library's external contract, which cannot and should not be hidden. Consistent with our positioning: **raise the cost, not "unbreakable"**. Full record: [`docs/release/s7-field-report.md`](docs/release/s7-field-report.md).
+
+> The red team used LLM sessions independent of the development context (CQ-05 outbound control). Runtime dynamic debugging is outside the scope of static obfuscation — a shared boundary of all obfuscators, stated here for honesty.
+
 ## Start here (users & agents)
 
 > Want to **use** it rather than read all the development docs? Start here:
@@ -52,6 +78,7 @@ This repository is in the **coding phase** (S3 iterations R1/R2/R3 complete; M4/
 | S4 System Integration & Verification | ✅ Done (differential fuzz 10⁵ / performance / adversarial (built-in + independent) / reproducibility / robustness / compatibility / SBOM; reports in `docs/release/`) |
 | S5 Beta Pilot | ✅ Done (3 pilots — C / C++ / Python-ext — closed the protection loop independently; improvements / compliance / release checklist / install guide) |
 | S6 Official Release v1.0 | ✅ Done (v1.0.0: skill entry / self-check / container / MCP config / example / release packaging; tag `v1.0.0`) |
+| S7 Continuous Improvement · round 1 | ✅ Done (real-world field red-team on a ~100 KLOC C `.so` — source-level leakage blocked; NFR-02 token-multiple sub-item deprecated, see `docs/release/s7-field-report.md`) |
 
 > **New to the project? Read [`docs/STATUS.md`](docs/STATUS.md) first** (project status & handoff), then continue from the "next step" listed there.
 > **Users: start with [`SKILL.md`](SKILL.md)** (skill entry) and [`docs/INSTALL.md`](docs/INSTALL.md).

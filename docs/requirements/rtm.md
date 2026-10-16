@@ -125,7 +125,8 @@
 | FR-G2 | `core/transform.py`（指纹/策略哈希）、`core/report.py` | `test_evaluation.py` | 已实现（R3） |
 | FR-G3 | `core/report.py::diff`、CLI `diff` | `test_evaluation.py` | 已实现（R3） |
 
-> **未量化验收项（留待 S4/S5）**：NFR-02 的 **Token 消耗倍数 ≥ 100x** 需真实 LLM 会话（CQ-05 出站控制 + 多模型）；
+> **未量化验收项（留待 S4/S5）**：NFR-02 的 **Token 消耗倍数 ≥ 100x** 需真实 LLM 会话（CQ-05 出站控制 + 多模型）——
+> **S7 已处置：该子项废弃**（两轮真实工程实测恒 ≈1.0，指标不可测且与防护效果解耦，见 `docs/release/s7-field-report.md` §5）；
 > 平台矩阵（NFR-05）与 EDR 兼容（CQ-04）需 S4/S5 环境。已实现 `static_only` 降级即可复现的**静态代理指标**作为替代门禁。
 
 ### 1.3 S4 验证证据回填（M6，2026-10-16）
@@ -136,7 +137,7 @@
 | 需求 | 验证方式 | 证据 | 结论 |
 | :--- | :--- | :--- | :--- |
 | NFR-01 性能预算 | PT | `docs/release/performance-baseline.md`（P0 0.031 / P1 0.042，均 ≤ 预算） | ✅ 达成 |
-| NFR-02 防护效果 | AT/IT | `docs/release/adversarial-report.md`（内置达标 + 独立不矛盾）；Token ≥100x 需 LLM | 🟡 部分（Token 倍数待 S5） |
+| NFR-02 防护效果 | AT/IT | `docs/release/adversarial-report.md`（内置达标 + 独立不矛盾）；真实工程红队实测 `docs/release/s7-field-report.md`（Token 倍数子项已废弃） | ✅ 达成（S7 闭环） |
 | NFR-03 语义保持 | AT | `docs/release/STR.md §2`（差分 fuzz 10⁵ 零差异） | ✅ 达成 |
 | NFR-04 可复现 | IT | `STR §1`（同输入同种子产物逐位一致） | ✅ 达成 |
 | NFR-05 平台矩阵 | IT | `docs/release/compatibility-matrix.md`（linux 5 组合 + 4 目标 IR 探针） | 🟡 部分（Win/macOS 待 S5） |
@@ -164,6 +165,12 @@
 | NFR-09 | 自身安全 | Should | — | 工程 / 供应链 | TC-N09 | S4 | 基线 |
 | NFR-10 | 安全软件兼容 | Should | UC-02 | 产物 / 分发 | TC-N10 | S4–S5 | 基线 |
 | NFR-11 | 可观测性 | Should | UC-02, UC-05 | 全流水线 | TC-N11 | R2–S4 | 基线 |
+
+> **S7 补测结论（2026-10-17，`docs/release/s7-field-report.md`）**：
+> NFR-02 的**会话判定子项**已由真实工程红队实测闭环（独立 LLM 会话 + Ghidra 交叉验证，
+> 源码级泄漏被阻断）；**Token 倍数 ≥ 100x 子项**经两轮实测恒 ≈1.0，评估认定该指标在固定
+> 单轮提示协议下不可测且与防护效果解耦，**废弃**（不再作为验收门禁）。SRS 条目内容未改
+> （需求已基线，处置记录以本注记与 `docs/release/s7-field-report.md` 为准）。
 
 ## 3. 合规与边界需求追踪（CQ）
 

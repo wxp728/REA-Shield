@@ -25,9 +25,13 @@
 **S3（R1/R2/R3）、S4（M6）、S5（M7）、S6（M8）全部完成，CI 全绿。**
 下一步：按 `plan §9` 进入 **S7（持续改进 / 条件项补测）**。
 
-> **两项条件项**（随发布说明披露，S7 持续补测）：NFR-02 的 **Token 消耗倍数 ≥ 100x**
-> 与**外部第三方红队结论**需真实 LLM 会话（CQ-05 出站控制 + 多模型）；无 LLM 时评估降级
-> `static_only`（OI-07 §D5），以可复现的**静态代理指标 + 独立工具交叉验证**作为替代门禁。
+> **S7 条件项补测已闭环（2026-10-17，见 `docs/release/s7-field-report.md`）**：
+> ①**外部红队结论** ✅ —— 对某真实 C 工程（10 万行 / 59 TU / `.so` 形态）做全范围构建注入，
+> 独立 LLM 会话红队 + Ghidra 交叉验证：内部符号 0 残留、特征字符串 -98%、关键函数指令最高 13.2×、
+> 核心函数 Ghidra 反编译失败、函数名恢复 0.00 —— 源码级泄漏被阻断。
+> ②NFR-02 的 **Token 倍数 ≥ 100x** ❌ **已废弃** —— 两轮实测恒 ≈1.0，评估认为该指标在
+> 固定单轮提示协议下不可测且与防护效果解耦（证据 24k 字符封顶 + 单轮作答），不再作为门禁；
+> 防护效果验收改以「独立会话判 S1–S4 + 静态指纹 + Ghidra 交叉验证」为准。
 
 ## 2. 里程碑状态（对照 `plan/anti-rea-project-plan.md` §1.2）
 
@@ -272,11 +276,11 @@ python -m core.mcp            # 或 anti-rea-mcp（stdio MCP Server）
 
 **M8 出口准则核对**：版本冻结 ✅；可构建可复现产物（bundle 主产物 + 哈希清单）✅；
 发布说明 + 变更记录 ✅；支持渠道（Issue 模板 / FAQ / 排障）✅；安装体验（doctor +
-容器 + 示例）✅；**NFR-02（Token ≥ 100x）与外部第三方红队** ⏳ 需真实 LLM，
-随发布说明披露、**顺延 S7**。
+容器 + 示例）✅；条件项（外部红队）已于 **S7 补测闭环** ✅（`docs/release/s7-field-report.md`）；
+NFR-02 Token 倍数子项 **S7 评估后废弃**（见 §1 说明）。
 
-> **下一步**：按 `plan §9` 进入 **S7（持续改进）**；条件项（真实 LLM 会话下的
-> NFR-02 与外部红队）在具备 LLM 出站环境时补测。
+> **下一步**：S7 首轮（条件项补测）已完成；继续按 `plan §9` 做持续改进
+> （多轮交互式红队协议、更多平台/语言端到端覆盖等）。
 
 ## 7. 新环境准备（**已完成，记录实测**）
 
@@ -304,9 +308,11 @@ python -m core.mcp            # 或 anti-rea-mcp（stdio MCP Server）
 
 > 请阅读仓库根目录 `README.md`（或 `SKILL.md`）与 `docs/STATUS.md`，了解 REA-Shield Skill 项目的当前进度；
 > M0–M8 均已通过（tag `m0-baseline` / `m1-architecture` / `m2-design` / `m3-r1` / `m4-r2` / `m5-frozen` / `m6-verified` / `m7-pilot` / `v1.0.0`），
-> **S3（R1/R2/R3）、S4（验证）、S5（试点）、S6（正式发布 v1.0）已完成**（`make ci` 全绿；报告见 `docs/release/`）。
-> 请按 `plan/anti-rea-project-plan.md §9` 进入 **S7（持续改进）**，优先补测两项条件项
-> （NFR-02 Token 倍数 ≥ 100x、外部第三方红队，均需真实 LLM 会话 CQ-05）。
+> **S3（R1/R2/R3）、S4（验证）、S5（试点）、S6（正式发布 v1.0）、S7 首轮（条件项补测）已完成**
+> （`make ci` 全绿；报告见 `docs/release/`，S7 实战补测见 `docs/release/s7-field-report.md`）。
+> S7 结论：外部红队条件项已闭环（真实工程 `.so` 全范围注入 + 独立 LLM 会话 + Ghidra 交叉验证，
+> 源码级泄漏被阻断）；NFR-02 Token 倍数子项已评估**废弃**。
+> 请按 `plan/anti-rea-project-plan.md §9` 继续 S7 持续改进。
 > 注意：需求已基线（tag `m0-baseline`），变更须走变更流程；所有跨模块数据须过 `schemas/` 校验；
 > 面向使用者的入口是 `SKILL.md` / `docs/INSTALL.md` / `docs/mcp-clients.md`。
 
