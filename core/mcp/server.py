@@ -1,4 +1,4 @@
-"""Anti-REA MCP Server（FR-D6；SRS §4.2；dd-build-integration §5）。
+"""REA-Shield MCP Server（FR-D6；SRS §4.2；dd-build-integration §5）。
 
 JSON-RPC 2.0 over stdio；7 个工具（`anti_rea.scan/plan/protect/verify/attack_sim/report/evolve`），
 每个工具暴露 JSON Schema 供 Agent 发现。出站控制：`attack_sim` 需显式 `allow_llm=true`（CQ-05）。

@@ -1,4 +1,4 @@
-# Anti-REA Skill 详细项目计划
+# REA-Shield 详细项目计划
 
 ## 文档信息
 
@@ -396,7 +396,7 @@ anti-rea-skill/
 | 指标与时序库 | Metrics + Timeseries | 六项指标计算并落库（FR-E6） |
 | 回归检测 | Regression Runner | 策略变更后可自动回归，无新弱点才放行（FR-E8） |
 | 自适应策略引擎 | Adaptive Engine v0.1 | 多 LLM 探测 + 一轮策略进化跑通（FR-F1/F2/F3/F4） |
-| MCP Server | Anti-REA MCP Server | 7 个 MCP 工具可被 Agent 调用，完成端到端保护（FR-D6） |
+| MCP Server | REA-Shield MCP Server | 7 个 MCP 工具可被 Agent 调用，完成端到端保护（FR-D6） |
 | 报告与产物管理 | Report & Artifacts | 统一目录 + 可复现元数据 + 变更对比（FR-G1/G2/G3） |
 
 **迭代出口（功能冻结 M5）**：全部 FR 实现；对样例工程用内置攻击模拟器验证，**Token 消耗倍数 ≥ 100x**（NFR-02 阶段性目标）。

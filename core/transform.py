@@ -1,4 +1,4 @@
-"""Anti-REA 变换执行层（Transform v0.1，R1 MVP）。
+"""REA-Shield 变换执行层（Transform v0.1，R1 MVP）。
 
 设计：docs/design/ddd/dd-03-llvm-transforms.md
 覆盖：FR-C1（CFF）、FR-C2（MBA）、FR-C3（不透明谓词）、FR-C6（选择性/白名单）。
@@ -160,7 +160,7 @@ def protect(policy: dict, sources: list[str], out_dir: str, root: str = ".",
         raise RuntimeError("E_BUILD_FAILED: 保护构建失败:\n" + (p.stderr or ""))
 
     log_lines = [
-        "# Anti-REA transform.log",
+        "# REA-Shield transform.log",
         "run_id: %s" % policy.get("_run_id", ""),
         "seed: %d" % seed,
         "plugin: %s" % plugin,

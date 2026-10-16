@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Anti-REA 构建集成共享驱动（FR-D2…D5）。
+"""REA-Shield 构建集成共享驱动（FR-D2…D5）。
 
 CMake / Cargo / npm / Python 插件统一调用本入口：**不内嵌引擎**，只走
 scan → plan → protect → verify 链路（`docs/design/ddd/dd-build-integration.md §4`）。

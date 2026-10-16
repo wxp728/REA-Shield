@@ -270,7 +270,7 @@ def doctor() -> dict:
 
 
 def format_report(report: dict) -> str:
-    lines = ["Anti-REA 环境自检 (doctor)", "=" * 40]
+    lines = ["REA-Shield 环境自检 (doctor)", "=" * 40]
     for r in report["checks"]:
         tag = "OK  " if r["ok"] else ("MISS" if r["required"] else "warn")
         lines.append("[%s] %-16s %s" % (tag, r["name"], r["detail"]))

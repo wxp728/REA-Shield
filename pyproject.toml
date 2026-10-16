@@ -5,11 +5,11 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "anti-rea"
 version = "1.0.0"
-description = "Anti-REA Skill：AI Agent 可调用的代码反逆向加固工具链（LLVM Pass + CLI + MCP）"
+description = "REA-Shield Skill：AI Agent 可调用的代码反逆向加固工具链（LLVM Pass + CLI + MCP）"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "Anti-REA Skill contributors" }]
+authors = [{ name = "REA-Shield Skill contributors" }]
 keywords = ["obfuscation", "reverse-engineering", "llvm", "mcp", "anti-rea"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",

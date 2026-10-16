@@ -1,4 +1,4 @@
-# Anti-REA Python 构建集成（FR-D5）
+# REA-Shield Python 构建集成（FR-D5）
 # 在 setuptools 的 build_ext 之后调用集成驱动施加保护（不内嵌引擎）。
 #
 # 用法（setup.py）：
@@ -29,4 +29,4 @@ class AntiReaBuildExt(build_ext):
                 cmd += ["--source", src]
         rc = subprocess.call(cmd)
         if rc != 0:
-            sys.exit("Anti-REA 保护/验证失败，构建中止（FR-D7）")
+            sys.exit("REA-Shield 保护/验证失败，构建中止（FR-D7）")

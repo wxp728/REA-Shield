@@ -54,7 +54,7 @@ def build_variant(src_text: str, symbols: list[str], index: int, seed: int) -> s
         decoys.append(_decoy_fn("%s_induce%d" % (base, j), seed + index * 7 + j))
 
     tail = (
-        "\n/* ==== Anti-REA 对抗性诱导变体 #%d ==== */\n" % index
+        "\n/* ==== REA-Shield 对抗性诱导变体 #%d ==== */\n" % index
         + _augment_comment(seed + index)
         + "".join(decoys)
         + "/* 不透明诱饵常量（不可达引用，避免被优化剔除） */\n"

@@ -39,7 +39,7 @@ function(anti_rea_protect)
     OUTPUT "${AR_OUT}/verification_report.json"
     COMMAND "${_driver}" ${_args}
     DEPENDS ${AR_SOURCES}
-    COMMENT "Anti-REA: 施加保护并验证（FR-D2）"
+    COMMENT "REA-Shield: 施加保护并验证（FR-D2）"
     VERBATIM)
   add_custom_target(anti_rea_protect ALL
     DEPENDS "${AR_OUT}/verification_report.json")

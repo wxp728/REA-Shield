@@ -1,6 +1,6 @@
-# MCP 客户端配置（Anti-REA Server）
+# MCP 客户端配置（REA-Shield Server）
 
-Anti-REA 通过 **MCP（Model Context Protocol）** 暴露 7 个工具（`scan` / `plan` /
+REA-Shield 通过 **MCP（Model Context Protocol）** 暴露 7 个工具（`scan` / `plan` /
 `protect` / `verify` / `attack_sim` / `report` / `evolve`），让上层 Agent 以工具调用
 而非手工拼命令的方式完成加固。
 

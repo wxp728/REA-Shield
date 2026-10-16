@@ -17,7 +17,7 @@ from string import Template
 
 # 自包含白盒 AES-128 C 实现（$SHARE_A/$SHARE_B/$SEED 由生成器填入）
 _C_TEMPLATE = Template(r'''/*
- * Anti-REA 白盒密码实现（AES-128，自动生成，勿手改）
+ * REA-Shield 白盒密码实现（AES-128，自动生成，勿手改）
  * 关联：FR-C10 / docs/design/ddd/dd-06-wbc.md / 移植自 PoC-4
  * - S-box 运行期由 GF(2^8) 逆 + 仿射变换生成（不硬编码明文 S-box）；
  * - SubBytes 经编码查找表 out_enc[sbox[in_enc[i]]] 承载；

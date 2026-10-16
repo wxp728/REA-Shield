@@ -44,7 +44,7 @@ docker run --rm -i anti-rea:1.0.0 mcp
 ```sh
 git clone https://gitee.com/wxp728/REA-Shield.git   # 或 git@gitee.com:wxp728/REA-Shield.git
 # GitHub 镜像：git clone git@github.com:wxp728/REA-Shield.git
-cd anti-rea
+cd REA-Shield
 
 # 依赖
 pip install -r requirements.txt      # 等价：pip install jsonschema PyYAML deap

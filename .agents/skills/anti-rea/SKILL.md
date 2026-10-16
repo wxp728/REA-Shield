@@ -9,7 +9,7 @@ license: MIT
 version: 1.0.0
 ---
 
-# Anti-REA Skill
+# REA-Shield
 
 This is the skill manifest location. The **canonical, full instructions** live at
 the repository root:

@@ -3,7 +3,7 @@ project(anti_rea_cmake_example C)
 
 add_executable(app src/app.c)
 
-# 接入 Anti-REA CMake 插件（FR-D2）
+# 接入 REA-Shield CMake 插件（FR-D2）
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/..")
 include(AntiRea)
 anti_rea_protect(

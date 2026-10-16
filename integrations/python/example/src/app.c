@@ -2,7 +2,7 @@
  *
  * 两种编译模式共用同一源文件：
  *   - 定义 ANTI_REA_EXT 时构建为 Python C 扩展（setuptools 传入宏）；
- *   - 未定义时构建为独立程序（Anti-REA 集成驱动保护并做差分验证）。
+ *   - 未定义时构建为独立程序（REA-Shield 集成驱动保护并做差分验证）。
  */
 #include <stdio.h>
 

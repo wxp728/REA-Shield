@@ -16,9 +16,9 @@ entrypoints:
   doctor: "anti-rea doctor"
 ---
 
-# Anti-REA Skill
+# REA-Shield
 
-> 仓库：**REA-Shield** — Gitee `https://gitee.com/wxp728/REA-Shield` ｜ GitHub 镜像 `https://github.com/wxp728/REA-Shield`
+> 仓库：**REA-Shield**（REA 是矛，本技能就是盾）— Gitee `https://gitee.com/wxp728/REA-Shield` ｜ GitHub 镜像 `https://github.com/wxp728/REA-Shield`
 
 > 把**你自己的**代码加固到「自动反逆向（REA）成本显著升高」的工具链。
 > 只加固你拥有或有权修改的代码；本项目**不**攻击、不削弱任何 REA 工具。

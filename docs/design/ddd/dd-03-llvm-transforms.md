@@ -29,7 +29,7 @@
 flowchart LR
   SRC[源码/IR] --> FE[前端 clang -emit-llvm -O2]
   FE --> PIPE
-  subgraph PIPE[Anti-REA 变换管线 · OptimizerLast]
+  subgraph PIPE[REA-Shield 变换管线 · OptimizerLast]
     REN[identifier_renaming] --> STR[string_encryption]
     STR --> FBP[function_boundary_perturbation]
     FBP --> R2M[reg2mem]

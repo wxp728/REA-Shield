@@ -1,4 +1,4 @@
-"""Anti-REA CLI（FR-D1）。
+"""REA-Shield CLI（FR-D1）。
 
 子命令：scan / plan / protect / verify / report（SRS §4.1）+
 扩展：attack_sim（FR-E3）/ regress（FR-E8）/ diff（FR-G3）/ evolve（FR-F3）。
@@ -154,7 +154,7 @@ def _cmd_doctor(args) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     from . import __version__
-    p = argparse.ArgumentParser(prog="anti-rea", description="Anti-REA Skill CLI")
+    p = argparse.ArgumentParser(prog="anti-rea", description="REA-Shield CLI")
     p.add_argument("--version", action="version",
                    version="anti-rea %s" % __version__)
     sub = p.add_subparsers(dest="command", required=True)

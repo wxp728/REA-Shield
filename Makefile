@@ -1,4 +1,4 @@
-# Anti-REA Skill —— 顶层构建/测试入口
+# REA-Shield Skill —— 顶层构建/测试入口
 # 用法：make doctor / make install / make build / make test / make e2e / make ci / make clean
 #
 # 工具链定位优先级：环境变量 > PATH > 常见安装目录（不再写死路径）。

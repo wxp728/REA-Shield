@@ -16,14 +16,14 @@ python tools/release.py --verify dist
 ## 1. 打标签
 
 ```bash
-git tag -a v1.0.0 -m "Anti-REA Skill v1.0.0"
+git tag -a v1.0.0 -m "REA-Shield Skill v1.0.0"
 git push origin v1.0.0
 ```
 
 ## 2. Gitee Release（主站）
 
 1. 打开 `https://gitee.com/wxp728/REA-Shield/releases/new`。
-2. 标题：`Anti-REA Skill v1.0.0`；标签选 `v1.0.0`。
+2. 标题：`REA-Shield Skill v1.0.0`；标签选 `v1.0.0`。
 3. 正文：粘贴 `docs/release/RELEASE-1.0.0.md`。
 4. 附件上传 `dist/` 下的产物：
    - `anti-rea-1.0.0-bundle.tar.gz`（**主产物**）
@@ -39,7 +39,7 @@ git remote add github git@github.com:wxp728/REA-Shield.git   # 若尚未配置
 git push github v1.0.0
 # 用 gh CLI 创建 Release 并上传附件：
 gh release create v1.0.0 dist/*.tar.gz dist/*.whl dist/MANIFEST.sha256 \
-    --title "Anti-REA Skill v1.0.0" \
+    --title "REA-Shield Skill v1.0.0" \
     --notes-file docs/release/RELEASE-1.0.0.md
 ```
 

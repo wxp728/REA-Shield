@@ -2,7 +2,7 @@
 
 ## 这个项目到底是什么？是"skill"吗？
 
-是。Anti-REA 是一套 **AI Agent 可调用的代码加固工具链**：
+是。REA-Shield 是一套 **AI Agent 可调用的代码加固工具链**：
 - 技能入口：[`../SKILL.md`](../SKILL.md)、机器可读清单 [`../skill.json`](../skill.json)；
 - 命令行：`anti-rea`（scan/plan/protect/verify/report/attack_sim/…）；
 - MCP Server：`anti-rea-mcp`（stdio JSON-RPC，7 个工具），供上层 Agent 调用。

@@ -1,4 +1,4 @@
-# Anti-REA Skill v1.0.0 发布说明（Release Notes）
+# REA-Shield Skill v1.0.0 发布说明（Release Notes）
 
 - **版本**：1.0.0
 - **日期**：2026-10-16

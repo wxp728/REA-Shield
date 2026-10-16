@@ -1,4 +1,4 @@
-# 端到端场景：AI Agent 经 MCP 调用 Anti-REA Skill
+# 端到端场景：AI Agent 经 MCP 调用 REA-Shield
 
 > S2 详细设计**集成主线**。所有模块详细设计（DD-01…DD-08）都必须能支撑本场景跑通；
 > 若某处设计与本场景冲突，以「可执行、可验证」为准。
@@ -21,7 +21,7 @@
 | 角色 | 说明 |
 | :--- | :--- |
 | **调用 Agent** | 上层 AI（如本会话模型），经 MCP JSON-RPC 调用工具、解释结构化结果、决定下一步 |
-| **Anti-REA MCP Server** | 对外暴露 7 个工具（`interfaces.md §3`），内部编排 `core/`（Python）与 `engine/`（C++） |
+| **REA-Shield MCP Server** | 对外暴露 7 个工具（`interfaces.md §3`），内部编排 `core/`（Python）与 `engine/`（C++） |
 | **评估 LLM** | 运行环境提供的 LLM（**不绑定供应商**，ADR-004），在攻击模拟中扮演 REA 对手 |
 | **人工技术负责人** | 处理需要审批/授权的拒绝执行与超预算降级 |
 
@@ -38,7 +38,7 @@
 sequenceDiagram
   autonumber
   participant A as 调用 Agent
-  participant M as Anti-REA MCP Server
+  participant M as REA-Shield MCP Server
   participant S as core/scanner
   participant P as core/strategy
   participant E as engine (LLVM/VM/WBC)

@@ -1,6 +1,6 @@
-/* Anti-REA quickstart 示例 —— 一个"你自己的"小项目，含敏感资产。
+/* REA-Shield quickstart 示例 —— 一个"你自己的"小项目，含敏感资产。
  *
- * 仅用于演示 Anti-REA 的 scan -> plan -> protect -> verify 流程。
+ * 仅用于演示 REA-Shield 的 scan -> plan -> protect -> verify 流程。
  * 请只对你拥有或有权修改的代码使用本工具链。
  */
 #include <stdio.h>

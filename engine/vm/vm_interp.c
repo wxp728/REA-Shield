@@ -1,5 +1,5 @@
 /*
- * Anti-REA 自定义虚拟机 —— 解释器（R2 v0.1）
+ * REA-Shield 自定义虚拟机 —— 解释器（R2 v0.1）
  * 设计：docs/design/ddd/dd-04-virtualization.md §4/§5
  *
  * 编译为 LLVM bitcode，与目标一起链接：

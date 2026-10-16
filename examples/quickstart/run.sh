@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Anti-REA 端到端快速上手（scan -> plan -> protect -> verify -> attack_sim -> report）
+# REA-Shield 端到端快速上手（scan -> plan -> protect -> verify -> attack_sim -> report）
 #
 # 用法：
 #   bash examples/quickstart/run.sh

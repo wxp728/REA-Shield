@@ -1,4 +1,4 @@
-# Anti-REA Skill —— 钉死的运行镜像（免手工拼装 LLVM18 + 插件）
+# REA-Shield Skill —— 钉死的运行镜像（免手工拼装 LLVM18 + 插件）
 #
 # 构建：docker build -t anti-rea:1.0.0 .
 # 运行：

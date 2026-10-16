@@ -1,4 +1,4 @@
-# Anti-REA Skill 概要设计说明书（HLD）
+# REA-Shield 概要设计说明书（HLD）
 
 ## 文档信息
 
@@ -157,7 +157,7 @@ asset_manifest.json ───► (2) plan ───► protection_policy.yaml
 ## 5. 仓库结构与骨架规范（HD-07）
 
 ```text
-anti-rea-skill/
+REA-Shield/
 ├── engine/                 # C++：变换引擎
 │   ├── passes/             #   LLVM Pass：CFF / MBA / 不透明谓词 / 扰动 / 噪声
 │   ├── vm/                 #   自定义 ISA 规范 + 字节码编译器 + VM 解释器

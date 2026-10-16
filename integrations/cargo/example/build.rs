@@ -1,4 +1,4 @@
-// Anti-REA Cargo 构建集成（FR-D3）
+// REA-Shield Cargo 构建集成（FR-D3）
 //
 // 放入 crate 根目录作为 `build.rs`；在构建时调用集成驱动施加保护（不内嵌引擎）。
 // v1.0 范围：保护 crate 内的 C/FFI 源（`ANTI_REA_SOURCES`/`csrc/`）；Rust IR 级保护
@@ -32,9 +32,9 @@ fn main() {
             "--abort-on-failure",
         ])
         .status()
-        .expect("无法启动 Anti-REA 集成驱动");
+        .expect("无法启动 REA-Shield 集成驱动");
 
     if !status.success() {
-        panic!("Anti-REA 保护/验证失败，构建中止（FR-D7）");
+        panic!("REA-Shield 保护/验证失败，构建中止（FR-D7）");
     }
 }

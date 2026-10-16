@@ -1,4 +1,4 @@
-# Anti-REA Skill 开发方案文档
+# REA-Shield 开发方案文档
 
 ## 文档信息
 
@@ -11,7 +11,7 @@
 
 ### 1.1 项目定位
 
-Anti-REA Skill 是一个 AI Agent 可调用的**代码工程反逆向改造技能**。它接收代码工程（源码或二进制），自动施加多层级防护变换，使 REA（Reverse Engineer Anything）等 AI 驱动逆向工具无法有效还原源代码或功能逻辑，将攻击者的逆向成本推高至经济不可行的阈值以上。
+REA-Shield 是一个 AI Agent 可调用的**代码工程反逆向改造技能**。它接收代码工程（源码或二进制），自动施加多层级防护变换，使 REA（Reverse Engineer Anything）等 AI 驱动逆向工具无法有效还原源代码或功能逻辑，将攻击者的逆向成本推高至经济不可行的阈值以上。
 
 ### 1.2 设计哲学
 
@@ -33,7 +33,7 @@ Anti-REA Skill 是一个 AI Agent 可调用的**代码工程反逆向改造技�
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Anti-REA Skill                            │
+│                    REA-Shield                            │
 │                                                             │
 │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
 │  │  输入分析层   │───▶│  策略决策层   │───▶│  变换执行层   │  │
@@ -240,7 +240,7 @@ assets:
 
 ### 3.4 模块四：构建集成层（Build Integration）
 
-**功能**：将 Anti-REA Skill 嵌入现有 CI/CD 流程。
+**功能**：将 REA-Shield 嵌入现有 CI/CD 流程。
 
 **支持的集成方式**：
 
@@ -256,7 +256,7 @@ assets:
 **构建流程**：
 
 ```
-源码 → 标准编译 → 中间产物 → [Anti-REA 变换] → 保护产物 → 功能验证 → 打包分发
+源码 → 标准编译 → 中间产物 → [REA-Shield 变换] → 保护产物 → 功能验证 → 打包分发
 ```
 
 **关键配置项**：
@@ -389,7 +389,7 @@ build:
 |:---|:---|:---|
 | W11-12 | 对抗策略引擎：LLM 探测 + 策略进化 | Adaptive Engine v0.1 |
 | W13 | 构建集成：CMake/Cargo/npm 插件 | Build Integrations |
-| W14 | MCP Server 封装 | Anti-REA MCP Server |
+| W14 | MCP Server 封装 | REA-Shield MCP Server |
 | W15-16 | 多平台适配（Windows/macOS/ARM）+ 文档 | 完整 Skill v1.0 |
 
 **验收标准**：Skill 可通过 MCP 被 AI Agent 调用，完成端到端的保护流程。

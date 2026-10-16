@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://anti-rea.dev/schemas/verification_report.schema.json",
   "title": "Verification Report",
-  "description": "Anti-REA 评估验证层产出：功能保持与性能验证结果（对应 FR-E1 / FR-E2）。",
+  "description": "REA-Shield 评估验证层产出：功能保持与性能验证结果（对应 FR-E1 / FR-E2）。",
   "type": "object",
   "required": ["schema_version", "run_id", "functional_pass", "overall_pass"],
   "additionalProperties": false,

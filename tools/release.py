@@ -230,7 +230,7 @@ def write_signing_doc(dist: str, ver: str) -> str:
     return out
 
 
-_SIGNING_TMPL = """# 发布签名与校验（Anti-REA v{ver}）
+_SIGNING_TMPL = """# 发布签名与校验（REA-Shield v{ver}）
 
 ## 校验完整性
 
@@ -296,7 +296,7 @@ def verify(dist: str) -> int:
 def build(dist: str) -> int:
     ver = _version()
     os.makedirs(dist, exist_ok=True)
-    print("Anti-REA 发布打包 v%s -> %s" % (ver, dist))
+    print("REA-Shield 发布打包 v%s -> %s" % (ver, dist))
     products: list[str] = []
     products += build_wheel(dist)
     products += build_sdist(dist)
@@ -313,7 +313,7 @@ def build(dist: str) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(prog="release.py", description="Anti-REA 发布打包")
+    ap = argparse.ArgumentParser(prog="release.py", description="REA-Shield 发布打包")
     ap.add_argument("--out", default=os.path.join(REPO, "dist"), help="输出目录")
     ap.add_argument("--check", action="store_true", help="只做一致性自检")
     ap.add_argument("--verify", metavar="DIST", default=None, help="校验既有 dist/MANIFEST.sha256")

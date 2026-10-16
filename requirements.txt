@@ -1,4 +1,4 @@
-# Anti-REA 运行依赖（安装：pip install -r requirements.txt）
+# REA-Shield 运行依赖（安装：pip install -r requirements.txt）
 jsonschema>=4.0
 PyYAML>=6.0
 deap>=1.4

@@ -1,5 +1,5 @@
 /*
- * Anti-REA 变换插件 SPI（进程内，ADR-005 / FR-C11）
+ * REA-Shield 变换插件 SPI（进程内，ADR-005 / FR-C11）
  * 契约见 docs/design/interfaces.md §5、dd-03-llvm-transforms.md §9.2。
  *
  * 第三方变换以共享库形式提供：
