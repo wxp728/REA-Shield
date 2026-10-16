@@ -24,7 +24,12 @@ EXIT_OK, EXIT_ERR, EXIT_VERIFY, EXIT_REFUSED = 0, 1, 2, 3
 
 
 def _cmd_scan(args) -> int:
-    manifest = _scan(args.path, {"allow_unknown_owner": args.allow_unknown_owner})
+    options: dict = {"allow_unknown_owner": args.allow_unknown_owner}
+    if args.include:
+        options["include"] = args.include
+    if args.exclude:
+        options["exclude"] = args.exclude
+    manifest = _scan(args.path, options)
     out = os.path.join(args.out, "asset_manifest.json")
     common.write_json(out, manifest)
     if args.json:
@@ -37,7 +42,12 @@ def _cmd_scan(args) -> int:
 def _cmd_plan(args) -> int:
     manifest = common.read_json(args.manifest)
     budget = {"max_overhead": args.max_overhead, "target_overhead": args.target_overhead}
-    policy = _plan(manifest, budget, seed=args.seed)
+    scope: dict = {}
+    if args.only_path:
+        scope["only_path"] = args.only_path
+    if args.only_func:
+        scope["only_func"] = args.only_func
+    policy = _plan(manifest, budget, seed=args.seed, scope=scope or None)
     policy["_run_id"] = manifest.get("run_id", "")
     out = os.path.join(args.out, "protection_policy.yaml")
     common.write_yaml(out, {k: v for k, v in policy.items() if not k.startswith("_")})
@@ -56,7 +66,8 @@ def _cmd_protect(args) -> int:
         # 缺省：策略资产路径解析为源文件
         sources = [os.path.join(args.root, a["path"]) for a in policy.get("assets", [])
                    if a.get("strategies")]
-    meta = _protect(policy, sources, args.out, root=args.root, seed=args.seed)
+    meta = _protect(policy, sources, args.out, root=args.root, seed=args.seed,
+                    protect_all=args.protect_all)
     print("protect: artifacts -> %s (strategies=%s, whitelist=%s)" %
           (args.out, meta["strategies"], meta["whitelist"]))
     return EXIT_OK
@@ -170,6 +181,10 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("-o", "--out", default=".")
     s.add_argument("--json", action="store_true")
     s.add_argument("--allow-unknown-owner", action="store_true")
+    s.add_argument("--include", action="append", default=[],
+                   help="只扫描该子路径（可重复；相对 root，子串匹配）")
+    s.add_argument("--exclude", action="append", default=[],
+                   help="排除该子路径（可重复；相对 root，子串匹配）")
     s.set_defaults(func=_cmd_scan)
 
     s = sub.add_parser("plan", help="生成 protection_policy.yaml")
@@ -178,6 +193,10 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--seed", type=int, default=0)
     s.add_argument("--max-overhead", type=float, default=0.20)
     s.add_argument("--target-overhead", type=float, default=0.10)
+    s.add_argument("--only-path", action="append", default=[],
+                   help="只保护路径匹配该 glob 的资产（可重复；收窄范围）")
+    s.add_argument("--only-func", action="append", default=[],
+                   help="只保护符号名匹配该正则的资产（可重复；收窄范围）")
     s.add_argument("--json", action="store_true")
     s.set_defaults(func=_cmd_plan)
 
@@ -188,6 +207,8 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("-o", "--out", default="build/run")
     s.add_argument("--seed", type=int, default=None)
     s.add_argument("--run-id", default="")
+    s.add_argument("--protect-all", action="store_true",
+                   help="整文件保护：白名单取 scope 内文件全部函数（含内部辅助函数）")
     s.set_defaults(func=_cmd_protect)
 
     s = sub.add_parser("verify", help="功能保持验证（差分）")

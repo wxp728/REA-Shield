@@ -180,7 +180,8 @@ class TestEndToEnd(unittest.TestCase):
                            check=True, capture_output=True, env=env)
             with open(se, encoding="utf-8") as fh:
                 setext = fh.read()
-            self.assertIn(".enc", setext)
+            self.assertIn("enc_", setext)          # 编码全局取不透明名（不带原表名）
+            self.assertNotIn(".enc", setext)        # 不再用 "<原名>.enc"（避免后缀漏名）
             self.assertIn("xor i8", setext)
             self.assertNotIn('%d %d %d', setext)
 

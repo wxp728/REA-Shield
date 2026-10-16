@@ -87,11 +87,14 @@ def _clang() -> str:
         "自检：anti-rea doctor")
 
 
-def _whitelist_symbols(policy: dict, root: str, only: str) -> list[str]:
+def _whitelist_symbols(policy: dict, root: str, only: str,
+                       protect_all: bool = False) -> list[str]:
     """按策略类型收集白名单符号。
 
     only="vm"  -> 含 code_virtualization 的资产；
     only="ir"  -> 含任一 IR 策略的资产。
+    protect_all=True 时取**文件内全部函数**（整文件保护），否则仅取名称命中
+    扫描规则者——后者会漏掉 `sm4_key_expand` 这类内部辅助函数（经验记录 gap#7）。
     """
     syms: set[str] = set()
     for a in policy.get("assets", []):
@@ -104,9 +107,12 @@ def _whitelist_symbols(policy: dict, root: str, only: str) -> list[str]:
                 continue
         p = os.path.join(root, a["path"])
         if os.path.isfile(p) and os.path.splitext(p)[1] in scanner._LANG_EXT_SOURCES:
-            for cand in scanner._scan_file(p):
-                if cand.get("symbol"):
-                    syms.add(cand["symbol"])
+            if protect_all:
+                syms.update(n for n in scanner.all_function_names(p) if n)
+            else:
+                for cand in scanner._scan_file(p):
+                    if cand.get("symbol"):
+                        syms.add(cand["symbol"])
     return sorted(syms)
 
 
@@ -120,8 +126,12 @@ def _plugin_strategies(policy: dict) -> list[str]:
 
 
 def protect(policy: dict, sources: list[str], out_dir: str, root: str = ".",
-            seed: int | None = None, offline: bool = True) -> dict:
-    """对 sources 施加策略保护的变换，产出 artifacts + transform.log + metadata。"""
+            seed: int | None = None, offline: bool = True,
+            protect_all: bool = False) -> dict:
+    """对 sources 施加策略保护的变换，产出 artifacts + transform.log + metadata。
+
+    protect_all=True：白名单取 scope 内文件**全部函数**（整文件保护）。
+    """
     os.makedirs(out_dir, exist_ok=True)
     art_dir = os.path.join(out_dir, "artifacts")
     os.makedirs(art_dir, exist_ok=True)
@@ -129,8 +139,8 @@ def protect(policy: dict, sources: list[str], out_dir: str, root: str = ".",
 
     clang = _clang()
     plugin = _find_plugin()
-    whitelist = _whitelist_symbols(policy, root, "ir")
-    vmp_whitelist = _whitelist_symbols(policy, root, "vm")
+    whitelist = _whitelist_symbols(policy, root, "ir", protect_all)
+    vmp_whitelist = _whitelist_symbols(policy, root, "vm", protect_all)
     strategies = _plugin_strategies(policy)
     # 外部 SPI 插件（FR-C11）：策略名由 ANTI_REA_EXTRA_STRATEGIES 追加，
     # 插件路径由 ANTI_REA_EXTRA_PLUGINS 经环境继承给引擎宿主。

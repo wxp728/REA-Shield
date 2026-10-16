@@ -136,6 +136,21 @@ def _looks_like_key_material(body: str) -> bool:
     return False
 
 
+def all_function_names(path: str) -> list[str]:
+    """返回文件内**所有函数定义**的名字（不做名称规则过滤）。
+
+    用于「整文件保护」：白名单按文件全量取名，覆盖 `sm4_key_expand` 这类名字
+    不含 crypto 关键词的内部辅助函数（见 经验记录 gap#7）。非函数误报无副作用
+    ——引擎按真实 IR 函数名匹配，多余的条目被忽略。
+    """
+    try:
+        with open(path, encoding="utf-8", errors="ignore") as fh:
+            text = fh.read()
+    except OSError:
+        return []
+    return [m.group(1) for m in _FUNC_RE.finditer(text)]
+
+
 def _scan_file(path: str) -> list[dict]:
     """返回该文件的候选资产（未分级）。"""
     try:

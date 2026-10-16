@@ -611,6 +611,9 @@ static bool applyVM(Function &F, uint32_t Seed) {
 // ------------------------- 函数边界扰动（FR-C4）-------------------------
 // 用 CodeExtractor 将单个非入口基本块外提为新函数，改变反编译器的函数识别数；
 // 语义不变（由 CodeExtractor 构造保证，随后由验证层差分确认）。
+// 前向声明：派生名（拆分/加密产物）在生成处即取不透明名，堵住「后缀保留原名」的泄漏。
+static std::string opaqueName(StringRef Base, const char *Prefix, unsigned Seed);
+
 static bool applyFuncSplit(Function &F, unsigned Seed) {
   if (F.isDeclaration() || F.size() < 3) return false;
   if (F.hasFnAttribute("anti-rea-nosplit")) return false;  // 防重复拆分（新增函数回访）
@@ -632,6 +635,8 @@ static bool applyFuncSplit(Function &F, unsigned Seed) {
   CodeExtractor Extractor({Cand});
   Function *NewF = Extractor.extractCodeRegion(CEAC);
   if (!NewF) return false;
+  // CodeExtractor 默认命名为 "<原函数>.extracted"，会把原函数名写进符号表；改为不透明名。
+  NewF->setName(opaqueName(F.getName(), "part", Seed));
   NewF->addFnAttr(Attribute::NoInline);
   NewF->addFnAttr("anti-rea-nosplit");
   F.addFnAttr("anti-rea-nosplit");
@@ -720,6 +725,18 @@ static bool applyRename(Module &M, unsigned Seed) {
     F->setName(opaqueName(F->getName(), "sub", Seed));
     Changed = true;
   }
+  // 本地链接的数据全局（static 常量表/字符串）也是算法指纹（sm4_sbox/sm4_ck 一眼可辨）。
+  // 本地链接仅本 TU 可见，改名安全（LLVM 自动改写 IR 内引用）；编码后的 .enc/.ks/.buf
+  // 由字符串加密处理，此处跳过。
+  std::vector<GlobalVariable *> Gs;
+  for (GlobalVariable &G : M.globals())
+    if (G.hasLocalLinkage() && !G.isDeclaration()) Gs.push_back(&G);
+  for (GlobalVariable *G : Gs) {
+    StringRef N = G->getName();
+    if (N.empty() || N.starts_with("llvm.") || N.starts_with("__anti_rea")) continue;
+    G->setName(opaqueName(N, "dat", Seed));
+    Changed = true;
+  }
   return Changed;
 }
 
@@ -742,15 +759,21 @@ static constexpr uint64_t KS_A = 6364136223846793005ULL;
 static constexpr uint64_t KS_B = 1442695040888963407ULL;
 static constexpr unsigned KS_RUNTIME_MAX = 256; // 超过则退化为常量密钥（控制 IR 规模）
 
-// 对"仅被白名单函数使用的本地字节串常量"做异或编码，并在使用处插入运行期解码桩。
+// 对"仅被白名单函数使用的本地整型常量数组"做异或编码，并在使用处插入运行期解码桩。
+// 覆盖字节串，也覆盖算法常数表（SM4 的 S 盒 i8[256]、CK 轮常量 i32[32] 等）——
+// 后者是算法身份的强指纹（经验记录 gap#7）。
 static bool applyStringEncrypt(Module &M, unsigned Seed) {
   LLVMContext &Ctx = M.getContext();
   std::vector<GlobalVariable *> Targets;
   for (GlobalVariable &G : M.globals()) {
     if (!G.hasInitializer() || !G.hasLocalLinkage()) continue;
-    if (G.getName().ends_with(".enc")) continue;
+    if (G.getName().starts_with("enc_")) continue;   // 已编码（见 opaqueName）
     auto *CDA = dyn_cast<ConstantDataArray>(G.getInitializer());
-    if (!CDA || !CDA->getElementType()->isIntegerTy(8)) continue;
+    if (!CDA) continue;
+    auto *ET = dyn_cast<IntegerType>(CDA->getElementType());
+    if (!ET) continue;
+    unsigned BW = ET->getBitWidth();
+    if (BW != 8 && BW != 16 && BW != 32 && BW != 64) continue;
     if (G.use_empty()) continue;
     bool AllIn = true;
     for (User *U : G.users()) {
@@ -764,9 +787,12 @@ static bool applyStringEncrypt(Module &M, unsigned Seed) {
   bool Changed = false;
   for (GlobalVariable *G : Targets) {
     auto *CDA = cast<ConstantDataArray>(G->getInitializer());
+    auto *ET = cast<IntegerType>(CDA->getElementType());
+    unsigned W = ET->getBitWidth() / 8;   // 每元素字节数
+    unsigned NE = (unsigned)CDA->getNumElements();
     StringRef Raw = CDA->getRawDataValues();
-    unsigned N = (unsigned)Raw.size();
-    if (N == 0 || N > 4096) continue;
+    unsigned N = (unsigned)Raw.size();    // 总字节数 = NE * W
+    if (N == 0 || NE == 0 || N > 4096) continue;
 
     uint64_t St = fnv1a(G->getName(), Seed) | 1ULL;
     std::vector<uint8_t> Enc(N), Key(N);
@@ -779,18 +805,18 @@ static bool applyStringEncrypt(Module &M, unsigned Seed) {
       }
     }
     bool Runtime = (N <= KS_RUNTIME_MAX);
-    Type *ArrTy = G->getValueType(); // [N x i8]
-    G->setInitializer(ConstantDataArray::get(Ctx, ArrayRef<uint8_t>(Enc)));
-    std::string NewName = G->getName().str() + ".enc";
+    Type *ArrTy = G->getValueType(); // [NE x ET]
+    G->setInitializer(ConstantDataArray::getRaw(
+        StringRef((const char *)Enc.data(), N), NE, ET));
+    std::string NewName = opaqueName(G->getName(), "enc", Seed);
     G->setName(NewName);
 
-    // 按使用函数分组，逐函数插入解码桩
+    // 按使用函数分组，逐函数插入解码桩（逐元素）
     std::map<Function *, AllocaInst *> Bufs;
     std::vector<Instruction *> Users;
     for (User *U : G->users())
       if (auto *I = dyn_cast<Instruction>(U)) Users.push_back(I);
 
-    IntegerType *I8 = IntegerType::get(Ctx, 8);
     IntegerType *I64 = IntegerType::get(Ctx, 64);
     for (Instruction *I : Users) {
       Function *F = I->getFunction();
@@ -801,28 +827,39 @@ static bool applyStringEncrypt(Module &M, unsigned Seed) {
       } else {
         IRBuilder<> B(&*F->getEntryBlock().getFirstInsertionPt());
         Buf = B.CreateAlloca(ArrTy, nullptr, G->getName() + ".buf");
-        Value *Cur;
+        Value *Cur = nullptr;
         if (Runtime) {
           // 从可变全局加载种子（volatile 防常量折叠/GVN），运行期递推密钥流
           auto *KS = new GlobalVariable(
               M, I64, false, GlobalValue::PrivateLinkage,
-              ConstantInt::get(I64, St), G->getName() + ".ks");
+              ConstantInt::get(I64, St), opaqueName(G->getName(), "ks", Seed));
           KS->setAlignment(Align(8));
           Cur = B.CreateLoad(I64, KS, /*isVolatile=*/true);
         }
-        for (unsigned i = 0; i < N; ++i) {
+        for (unsigned e = 0; e < NE; ++e) {
           Value *K;
           if (Runtime) {
-            Cur = B.CreateAdd(B.CreateMul(Cur, ConstantInt::get(I64, KS_A)),
-                              ConstantInt::get(I64, KS_B));
-            K = B.CreateTrunc(B.CreateLShr(Cur, ConstantInt::get(I64, 33)), I8);
+            // 每个元素由 W 个密钥流字节按小端拼成
+            Value *KV = ConstantInt::get(ET, 0);
+            for (unsigned b = 0; b < W; ++b) {
+              Cur = B.CreateAdd(B.CreateMul(Cur, ConstantInt::get(I64, KS_A)),
+                                ConstantInt::get(I64, KS_B));
+              Value *KB = B.CreateTrunc(
+                  B.CreateLShr(Cur, ConstantInt::get(I64, 33)), ET);
+              if (b) KB = B.CreateShl(KB, ConstantInt::get(ET, 8 * b));
+              KV = B.CreateOr(KV, KB);
+            }
+            K = KV;
           } else {
-            K = ConstantInt::get(I8, Key[i]);
+            uint64_t KE = 0;
+            for (unsigned b = 0; b < W; ++b)
+              KE |= (uint64_t)Key[e * W + b] << (8 * b);
+            K = ConstantInt::get(ET, KE);
           }
-          Value *Src = B.CreateGEP(ArrTy, G, {B.getInt64(0), B.getInt64(i)});
-          LoadInst *L = B.CreateLoad(I8, Src);
+          Value *Src = B.CreateGEP(ArrTy, G, {B.getInt64(0), B.getInt64(e)});
+          LoadInst *L = B.CreateLoad(ET, Src);
           Value *X = B.CreateXor(L, K);
-          Value *Dst = B.CreateGEP(ArrTy, Buf, {B.getInt64(0), B.getInt64(i)});
+          Value *Dst = B.CreateGEP(ArrTy, Buf, {B.getInt64(0), B.getInt64(e)});
           B.CreateStore(X, Dst);
         }
         Bufs[F] = Buf;
