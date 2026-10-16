@@ -17,7 +17,8 @@ CC_WRAPPER = os.path.join(INT, "cc-wrapper", "anti-rea-cc")
 
 sys.path.insert(0, REPO)
 
-from core.transform import scope_env as _scope_env, _clang, _find_plugin  # noqa: E402
+from core.transform import (  # noqa: E402
+    scope_env as _scope_env, _clang, _find_plugin, build_vm_object as _build_vm_object)
 
 
 def _env() -> dict:
@@ -163,6 +164,46 @@ int main(void) { return secret_mix(1) == secret_mix(1) ? 0 : 1; }
             self.assertEqual(r.returncode, 0, r.stderr)
             nm = subprocess.run(["nm", obj], capture_output=True, text=True).stdout
             self.assertIn("helper_xyz", nm)      # 未注入 -> 名字保留
+
+    def test_vm_runtime_linked_into_shared_lib(self):
+        """构建注入 + 代码虚拟化：产出真实 .so，链接期自动并入 VM 运行期，功能保持。"""
+        lib = """\
+static int helper_xyz(int a) { return a * 3 + 1; }
+int compute(int a) { return helper_xyz(a) ^ 0x5a; }
+"""
+        drv = """\
+extern int compute(int);
+int main(void) { return compute(7) == 76 ? 0 : 1; }
+"""
+        with tempfile.TemporaryDirectory() as d:
+            ls = os.path.join(d, "s.c")
+            lm = os.path.join(d, "m.c")
+            with open(ls, "w", encoding="utf-8") as fh:
+                fh.write(lib)
+            with open(lm, "w", encoding="utf-8") as fh:
+                fh.write(drv)
+            policy = {"seed": 11, "assets": [{"path": "s.c", "sensitivity": "P0",
+                      "strategies": ["code_virtualization", "identifier_renaming"]}]}
+            env = dict(os.environ)
+            env.update(_scope_env(policy, d, protect_all=True))
+            env["ANTI_REA_REAL_CC"] = _clang()
+            env["ANTI_REA_VM_OBJ"] = _build_vm_object(os.path.join(d, "anti_rea_vm.o"))
+
+            # 逐 TU 编译 + 链接成共享库（链接期自动并入 VM 对象）
+            obj = os.path.join(d, "s.o")
+            r = subprocess.run([CC_WRAPPER, "-O1", "-fPIC", "-c", ls, "-o", obj],
+                               capture_output=True, text=True, env=env)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            so = os.path.join(d, "libs.so")
+            r = subprocess.run([CC_WRAPPER, "-shared", "-fPIC", obj, "-o", so],
+                               capture_output=True, text=True, env=env)
+            self.assertEqual(r.returncode, 0, r.stderr)
+
+            exe = os.path.join(d, "m")
+            r = subprocess.run([_clang(), lm, "-L" + d, "-ls", "-Wl,-rpath," + d, "-o", exe],
+                               capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertEqual(subprocess.run([exe]).returncode, 0)   # compute(7)==76
 
 
 if __name__ == "__main__":

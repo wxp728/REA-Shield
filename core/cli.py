@@ -15,7 +15,7 @@ import sys
 from . import common
 from .scanner import scan as _scan
 from .strategy import plan as _plan
-from .transform import protect as _protect, scope_env as _scope_env
+from .transform import protect as _protect, scope_env as _scope_env, build_vm_object as _build_vm_object
 from .evaluate import verify as _verify
 from .evaluate import attack_sim as _attack_sim
 from . import report as _report
@@ -80,6 +80,14 @@ def _cmd_buildenv(args) -> int:
     policy = common.read_yaml(args.policy)
     env = _scope_env(policy, args.root, protect_all=args.protect_all,
                      plugin=args.plugin or None)
+    # 虚拟化：预编译 VM 运行期对象（PIC），供链接步骤并入真实产物
+    if env.get("ANTI_REA_VM_BC") and args.out:
+        outdir = os.path.dirname(os.path.abspath(args.out)) or "."
+        try:
+            vm_obj = _build_vm_object(os.path.join(outdir, "anti_rea_vm.o"))
+            env["ANTI_REA_VM_OBJ"] = vm_obj
+        except Exception as exc:  # noqa: BLE001
+            print("buildenv: 警告：VM 运行期对象预编译失败（%s）" % exc, file=sys.stderr)
     lines = ["# REA-Shield 构建注入环境（anti-rea buildenv 生成）",
              "# 用法：source <本文件>；再把 CC 指向 integrations/cc-wrapper/anti-rea-cc"]
     for k in sorted(env):
@@ -88,9 +96,9 @@ def _cmd_buildenv(args) -> int:
     if args.out:
         with open(args.out, "w", encoding="utf-8") as fh:
             fh.write(text)
+        wl = [x for x in env.get("ANTI_REA_WHITELIST", "").split(",") if x]
         print("buildenv: %s (whitelist=%d, strategies=%s)" % (
-            args.out, len(env.get("ANTI_REA_WHITELIST", "").split(",") or []),
-            env.get("ANTI_REA_STRATEGIES", "")))
+            args.out, len(wl), env.get("ANTI_REA_STRATEGIES", "")))
     else:
         sys.stdout.write(text)
     return EXIT_OK

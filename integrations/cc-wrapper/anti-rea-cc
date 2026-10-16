@@ -43,4 +43,9 @@ if [ "$inject" = "1" ]; then
   exec "$real" -fpass-plugin="$ANTI_REA_PLUGIN" "$@"
 fi
 
+# 链接步骤：若启用了代码虚拟化，并入 VM 运行期对象（anti_rea_vm_run 的实现）。
+if [ -n "${ANTI_REA_VM_OBJ:-}" ] && [ -f "${ANTI_REA_VM_OBJ}" ]; then
+  exec "$real" "$@" "$ANTI_REA_VM_OBJ"
+fi
+
 exec "$real" "$@"

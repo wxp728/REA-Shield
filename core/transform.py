@@ -160,6 +160,22 @@ def scope_env(policy: dict, root: str = ".", protect_all: bool = False,
     return env
 
 
+def build_vm_object(out_path: str) -> str:
+    """把 VM 解释器 IR（vm_interp.bc）预编译为 PIC 目标文件。
+
+    构建注入时，被虚拟化的函数会调用 `anti_rea_vm_run`；独立编译流程由引擎把
+    `vm_interp.bc` 一起链接，真实构建则需在**链接步骤**并入该运行期对象。
+    """
+    clang = _clang()
+    bc = _find_vm_bc()
+    d = os.path.dirname(os.path.abspath(out_path))
+    if d:
+        os.makedirs(d, exist_ok=True)
+    subprocess.run([clang, "-O2", "-fPIC", "-c", bc, "-o", out_path],
+                   check=True, capture_output=True, text=True)
+    return out_path
+
+
 def protect(policy: dict, sources: list[str], out_dir: str, root: str = ".",
             seed: int | None = None, offline: bool = True,
             protect_all: bool = False) -> dict:

@@ -844,8 +844,11 @@ static bool applyStringEncrypt(Module &M, unsigned Seed) {
             for (unsigned b = 0; b < W; ++b) {
               Cur = B.CreateAdd(B.CreateMul(Cur, ConstantInt::get(I64, KS_A)),
                                 ConstantInt::get(I64, KS_B));
-              Value *KB = B.CreateTrunc(
-                  B.CreateLShr(Cur, ConstantInt::get(I64, 33)), ET);
+              // 密钥流每字节取 (S>>33) 的低 8 位（与编码端一致），再拼入元素
+              Value *Byte = B.CreateAnd(
+                  B.CreateLShr(Cur, ConstantInt::get(I64, 33)),
+                  ConstantInt::get(I64, 0xFF));
+              Value *KB = B.CreateTrunc(Byte, ET);
               if (b) KB = B.CreateShl(KB, ConstantInt::get(ET, 8 * b));
               KV = B.CreateOr(KV, KB);
             }
