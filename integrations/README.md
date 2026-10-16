@@ -10,6 +10,7 @@
 
 | 集成 | 文件 | 挂载点 | 样例 |
 | :--- | :--- | :--- | :--- |
+| **编译器包装器** | `cc-wrapper/anti-rea-cc` | `CC=<wrapper>`（注入真实构建，产出 `.so`/可执行） | 见 `docs/build-injection.md` |
 | CMake | `cmake/AntiRea.cmake` | `add_custom_target(POST_BUILD)` | `cmake/example/` |
 | Cargo | `cargo/example/build.rs` | `build.rs` | `cargo/example/` |
 | npm | `npm/anti-rea-protect.js` | `scripts.postbuild` | `npm/example/` |

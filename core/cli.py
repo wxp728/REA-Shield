@@ -15,7 +15,7 @@ import sys
 from . import common
 from .scanner import scan as _scan
 from .strategy import plan as _plan
-from .transform import protect as _protect
+from .transform import protect as _protect, scope_env as _scope_env
 from .evaluate import verify as _verify
 from .evaluate import attack_sim as _attack_sim
 from . import report as _report
@@ -70,6 +70,29 @@ def _cmd_protect(args) -> int:
                     protect_all=args.protect_all)
     print("protect: artifacts -> %s (strategies=%s, whitelist=%s)" %
           (args.out, meta["strategies"], meta["whitelist"]))
+    return EXIT_OK
+
+
+def _cmd_buildenv(args) -> int:
+    """输出「构建注入」所需的环境变量（供 CC 包装器）；可写入文件后 source。"""
+    import shlex
+
+    policy = common.read_yaml(args.policy)
+    env = _scope_env(policy, args.root, protect_all=args.protect_all,
+                     plugin=args.plugin or None)
+    lines = ["# REA-Shield 构建注入环境（anti-rea buildenv 生成）",
+             "# 用法：source <本文件>；再把 CC 指向 integrations/cc-wrapper/anti-rea-cc"]
+    for k in sorted(env):
+        lines.append("export %s=%s" % (k, shlex.quote(str(env[k]))))
+    text = "\n".join(lines) + "\n"
+    if args.out:
+        with open(args.out, "w", encoding="utf-8") as fh:
+            fh.write(text)
+        print("buildenv: %s (whitelist=%d, strategies=%s)" % (
+            args.out, len(env.get("ANTI_REA_WHITELIST", "").split(",") or []),
+            env.get("ANTI_REA_STRATEGIES", "")))
+    else:
+        sys.stdout.write(text)
     return EXIT_OK
 
 
@@ -210,6 +233,14 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--protect-all", action="store_true",
                    help="整文件保护：白名单取 scope 内文件全部函数（含内部辅助函数）")
     s.set_defaults(func=_cmd_protect)
+
+    s = sub.add_parser("buildenv", help="输出构建注入环境变量（真实构建 CC 包装器用）")
+    s.add_argument("policy")
+    s.add_argument("--root", default=".")
+    s.add_argument("--protect-all", action="store_true")
+    s.add_argument("--plugin", default="", help="覆盖变换插件路径")
+    s.add_argument("-o", "--out", default="", help="写入文件（缺省打印到 stdout）")
+    s.set_defaults(func=_cmd_buildenv)
 
     s = sub.add_parser("verify", help="功能保持验证（差分）")
     s.add_argument("artifacts")

@@ -125,6 +125,41 @@ def _plugin_strategies(policy: dict) -> list[str]:
     return sorted(out)
 
 
+def scope_env(policy: dict, root: str = ".", protect_all: bool = False,
+              seed: int | None = None, plugin: str | None = None) -> dict:
+    """构建注入所需的环境变量（把插件挂进真实构建，而非独立编译）。
+
+    供 `anti-rea buildenv` 与 `integrations/cc-wrapper` 使用：CI/构建系统先
+    `source scope.env`，再以包装器作 `CC` 编译，即可对**真实产物**（如 .so）逐 TU
+    施加变换，而链接步骤保持不变。
+    """
+    seed = int(seed if seed is not None else policy.get("seed", 0))
+    whitelist = _whitelist_symbols(policy, root, "ir", protect_all)
+    vmp = _whitelist_symbols(policy, root, "vm", protect_all)
+    strategies = _plugin_strategies(policy)
+    env = {
+        "ANTI_REA_WHITELIST": ",".join(whitelist),
+        "ANTI_REA_VMP_WHITELIST": ",".join(vmp),
+        "ANTI_REA_STRATEGIES": ",".join(strategies),
+        "ANTI_REA_SEED": str(seed),
+        # 真实构建（多 TU）：默认不改外部名，避免他 TU 按原名引用而断链。
+        "ANTI_REA_RENAME_EXTERNAL": os.environ.get("ANTI_REA_RENAME_EXTERNAL", "0"),
+    }
+    if plugin:
+        env["ANTI_REA_PLUGIN"] = plugin
+    else:
+        try:
+            env["ANTI_REA_PLUGIN"] = _find_plugin()
+        except Exception:  # noqa: BLE001 - 未构建引擎时留空，由包装器报错
+            pass
+    if "virtualize" in strategies:
+        try:
+            env["ANTI_REA_VM_BC"] = _find_vm_bc()
+        except Exception:  # noqa: BLE001
+            pass
+    return env
+
+
 def protect(policy: dict, sources: list[str], out_dir: str, root: str = ".",
             seed: int | None = None, offline: bool = True,
             protect_all: bool = False) -> dict:

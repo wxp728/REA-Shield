@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# anti-rea-cc —— REA-Shield 编译注入包装器（CC wrapper）
+#
+# 作用：把「clang + 变换插件」挂进**真实构建**（autoconf / Makefile / PGXS 等），
+#       逐编译单元（TU）施加 anti-rea 变换，而**链接步骤原样透传**——从而产出真正的
+#       目标产物（可执行文件 / 共享库 .so），而不是另一份独立可执行文件。
+#
+# 快速用法：
+#   export ANTI_REA_PLUGIN=/abs/path/engine/build/anti_rea_passes.so
+#   source out/scope.env                       # anti-rea buildenv 产出：白名单/策略/种子/插件
+#   export CC=$PWD/integrations/cc-wrapper/anti-rea-cc
+#   ./configure ... && make -j"$(nproc)"
+#
+# 环境变量：
+#   ANTI_REA_REAL_CC   真实编译器（默认 clang；回退 ANTI_REA_CLANG、cc）
+#   ANTI_REA_PLUGIN    变换插件 .so（进行注入时必填）
+#   ANTI_REA_DISABLE=1 关闭注入（纯透传）——用于 configure 探测等对插件敏感的场景
+set -euo pipefail
+
+real="${ANTI_REA_REAL_CC:-${ANTI_REA_CLANG:-clang}}"
+if ! command -v "$real" >/dev/null 2>&1; then
+  real="cc"
+fi
+
+if [ "${ANTI_REA_DISABLE:-0}" = "1" ]; then
+  exec "$real" "$@"
+fi
+
+# 仅「编译到对象/汇编」时注入（-c / -S）；预处理（-E）与链接不注入。
+inject=0
+for a in "$@"; do
+  case "$a" in
+    -E) inject=0; break ;;
+    -c|-S) inject=1 ;;
+  esac
+done
+
+if [ "$inject" = "1" ]; then
+  if [ -z "${ANTI_REA_PLUGIN:-}" ]; then
+    echo "anti-rea-cc: 需要 ANTI_REA_PLUGIN（可先运行 anti-rea buildenv 并 source 其输出）" >&2
+    exit 1
+  fi
+  exec "$real" -fpass-plugin="$ANTI_REA_PLUGIN" "$@"
+fi
+
+exec "$real" "$@"

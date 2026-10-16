@@ -96,6 +96,7 @@ anti-rea-mcp        # stdio JSON-RPC，暴露 7 个工具
 | `scan` | 扫描工程，产出 `asset_manifest.json` | `path` |
 | `plan` | 生成策略 `protection_policy.yaml` | `manifest`, `budget` |
 | `protect` | 施加变换，产出保护产物 | `policy`, `root`, `sources` |
+| `buildenv` | 输出构建注入环境变量（真实构建 CC 包装器用） | `policy`, `root`, `protect_all` |
 | `verify` | 差分验证功能保持 | `artifacts` |
 | `attack_sim` | 攻击模拟，产出 `eval_report.json`（`--allow-llm` 走真实 LLM 会话判定，见 [`docs/INSTALL.md`](docs/INSTALL.md)） | `artifacts`, `mode`, `allow_llm` |
 | `report` | 生成人读保护报告 | `run` |
@@ -115,6 +116,35 @@ anti-rea-mcp        # stdio JSON-RPC，暴露 7 个工具
   路径**，避免副本挪到 `out_dir` 后断链。
 - **口径提示**：`baseline` 用 `clang -O0`、`protected` 用 `clang -O1`，两者的体积/符号差异
   含优化因素，不全是混淆所致；需严格对比时请自行对齐优化级别。
+
+## 收窄范围 / Scoping（只保护自有代码）
+
+默认会保护扫描到的全部敏感资产。真实工程往往只想保护**自有敏感模块**，可用：
+
+```sh
+anti-rea scan /path/to/project --include src/common/crypto_algorithm --exclude contrib -o out
+anti-rea plan out/asset_manifest.json --only-path 'src/common/crypto_*/*' --only-func '^crypto_' -o out
+```
+
+- `scan --include/--exclude`：限定扫描子路径；
+- `plan --only-path`（路径 glob）/ `--only-func`（符号正则）：范围外的资产**被丢弃**，
+  不进策略、不进白名单（免手改 YAML）；
+- `protect --protect-all`：**整文件保护**——白名单取 scope 内文件**全部函数**（含
+  `sm4_key_expand` 这类名字不含关键词的内部辅助函数），推荐与已收窄的 scope 搭配。
+
+## 保护真实工程产物（`.so`/大型构建）
+
+`protect` 只产出**独立可执行文件**，产不出 PG 扩展 `.so` 这类真实产物。此时用**构建注入**：
+把「clang + 变换插件」挂进原有构建（编译挂插件、链接透传），产出真正的 `.so`：
+
+```sh
+anti-rea buildenv out/protection_policy.yaml --root /path/to/project --protect-all -o out/scope.env
+source out/scope.env
+export CC=$PWD/integrations/cc-wrapper/anti-rea-cc
+./configure ... && make -j"$(nproc)"
+```
+
+详见 [`docs/build-injection.md`](docs/build-injection.md)。
 
 ## 安全边界 / Safety & Limits (v1.0)
 
