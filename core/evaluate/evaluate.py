@@ -44,11 +44,15 @@ def _verify_variants(artifacts_dir: str, meta: dict, baseline_out: str,
         return True, 0, 0
     from ..transform import _clang
     clang = _clang()
+    # 变体由 sources[0] 改写而来；其余源文件（多编译单元工程）需一并参与链接，
+    # 否则变体里对其它 TU 的引用会 undefined reference。
+    origin = os.path.abspath(adv.get("source", ""))
+    others = [s for s in meta.get("sources", []) if os.path.abspath(s) != origin]
     total = len(adv["variants"])
     mismatches = 0
     for v in adv["variants"]:
         exe = v["path"] + ".exe"
-        subprocess.run([clang, "-O0", v["path"], "-o", exe],
+        subprocess.run([clang, "-O0", v["path"], *others, "-o", exe],
                        check=True, capture_output=True)
         p = subprocess.run([exe], capture_output=True, text=True)
         if p.returncode != baseline_rc or (p.stdout or "") != baseline_out:

@@ -13,6 +13,30 @@ from __future__ import annotations
 
 import os
 import random
+import re
+
+# 引号形式 #include "..."（仅这些需要相对本文件的定位；尖括号交给 -I/系统路径）
+_QUOTED_INCLUDE = re.compile(r'^([ \t]*#[ \t]*include[ \t]*)"([^"]+)"(.*)$', re.M)
+
+
+def _absolutize_includes(text: str, base_dir: str) -> str:
+    """把「相对本文件定位」的引号 include 改写为绝对路径。
+
+    变体源码是 `sources[0]` 的副本 + 诱导尾，会被写到 out_dir 下。若源文件用了
+    形如 `#include "../../include/foo.h"` 的相对 include，副本挪位后即失效
+    （C 引号 include 相对**包含它的文件**解析）。改写为绝对路径即可让副本在任意
+    目录编译；仅改写能在 base_dir 下找到真实文件的 include，其余原样保留。
+    """
+    def repl(m: "re.Match[str]") -> str:
+        prefix, inc, suffix = m.group(1), m.group(2), m.group(3)
+        if os.path.isabs(inc):
+            return m.group(0)
+        cand = os.path.normpath(os.path.join(base_dir, inc))
+        if os.path.isfile(cand):
+            return '%s"%s"%s' % (prefix, cand, suffix)
+        return m.group(0)
+
+    return _QUOTED_INCLUDE.sub(repl, text)
 
 
 def _decoy_fn(name: str, seed: int) -> str:
@@ -74,6 +98,8 @@ def generate_variants(src_path: str, out_dir: str, symbols: list[str] | None = N
     os.makedirs(out_dir, exist_ok=True)
     with open(src_path, encoding="utf-8") as fh:
         src = fh.read()
+    # 副本会被挪到 out_dir：先把相对引号 include 绝对化，避免断链（见 _absolutize_includes）
+    src = _absolutize_includes(src, os.path.dirname(os.path.abspath(src_path)))
     symbols = symbols or []
     stem, ext = os.path.splitext(os.path.basename(src_path))
     ext = ext or ".c"          # 保留源语言扩展名（.cpp 需按 C++ 编译）

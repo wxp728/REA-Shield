@@ -701,15 +701,22 @@ static std::string opaqueName(StringRef Base, const char *Prefix, unsigned Seed)
   return std::string(Buf);
 }
 
-// 将白名单内的定义函数改名为不透明符号（保留 main 与外部可见性），并按需剥离调试信息。
+// 将白名单内的定义函数改名为不透明符号，并按需剥离调试信息。
+//   - main 永远保留；
+//   - 内部链接（static/private）函数始终可安全改名；
+//   - 外部链接函数由 ANTI_REA_RENAME_EXTERNAL 控制（默认 1）：其他编译单元/外部调用方
+//     可能按原名引用它，而本 pass 经 clang -fpass-plugin 逐 TU 运行、无法改写那些引用，
+//     改名会破坏多 TU 链接（实测 undefined reference）。故 protect 在多源构建时自动置 0。
 static bool applyRename(Module &M, unsigned Seed) {
   bool Changed = false;
+  const bool renameExternal = envInt("ANTI_REA_RENAME_EXTERNAL", 1) != 0;
   std::vector<Function *> Fs;
   for (Function &F : M)
     if (!F.isDeclaration()) Fs.push_back(&F);
   for (Function *F : Fs) {
     if (F->getName() == "main") continue;
     if (!whitelisted(F->getName())) continue;
+    if (!F->hasLocalLinkage() && !renameExternal) continue;
     F->setName(opaqueName(F->getName(), "sub", Seed));
     Changed = true;
   }

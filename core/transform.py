@@ -153,6 +153,10 @@ def protect(policy: dict, sources: list[str], out_dir: str, root: str = ".",
     env["ANTI_REA_VMP_WHITELIST"] = ",".join(vmp_whitelist)
     env["ANTI_REA_STRATEGIES"] = ",".join(strategies) if strategies else ""
     env["ANTI_REA_SEED"] = str(seed)
+    # 多编译单元（多 source）：外部链接符号可能被其它 TU 按原名引用，重命名会破坏链接。
+    # 自动降级为「只改名内部链接函数」；用户显式设置 ANTI_REA_RENAME_EXTERNAL 时以其为准。
+    if len(sources) > 1 and "ANTI_REA_RENAME_EXTERNAL" not in os.environ:
+        env["ANTI_REA_RENAME_EXTERNAL"] = "0"
     cmd = [clang, "-O1", "-fpass-plugin=" + plugin,
            *sources, *extra_inputs, "-o", protected_exe]
     p = subprocess.run(cmd, capture_output=True, text=True, env=env)
@@ -188,6 +192,8 @@ def protect(policy: dict, sources: list[str], out_dir: str, root: str = ".",
         # FR-G2 可复现元数据
         "input_fingerprint": _input_fingerprint(sources),
         "policy_hash": _policy_hash(policy),
+        # 全部源文件（绝对路径）：供 verify 的对抗诱导变体与其它多-TU 步骤复用
+        "sources": [os.path.abspath(s) for s in sources],
         "generated_at": common.now_iso(),
     }
 

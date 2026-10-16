@@ -184,7 +184,8 @@ class TestEndToEnd(unittest.TestCase):
             self.assertIn("xor i8", setext)
             self.assertNotIn('%d %d %d', setext)
 
-            # 标识符重命名：白名单函数名不再出现
+            # 标识符重命名：白名单函数名不再出现（默认 ANTI_REA_RENAME_EXTERNAL=1，
+            # 单 TU/整程序场景连外部链接函数一并抹名）
             rn = os.path.join(t, "rn.ll")
             subprocess.run([opt, "-load-pass-plugin=" + plug,
                             "-passes=ident-rename", ir, "-S", "-o", rn],
@@ -210,6 +211,42 @@ class TestEndToEnd(unittest.TestCase):
             self.assertNotIn("%d %d %d", strs)
             nm = subprocess.run(["nm", prot], capture_output=True, text=True).stdout
             self.assertNotIn("secret_mix", nm)
+
+    def test_rename_external_opt_out(self):
+        """ANTI_REA_RENAME_EXTERNAL=0：外部链接函数保留（多 TU 链接安全），static 仍改名。
+
+        protect 对多源（多编译单元）构建会自动置 0，避免他 TU 按原名引用导致
+        undefined reference；本用例在引擎层直接验证该开关语义。
+        """
+        opt = _opt()
+        if not opt:
+            self.skipTest("无 opt")
+        plug = _find_plugin()
+        with tempfile.TemporaryDirectory() as t:
+            src = os.path.join(t, "mix.c")
+            with open(src, "w", encoding="utf-8") as fh:
+                fh.write("static int secret_mix(int x) { return x ^ 0x5a; }\n"
+                         "int secret_api(int x) { return secret_mix(x) + 1; }\n"
+                         "int main(void) { return secret_api(3); }\n")
+            ir = os.path.join(t, "mix.ll")
+            # 用 -O0 避免 static 函数被内联消除
+            subprocess.run([_clang(), "-O0", "-S", "-emit-llvm", src, "-o", ir],
+                           check=True, capture_output=True)
+            env = dict(os.environ)
+            env["ANTI_REA_WHITELIST"] = "*"
+            env["ANTI_REA_STRATEGIES"] = "rename"
+            env["ANTI_REA_SEED"] = "5"
+            env["ANTI_REA_RENAME_EXTERNAL"] = "0"
+            rn = os.path.join(t, "rn.ll")
+            subprocess.run([opt, "-load-pass-plugin=" + plug,
+                            "-passes=ident-rename", ir, "-S", "-o", rn],
+                           check=True, capture_output=True, env=env)
+            with open(rn, encoding="utf-8") as fh:
+                txt = fh.read()
+            self.assertNotIn("@secret_mix", txt)   # static -> 改名
+            self.assertIn("@sub_", txt)
+            self.assertIn("@secret_api", txt)      # 外部链接 -> 保留
+            self.assertIn("@main", txt)            # main -> 保留
 
     def test_transform_markers_and_selectivity(self):
         opt = _opt()
