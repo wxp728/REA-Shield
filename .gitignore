@@ -42,3 +42,6 @@ integrations/python/example/*.so
 
 # S6 示例运行产物
 examples/quickstart/out/
+
+# 本地 agent 开发指引（不入库）
+AGENTS.md
