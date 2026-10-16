@@ -12,6 +12,8 @@
 >
 > **Currently**, this skill provides end-to-end protection **only on Linux x86_64**; its transformation engine is built on **LLVM IR** and can target ARM64 / Windows x64 / WASM, etc. (IR-level support; end-to-end verified only on Linux x86_64 so far); more platforms / OSes will be added in future releases.
 >
+> **Supported source languages**: the transform engine is an LLVM pass loaded via `clang -fpass-plugin`, so protection covers **C / C++** (first-class) plus the **C/FFI parts of Rust** and **Python C-extensions**. Pure **Rust / Java / .NET / JS-TS / Go** get **no IR-level protection** (ADR-006) — but for those languages the toolchain can still **scan** (inventory assets, detect language & build system) and **plan** (produce a protection policy); the protection stages — **protect / verify / attack_sim / report** — are unavailable, since they all build on a clang-compiled run.
+>
 > **Anti-reverse techniques**: control-flow flattening (CFF), non-linear MBA, opaque predicates, function-boundary perturbation, data-flow noise, identifier renaming, string encryption, code virtualization, white-box cryptography, adversarial inducement, MTD multi-variant; **costs**: runtime overhead (P2 ≤ 5% / P1 ≤ 15% / P0 ≤ 40%, configurable), increased binary size and build time, a heavy LLVM 18 toolchain dependency, and platforms / languages not yet covered end-to-end.
 >
 > Built with the assistance of Opencode + DeepSeek V4.1 Flash Free.
