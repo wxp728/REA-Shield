@@ -4,7 +4,7 @@
 
 > **Where there is a spear, there is a shield — this skill project is the shield against REA.**
 >
-> This skill delivers end-to-end protection on **Linux x86_64**; its transformation engine is built on **LLVM IR** and can target ARM64 / Windows x64 / WASM, etc. (IR-level support; end-to-end verified only on Linux x86_64 so far).
+> **Currently**, this skill provides end-to-end protection **only on Linux x86_64**; its transformation engine is built on **LLVM IR** and can target ARM64 / Windows x64 / WASM, etc. (IR-level support; end-to-end verified only on Linux x86_64 so far); more platforms / OSes will be added in future releases.
 >
 > **Anti-reverse techniques**: control-flow flattening (CFF), non-linear MBA, opaque predicates, function-boundary perturbation, data-flow noise, identifier renaming, string encryption, code virtualization, white-box cryptography, adversarial inducement, MTD multi-variant; **costs**: runtime overhead (P2 ≤ 5% / P1 ≤ 15% / P0 ≤ 40%, configurable), increased binary size and build time, a heavy LLVM 18 toolchain dependency, and platforms / languages not yet covered end-to-end.
 >
