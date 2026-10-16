@@ -4,9 +4,9 @@
 
 > **Where there is a spear, there is a shield. REA is the spear; this skill is the shield.**
 >
-> **Goal**: raise REA's cost above, or close to, the cost of forward development.
->
 > Perhaps that day will come soon: AI will develop any software at extremely low cost, and both REA and this "shield" will lose their meaning. But until that day comes, we will always believe in and hold to one thing: cheating is wrong.
+>
+> **Goal**: raise REA's cost above, or close to, the cost of forward development.
 >
 > **Currently**, this skill provides end-to-end protection **only on Linux x86_64**; its transformation engine is built on **LLVM IR** and can target ARM64 / Windows x64 / WASM, etc. (IR-level support; end-to-end verified only on Linux x86_64 so far); more platforms / OSes will be added in future releases.
 >
