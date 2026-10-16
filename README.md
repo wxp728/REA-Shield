@@ -4,13 +4,13 @@
 
 > **Where there is a spear, there is a shield. REA is the spear; this skill is the shield.**
 >
+> **Goal**: raise REA's cost above, or close to, the cost of forward development.
+>
 > **Currently**, this skill provides end-to-end protection **only on Linux x86_64**; its transformation engine is built on **LLVM IR** and can target ARM64 / Windows x64 / WASM, etc. (IR-level support; end-to-end verified only on Linux x86_64 so far); more platforms / OSes will be added in future releases.
 >
 > **Anti-reverse techniques**: control-flow flattening (CFF), non-linear MBA, opaque predicates, function-boundary perturbation, data-flow noise, identifier renaming, string encryption, code virtualization, white-box cryptography, adversarial inducement, MTD multi-variant; **costs**: runtime overhead (P2 ≤ 5% / P1 ≤ 15% / P0 ≤ 40%, configurable), increased binary size and build time, a heavy LLVM 18 toolchain dependency, and platforms / languages not yet covered end-to-end.
 >
 > Built with the assistance of Opencode + DeepSeek V4.1 Flash Free.
-
-> An **anti-reverse-engineering hardening skill** callable by an AI Agent: it applies multi-layer protection transforms to source code / binaries and drives the **reverse-engineering cost of AI-powered reversing tools (REA-class) above the benefit of reversing** — the goal is not "impossible to reverse", but "not worth reversing".
 
 ## Start here (users & agents)
 
