@@ -9,7 +9,7 @@
 | 日期 | 2026-10-16 |
 | 分支 | `master` |
 | 基线 tag | `m0-baseline`（M0 需求基线）、`m1-architecture`（M1 架构基线）、`m2-design`（M2 设计基线）、`m3-r1`（M3 R1）、`m4-r2`（M4 R2）、`m5-frozen`（M5 R3）、`m6-verified`（M6 验证）、`m7-pilot`（M7 试点） |
-| 远端 | `git@gitee.com:wxp728/anti-rea.git` |
+| 远端 | Gitee：`git@gitee.com:wxp728/REA-Shield.git`；GitHub：`git@github.com:wxp728/REA-Shield.git` |
 | 最近提交 | 见 `git log -1`（本文件随该提交一并推送） |
 | 工作区 | 干净（无未提交改动） |
 

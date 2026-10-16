@@ -18,7 +18,8 @@
 ## 2. 安装
 
 ```sh
-git clone git@gitee.com:wxp728/anti-rea.git
+git clone git@gitee.com:wxp728/REA-Shield.git
+# GitHub 镜像：git clone git@github.com:wxp728/REA-Shield.git
 cd anti-rea
 
 # （推荐）安装到虚拟环境或直接使用系统 Python
