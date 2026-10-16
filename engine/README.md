@@ -69,8 +69,12 @@
 ## 构建
 
 ```sh
-LLVM=/opt/anti-rea-toolchain/clang+llvm-18.1.8-x86_64-linux-gnu-ubuntu-18.04
-cmake -S engine -B engine/build -DLLVM_DIR=$LLVM/lib/cmake/llvm -DCMAKE_BUILD_TYPE=Release
+# 顶层一键构建（自动探测 LLVM 前缀）：
+make build
+
+# 或手动指定：
+LLVM="$(llvm-config --prefix)"   # 也可：export ANTI_REA_LLVM=<LLVM 前缀>
+cmake -S engine -B engine/build -DLLVM_DIR="$LLVM/lib/cmake/llvm" -DCMAKE_BUILD_TYPE=Release
 cmake --build engine/build -j
 # 产物：engine/build/anti_rea_passes.so、engine/build/vm_interp.bc、
 #       engine/build/libanti_rea_example_plugin.so（SPI 示例）

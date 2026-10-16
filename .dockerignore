@@ -1,0 +1,18 @@
+# 构建镜像时不复制的内容（减小上下文、避免污染）
+.git
+.gitignore
+engine/build
+build
+dist
+*.egg-info
+__pycache__
+**/__pycache__
+.pytest_cache
+.ruff_cache
+.mypy_cache
+*.pyc
+*.o
+*.so
+*.a
+tests/.tmp*
+docs/release/*.tmp

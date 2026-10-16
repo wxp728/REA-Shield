@@ -140,9 +140,30 @@ def _cmd_evolve(args) -> int:
     return EXIT_OK
 
 
+def _cmd_doctor(args) -> int:
+    from . import toolchain
+    if args.llvm:
+        os.environ["ANTI_REA_LLVM"] = args.llvm
+    report = toolchain.doctor()
+    if args.json:
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+    else:
+        print(toolchain.format_report(report))
+    return EXIT_OK if report["ok"] else EXIT_ERR
+
+
 def build_parser() -> argparse.ArgumentParser:
+    from . import __version__
     p = argparse.ArgumentParser(prog="anti-rea", description="REA-Shield CLI")
+    p.add_argument("--version", action="version",
+                   version="anti-rea %s" % __version__)
     sub = p.add_subparsers(dest="command", required=True)
+
+    s = sub.add_parser("doctor", help="环境自检：检查 Python/LLVM/插件/工具链是否就绪")
+    s.add_argument("--llvm", default=None,
+                   help="指定 LLVM 前缀（等价于设置 ANTI_REA_LLVM）")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=_cmd_doctor)
 
     s = sub.add_parser("scan", help="扫描工程，产出 asset_manifest.json")
     s.add_argument("path")

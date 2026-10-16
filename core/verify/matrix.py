@@ -10,6 +10,7 @@ import platform
 import subprocess
 
 from ..transform import _clang, _find_plugin
+from .. import toolchain as _tc
 
 # 目标三元组探针（仅编译到汇编，避免交叉链接器依赖）
 _CROSS = ["aarch64-linux-gnu", "riscv64-linux-gnu", "wasm32-unknown-unknown",
@@ -39,8 +40,7 @@ int probe_mix(int x)
 
 
 def _opt_bin() -> str:
-    import shutil
-    o = shutil.which("opt")
+    o = _tc.find_opt()
     if o:
         return o
     return os.path.join(os.path.dirname(_clang()), "opt")

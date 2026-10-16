@@ -14,6 +14,25 @@
 >
 > Built with the assistance of Opencode + DeepSeek V4.1 Flash Free.
 
+## Start here (users & agents)
+
+> Want to **use** it rather than read all the development docs? Start here:
+
+| I want to… | Read |
+| :--- | :--- |
+| Teach an agent to use this skill | **[`SKILL.md`](SKILL.md)** + [`skill.json`](skill.json) (machine-readable) |
+| Install / build / environment variables / Docker | [`docs/INSTALL.md`](docs/INSTALL.md) |
+| Wire the MCP server into my client | [`docs/mcp-clients.md`](docs/mcp-clients.md) |
+| Run an end-to-end example | [`examples/quickstart/`](examples/quickstart/) |
+| Troubleshoot | [`docs/FAQ.md`](docs/FAQ.md), [`docs/troubleshooting.md`](docs/troubleshooting.md) |
+
+```bash
+pip install -r requirements.txt   # jsonschema / PyYAML / deap
+anti-rea doctor                   # environment self-check with fix guidance
+make build                        # build the LLVM transform plugin
+docker build -t anti-rea:1.0.0 .  # or: pinned image, no manual LLVM18 setup
+```
+
 ## Repository Status
 
 This repository is in the **coding phase** (S3 iterations R1/R2/R3 complete; M4/M5 approved).
@@ -28,9 +47,10 @@ This repository is in the **coding phase** (S3 iterations R1/R2/R3 complete; M4/
 | S3 Coding · R3 | ✅ Done (evaluation & verification / adaptive evolution / MCP Server / reporting, tag `m5-frozen`) |
 | S4 System Integration & Verification | ✅ Done (differential fuzz 10⁵ / performance / adversarial (built-in + independent) / reproducibility / robustness / compatibility / SBOM; reports in `docs/release/`) |
 | S5 Beta Pilot | ✅ Done (3 pilots — C / C++ / Python-ext — closed the protection loop independently; improvements / compliance / release checklist / install guide) |
-| S6 Official Release v1.0 | ⬜ Not started |
+| S6 Official Release v1.0 | ✅ Done (v1.0.0: skill entry / self-check / container / MCP config / example / release packaging; tag `v1.0.0`) |
 
 > **New to the project? Read [`docs/STATUS.md`](docs/STATUS.md) first** (project status & handoff), then continue from the "next step" listed there.
+> **Users: start with [`SKILL.md`](SKILL.md)** (skill entry) and [`docs/INSTALL.md`](docs/INSTALL.md).
 >
 > **Note**: the detailed design / requirements docs are currently written in Chinese.
 
@@ -38,11 +58,22 @@ This repository is in the **coding phase** (S3 iterations R1/R2/R3 complete; M4/
 
 ```text
 REA-Shield/
+├── SKILL.md                  # ★ Skill entry (start here as a user / agent)
+├── skill.json                # ★ Machine-readable skill manifest (tools/env/platform)
+├── README.md / README.zh-CN.md  # Overview (EN / 中文)
+├── LICENSE                   # MIT
+├── CHANGELOG.md              # Version history
+├── Dockerfile                # Pinned image (LLVM18 + Python3.11 + engine plugin)
+├── .agents/skills/anti-rea/  # Skill manifest location (points to root SKILL.md)
+├── examples/quickstart/      # Runnable end-to-end example
 ├── plan/                     # Plan & project plan
 │   ├── anti-rea-plan.md              # Original technical plan (capability-module oriented)
 │   └── anti-rea-project-plan.md      # Full-lifecycle project plan (phases/milestones/exit criteria)
 ├── docs/
 │   ├── STATUS.md             # ★ Project status & handoff (new-session entry point)
+│   ├── INSTALL.md            # Install / build / env vars / Docker
+│   ├── mcp-clients.md        # MCP client config (paste-ready)
+│   ├── FAQ.md、troubleshooting.md    # FAQ & troubleshooting
 │   ├── requirements/         # S0 deliverables
 │   │   ├── SRS.md                    # Software Requirements Spec (47 FR + 11 NFR + 5 CQ)
 │   │   ├── use-cases.md              # Use cases
@@ -79,10 +110,12 @@ REA-Shield/
 │   ├── mcp/                  #   MCP Server (stdio JSON-RPC 2.0, 7 tools)
 │   ├── verify/               #   S4 system verification (differential fuzz / perf / independent cross-check / reproducibility / robustness / compatibility)
 │   ├── transform.py          #   Transform execution (drives the engine plugin)
+│   ├── toolchain.py          #   Toolchain discovery + doctor self-check (no hardcoded paths)
+│   ├── platform_info.py      #   Platform / target-environment detection
 │   ├── report.py             #   Reporting & artifact management (unified dir / metadata / diff)
 │   ├── common.py             #   Schema validation / run_id / IO
-│   └── cli.py                #   CLI entry (scan/plan/protect/verify/report/attack_sim/regress/diff/evolve)
-├── tools/                    # S4/S5 verification & release tools (run_s4.py / run_s5.py / sbom.py / ghidra_functions.py)
+│   └── cli.py                #   CLI entry (doctor/scan/plan/protect/verify/report/attack_sim/regress/diff/evolve)
+├── tools/                    # S4/S5/S6 tools (run_s4.py / run_s5.py / sbom.py / release.py / ghidra_functions.py)
 ├── pilots/                   # S5 Beta pilots (crypto-lib / protocol-svc / python-ext)
 ├── docs/release/             # S4/S5 verification & release artifacts (STR/perf/adversarial/compatibility/SBOM/pilot/release checklist)
 ├── docs/INSTALL.md           # Install & upgrade guide
@@ -105,6 +138,7 @@ REA-Shield/
 
 | I want to… | Look here |
 | :--- | :--- |
+| **Hand the skill to an agent / person new to the project** | **[`SKILL.md`](SKILL.md)** + [`docs/INSTALL.md`](docs/INSTALL.md) + [`docs/mcp-clients.md`](docs/mcp-clients.md) |
 | Understand what this project does | `plan/anti-rea-plan.md` |
 | Understand the development process & milestones | `plan/anti-rea-project-plan.md` |
 | Know the current progress / how to take over | `docs/STATUS.md` |

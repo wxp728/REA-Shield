@@ -3,7 +3,6 @@
 若工具链/插件不可用则跳过（CI 中应先构建 engine/）。
 """
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -12,6 +11,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core import common  # noqa: E402
+from core import toolchain  # noqa: E402
 from core.scanner import scan  # noqa: E402
 from core.strategy import plan  # noqa: E402
 from core.transform import protect, _clang, _find_plugin  # noqa: E402
@@ -22,12 +22,9 @@ SAMPLES = os.path.join(REPO, "tests", "samples")
 HELLO = os.path.join(SAMPLES, "hello.c")
 P0_SECRET = os.path.join(SAMPLES, "p0_secret.c")
 
-_LLVM_BIN = "/opt/anti-rea-toolchain/clang+llvm-18.1.8-x86_64-linux-gnu-ubuntu-18.04/bin"
-
 
 def _opt() -> str | None:
-    o = shutil.which("opt") or os.path.join(_LLVM_BIN, "opt")
-    return o if os.path.exists(o) else None
+    return toolchain.find_opt()
 
 
 def _have_toolchain() -> bool:

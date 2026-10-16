@@ -39,3 +39,6 @@ htmlcov/
 integrations/*/example/anti-rea/
 integrations/*/example/target/
 integrations/python/example/*.so
+
+# S6 示例运行产物
+examples/quickstart/out/

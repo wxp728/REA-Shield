@@ -3,7 +3,6 @@
 无工具链/插件时跳过。
 """
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -11,16 +10,15 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from core import toolchain  # noqa: E402
 from core.transform import _clang, _find_plugin  # noqa: E402
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HELLO = os.path.join(REPO, "tests", "samples", "hello.c")
-_LLVM_BIN = "/opt/anti-rea-toolchain/clang+llvm-18.1.8-x86_64-linux-gnu-ubuntu-18.04/bin"
 
 
 def _opt() -> str | None:
-    o = shutil.which("opt") or os.path.join(_LLVM_BIN, "opt")
-    return o if os.path.exists(o) else None
+    return toolchain.find_opt()
 
 
 def _example_plugin() -> str:
