@@ -33,9 +33,10 @@ dependencies = [
 dev = ["pytest>=7", "ruff", "black"]
 
 [project.urls]
-Homepage = "https://gitee.com/wxp728/anti-rea"
-Repository = "https://gitee.com/wxp728/anti-rea"
-Documentation = "https://gitee.com/wxp728/anti-rea/blob/master/SKILL.md"
+Homepage = "https://gitee.com/wxp728/REA-Shield"
+Repository = "https://gitee.com/wxp728/REA-Shield"
+Mirror = "https://github.com/wxp728/REA-Shield"
+Documentation = "https://gitee.com/wxp728/REA-Shield/blob/master/SKILL.md"
 
 [project.scripts]
 anti-rea = "core.cli:main"

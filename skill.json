@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "description": "AI Agent-callable code-protection toolchain that raises the cost of automated reverse engineering (REA) for code you own. LLVM-based obfuscation transforms + CLI + MCP server.",
   "license": "MIT",
-  "homepage": "https://gitee.com/wxp728/anti-rea",
-  "repository": "https://gitee.com/wxp728/anti-rea",
+  "homepage": "https://gitee.com/wxp728/REA-Shield",
+  "repository": "https://gitee.com/wxp728/REA-Shield",
+  "repository_mirror": "https://github.com/wxp728/REA-Shield",
   "skill_document": "SKILL.md",
   "entrypoints": {
     "doctor": {

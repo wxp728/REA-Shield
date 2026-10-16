@@ -22,7 +22,7 @@ git push origin v1.0.0
 
 ## 2. Gitee Release（主站）
 
-1. 打开 `https://gitee.com/wxp728/anti-rea/releases/new`。
+1. 打开 `https://gitee.com/wxp728/REA-Shield/releases/new`。
 2. 标题：`Anti-REA Skill v1.0.0`；标签选 `v1.0.0`。
 3. 正文：粘贴 `docs/release/RELEASE-1.0.0.md`。
 4. 附件上传 `dist/` 下的产物：
@@ -35,7 +35,7 @@ git push origin v1.0.0
 ## 3. GitHub 镜像 / Release（可选）
 
 ```bash
-git remote add github git@github.com:<org>/anti-rea.git   # 若尚未配置
+git remote add github git@github.com:wxp728/REA-Shield.git   # 若尚未配置
 git push github v1.0.0
 # 用 gh CLI 创建 Release 并上传附件：
 gh release create v1.0.0 dist/*.tar.gz dist/*.whl dist/MANIFEST.sha256 \

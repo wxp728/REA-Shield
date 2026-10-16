@@ -40,7 +40,7 @@
 - **MCP 客户端配置**：[`docs/mcp-clients.md`](docs/mcp-clients.md)，
   Claude Desktop / Cursor / 通用 stdio 可直接粘贴。
 - **示例与文档**：`examples/quickstart/`（端到端可运行）、
-  `docs/FAQ.md`、`docs/troubleshooting.md`、`README.en.md`、`LICENSE`、`CHANGELOG.md`。
+  `docs/FAQ.md`、`docs/troubleshooting.md`、英文 `README.md` / 中文 `README.zh-CN.md`、`LICENSE`、`CHANGELOG.md`。
 - **依赖修正**：`requirements.txt` / `pyproject.toml` 补 `deap`、补
   `core.verify` 包与元数据（classifiers/urls/license）。
 - **发布打包**：`tools/release.py`（wheel + sdist + 全仓自包含 bundle +

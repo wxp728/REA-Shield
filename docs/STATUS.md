@@ -9,7 +9,7 @@
 | 日期 | 2026-10-16 |
 | 分支 | `master` |
 | 基线 tag | `m0-baseline`（M0 需求基线）、`m1-architecture`（M1 架构基线）、`m2-design`（M2 设计基线）、`m3-r1`（M3 R1）、`m4-r2`（M4 R2）、`m5-frozen`（M5 R3）、`m6-verified`（M6 验证）、`m7-pilot`（M7 试点）、`v1.0.0`（正式发布） |
-| 远端 | `git@gitee.com:wxp728/anti-rea.git` |
+| 远端 | Gitee：`git@gitee.com:wxp728/REA-Shield.git`；GitHub：`git@github.com:wxp728/REA-Shield.git` |
 | 最近提交 | 见 `git log -1`（本文件随该提交一并推送） |
 | 工作区 | 干净（无未提交改动） |
 
@@ -20,7 +20,7 @@
 **环境自检** `anti-rea doctor`、**去除硬编码路径**（`core/toolchain.py` 自动探测）、
 **容器镜像**（根 `Dockerfile`）、**MCP 客户端配置**（`docs/mcp-clients.md`）、
 **端到端示例**（`examples/quickstart/`）与 `docs/FAQ.md` / `docs/troubleshooting.md` /
-`README.en.md` / `LICENSE` / `CHANGELOG.md` 均已产出；发布打包器 `tools/release.py`
+`README.zh-CN.md`（中文）/ `README.md`（英文）/ `LICENSE` / `CHANGELOG.md` 均已产出；发布打包器 `tools/release.py`
 与发布说明 `docs/release/RELEASE-1.0.0.md`、上传清单 `upload-checklist.md` 就绪。
 **S3（R1/R2/R3）、S4（M6）、S5（M7）、S6（M8）全部完成，CI 全绿。**
 下一步：按 `plan §9` 进入 **S7（持续改进 / 条件项补测）**。
@@ -98,7 +98,7 @@
 | S6 | 容器镜像 + 入口脚本 | `Dockerfile`、`.dockerignore`、`deploy/entrypoint.sh` | v1.0 |
 | S6 | MCP 客户端配置 | `docs/mcp-clients.md` | v1.0 |
 | S6 | 端到端示例 | `examples/quickstart/`（`victim.c` / `run.sh` / `README.md`） | v1.0 |
-| S6 | 使用者文档（FAQ/排障/英文 README/许可证/变更记录） | `docs/{FAQ,troubleshooting}.md`、`README.en.md`、`LICENSE`、`CHANGELOG.md` | v1.0 |
+| S6 | 使用者文档（FAQ/排障/中英 README/许可证/变更记录） | `docs/{FAQ,troubleshooting}.md`、`README.md`、`README.zh-CN.md`、`LICENSE`、`CHANGELOG.md` | v1.0 |
 | S6 | 发布打包器 + 发布说明 + 上传清单 | `tools/release.py`、`docs/release/{RELEASE-1.0.0,upload-checklist}.md` | v1.0 |
 | S6 | 支持渠道（Issue 模板） | `.github/ISSUE_TEMPLATE/{bug_report,feature_request}.md` | v1.0 |
 | S6 | 打包/自检自动化用例 | `tests/test_toolchain.py` | — |
@@ -268,7 +268,7 @@ python -m core.mcp            # 或 anti-rea-mcp（stdio MCP Server）
 | **可用性：容器** | `Dockerfile`（钉死 Python3.11 + LLVM18 + 预构建插件；`mcp` 子命令） | `docker build` / `docker run` |
 | **可用性：平台探测修正** | `core/platform_info.py`（`target_platform` 按主机探测，可覆盖） | `tests/test_toolchain.py` |
 | **可用性：Agent 接入** | `docs/mcp-clients.md`（Claude Desktop / Cursor / 通用 stdio 可直接粘贴） | — |
-| **可用性：示例与支持** | `examples/quickstart/`、`docs/FAQ.md`、`docs/troubleshooting.md`、`README.en.md`、Issue 模板 | 端到端可运行 |
+| **可用性：示例与支持** | `examples/quickstart/`、`docs/FAQ.md`、`docs/troubleshooting.md`、中英 README、Issue 模板 | 端到端可运行 |
 
 **M8 出口准则核对**：版本冻结 ✅；可构建可复现产物（bundle 主产物 + 哈希清单）✅；
 发布说明 + 变更记录 ✅；支持渠道（Issue 模板 / FAQ / 排障）✅；安装体验（doctor +

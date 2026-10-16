@@ -18,6 +18,8 @@ entrypoints:
 
 # Anti-REA Skill
 
+> 仓库：**REA-Shield** — Gitee `https://gitee.com/wxp728/REA-Shield` ｜ GitHub 镜像 `https://github.com/wxp728/REA-Shield`
+
 > 把**你自己的**代码加固到「自动反逆向（REA）成本显著升高」的工具链。
 > 只加固你拥有或有权修改的代码；本项目**不**攻击、不削弱任何 REA 工具。
 
@@ -115,4 +117,4 @@ anti-rea-mcp        # stdio JSON-RPC，暴露 7 个工具
 - `examples/quickstart/` — 端到端可运行示例。
 - `docs/FAQ.md`、`docs/troubleshooting.md` — 常见问题与故障排查。
 - `skill.json` — 机器可读的 skill 清单。
-- `README.md` / `README.en.md` — 项目总览。
+- `README.md` / `README.zh-CN.md` — 项目总览（英 / 中）。

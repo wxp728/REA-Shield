@@ -71,7 +71,7 @@ def check() -> list[str]:
 
     # 关键文件存在
     required = [
-        "SKILL.md", "skill.json", "README.md", "README.en.md", "LICENSE",
+        "SKILL.md", "skill.json", "README.md", "README.zh-CN.md", "LICENSE",
         "requirements.txt", "pyproject.toml", "Dockerfile",
         ".agents/skills/anti-rea/SKILL.md",
         "docs/INSTALL.md", "docs/mcp-clients.md",

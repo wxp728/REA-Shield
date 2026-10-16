@@ -8,7 +8,7 @@
 不想手工拼装 LLVM18 + 插件？用仓库根目录的钉死镜像，开箱即用：
 
 ```sh
-git clone https://gitee.com/wxp728/anti-rea.git   # 或 github 镜像
+git clone https://gitee.com/wxp728/REA-Shield.git   # 或 GitHub 镜像：https://github.com/wxp728/REA-Shield
 cd anti-rea
 docker build -t anti-rea:1.0.0 .
 
@@ -42,7 +42,8 @@ docker run --rm -i anti-rea:1.0.0 mcp
 ## 2. 安装（源码）
 
 ```sh
-git clone https://gitee.com/wxp728/anti-rea.git    # 或 git@gitee.com:wxp728/anti-rea.git
+git clone https://gitee.com/wxp728/REA-Shield.git   # 或 git@gitee.com:wxp728/REA-Shield.git
+# GitHub 镜像：git clone git@github.com:wxp728/REA-Shield.git
 cd anti-rea
 
 # 依赖
