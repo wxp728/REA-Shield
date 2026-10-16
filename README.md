@@ -4,7 +4,9 @@
 
 > **Where there is a spear, there is a shield. REA is the spear; this skill is the shield.**
 >
-> Perhaps that day will come soon: AI will develop any software at extremely low cost, and both REA and this "shield" will lose their meaning. But until that day comes, we will always believe in and hold to one thing: cheating is wrong.
+> Perhaps that day will come soon: AI will develop any software at extremely low cost, and both REA and this "shield" will lose their meaning. But until that day comes, we will always believe in and hold to one thing:
+>
+> **Cheating is wrong.**
 >
 > **Goal**: raise REA's cost above, or close to, the cost of forward development.
 >
