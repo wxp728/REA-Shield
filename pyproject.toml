@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "anti-rea"
 version = "0.1.0"
-description = "Anti-REA Skill：AI Agent 可调用的代码反逆向加固引擎（R1 骨架）"
+description = "REA-Shield：AI Agent 可调用的代码反逆向加固引擎（R1 骨架）"
 requires-python = ">=3.11"
 dependencies = [
     "jsonschema>=4.0",

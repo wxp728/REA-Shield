@@ -1,4 +1,4 @@
-"""Anti-REA core 公共工具：路径、Schema 校验、run_id、JSON IO。"""
+"""REA-Shield core 公共工具：路径、Schema 校验、run_id、JSON IO。"""
 from __future__ import annotations
 
 import datetime as _dt

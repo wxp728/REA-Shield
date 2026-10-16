@@ -1,4 +1,4 @@
-"""Anti-REA 评估验证层。
+"""REA-Shield 评估验证层。
 
 - `verify`：功能保持 + 性能基准（FR-E1/E2）；
 - `attack_sim`：攻击模拟（FR-E3/E4/E5）+ 六项指标（FR-E6）+ 判定（OI-07）；

@@ -1,8 +1,8 @@
 **English** | [简体中文](README.zh-CN.md)
 
-# Anti-REA Skill
+# REA-Shield
 
-> **Where there is a spear, there is a shield — this skill project is the shield against REA.**
+> **Where there is a spear, there is a shield. REA is the spear; this skill is the shield.**
 >
 > **Currently**, this skill provides end-to-end protection **only on Linux x86_64**; its transformation engine is built on **LLVM IR** and can target ARM64 / Windows x64 / WASM, etc. (IR-level support; end-to-end verified only on Linux x86_64 so far); more platforms / OSes will be added in future releases.
 >
@@ -35,7 +35,7 @@ This repository is in the **coding phase** (S3 iterations R1/R2/R3 complete; M4/
 ## Repository Layout
 
 ```text
-anti-rea/
+REA-Shield/
 ├── plan/                     # Plan & project plan
 │   ├── anti-rea-plan.md              # Original technical plan (capability-module oriented)
 │   └── anti-rea-project-plan.md      # Full-lifecycle project plan (phases/milestones/exit criteria)

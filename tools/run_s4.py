@@ -96,7 +96,7 @@ def run_all(workdir: str, n_fuzz: int, reps: int, ghidra: bool) -> dict:
 def _md_str(res: dict, args) -> str:
     fz, perf, adv = res["fuzz"]["result"], res["performance"], res["adversarial"]
     indep_txt = "通过" if res["independent"]["independent_pass"] else "未通过"
-    L = ["# Anti-REA 系统测试报告（STR）", "",
+    L = ["# REA-Shield 系统测试报告（STR）", "",
          "> 由 `tools/run_s4.py` 生成；对应 `plan §6.3` M6 质量门。",
          "", "## 1. 验证类型矩阵结果", "",
          "| 验证类型 | 结果 | 证据 |", "| :--- | :--- | :--- |",

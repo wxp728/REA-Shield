@@ -1,4 +1,4 @@
-# Anti-REA 系统测试报告（STR）
+# REA-Shield 系统测试报告（STR）
 
 > 由 `tools/run_s4.py` 生成；对应 `plan §6.3` M6 质量门。
 

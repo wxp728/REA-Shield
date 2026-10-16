@@ -1,5 +1,5 @@
 /*
- * Anti-REA Transform Engine —— LLVM Pass 插件
+ * REA-Shield Transform Engine —— LLVM Pass 插件
  * 关联：FR-C1 CFF / FR-C2 MBA / FR-C3 不透明谓词 / FR-C6 选择性变换（白名单）
  *       FR-C7 代码虚拟化（R2）
  * 设计：docs/design/ddd/dd-03-llvm-transforms.md、dd-04-virtualization.md

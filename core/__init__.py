@@ -1,1 +1,1 @@
-"""Anti-REA core 包。"""
+"""REA-Shield core 包。"""

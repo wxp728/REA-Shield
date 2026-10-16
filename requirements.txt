@@ -1,4 +1,4 @@
-# Anti-REA core 运行依赖（R1）
+# REA-Shield core 运行依赖（R1）
 jsonschema>=4.0
 PyYAML>=6.0
 

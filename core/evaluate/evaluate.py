@@ -1,4 +1,4 @@
-"""Anti-REA 评估验证层（Evaluation v0.1，R1/R2）。
+"""REA-Shield 评估验证层（Evaluation v0.1，R1/R2）。
 
 设计：docs/design/ddd/dd-07-evaluation.md
 覆盖：FR-E1（功能保持，差分验证）、FR-E2（性能基准，粗测）；

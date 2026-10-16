@@ -1,4 +1,4 @@
-"""Anti-REA 输入分析层（Scanner v0.1，R1 MVP）。
+"""REA-Shield 输入分析层（Scanner v0.1，R1 MVP）。
 
 设计：docs/design/ddd/dd-01-scanner.md
 覆盖：FR-A1（工程类型）、FR-A2（敏感资产三类）、FR-A3（分级）、

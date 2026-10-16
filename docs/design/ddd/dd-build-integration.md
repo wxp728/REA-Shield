@@ -12,7 +12,7 @@
 
 ## 1. 目标与范围
 
-把「把 Anti-REA 嵌入构建/CI」与「产物/报告管理」设计到可编码级：CLI、CMake/Cargo/npm/Python 插件、MCP Server、构建钩子与失败策略、统一产物目录、可复现元数据、变更对比。
+把「把 REA-Shield 嵌入构建/CI」与「产物/报告管理」设计到可编码级：CLI、CMake/Cargo/npm/Python 插件、MCP Server、构建钩子与失败策略、统一产物目录、可复现元数据、变更对比。
 
 ## 2. 组件与依赖方向
 

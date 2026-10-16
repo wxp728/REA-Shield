@@ -1,4 +1,4 @@
-"""Anti-REA 策略决策层（Strategy Engine v0.1，R1 MVP）。
+"""REA-Shield 策略决策层（Strategy Engine v0.1，R1 MVP）。
 
 设计：docs/design/ddd/dd-02-strategy.md
 覆盖：FR-B1（模板库）、FR-B2（按敏感度匹配）、FR-B6（Schema 校验）。

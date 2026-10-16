@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://anti-rea.dev/schemas/protection_policy.schema.json",
   "title": "Protection Policy",
-  "description": "Anti-REA 策略决策层产出：防护策略组合（对应 FR-B6）。文件为 YAML，解析后按本 Schema 校验。",
+  "description": "REA-Shield 策略决策层产出：防护策略组合（对应 FR-B6）。文件为 YAML，解析后按本 Schema 校验。",
   "type": "object",
   "required": ["schema_version", "target", "performance_budget", "assets"],
   "additionalProperties": false,

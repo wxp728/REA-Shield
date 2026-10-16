@@ -96,7 +96,7 @@ def _report_model(run_dir: str) -> dict:
 
 
 def _to_markdown(m: dict) -> str:
-    L = ["# Anti-REA 保护报告", "",
+    L = ["# REA-Shield 保护报告", "",
          "- run_id: `%s`" % m.get("run_id", ""),
          "- engine: `%s`" % m.get("engine_version", ""),
          "- seed: `%s`" % m.get("seed"),
@@ -128,7 +128,7 @@ def _to_markdown(m: dict) -> str:
 def _to_html(m: dict, md: str) -> str:
     body = "<pre>%s</pre>" % html.escape(md)
     return ("<!doctype html><html lang=\"zh\"><head><meta charset=\"utf-8\">"
-            "<title>Anti-REA 保护报告 %s</title></head><body>%s</body></html>\n"
+            "<title>REA-Shield 保护报告 %s</title></head><body>%s</body></html>\n"
             % (html.escape(m.get("run_id", "")), body))
 
 
@@ -192,7 +192,7 @@ def diff(run_a: str, run_b: str) -> dict:
                            "removed": sorted(set(ha) - set(hb))}
 
     common.write_json(os.path.join(run_b, "diff_report.json"), result)
-    lines = ["# Anti-REA 变更对比", "",
+    lines = ["# REA-Shield 变更对比", "",
              "- run_a: `%s`" % result["run_a"],
              "- run_b: `%s`" % result["run_b"], "",
              "## 策略差异", "```json",

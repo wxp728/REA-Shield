@@ -1,4 +1,4 @@
-/* Crate 内的 C/FFI 敏感源（Anti-REA Cargo 集成样例，FR-D3）。
+/* Crate 内的 C/FFI 敏感源（REA-Shield Cargo 集成样例，FR-D3）。
  * 独立程序：集成驱动对其施加保护并做差分验证。 */
 #include <stdio.h>
 

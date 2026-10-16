@@ -1,5 +1,5 @@
 /*
- * Anti-REA 自定义虚拟机 —— ISA 与随机化表（pass 与解释器共享的唯一事实来源）
+ * REA-Shield 自定义虚拟机 —— ISA 与随机化表（pass 与解释器共享的唯一事实来源）
  * 设计：docs/design/ddd/dd-04-virtualization.md §3
  *
  * 机器模型：

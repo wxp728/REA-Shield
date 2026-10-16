@@ -1,4 +1,4 @@
-# Anti-REA Transform Engine（LLVM Pass 插件）
+# REA-Shield Transform Engine（LLVM Pass 插件）
 
 对 LLVM IR 施加**代码工程反逆向加固**变换，供 `core` 保护流水线经 `clang -fpass-plugin` 调用。
 

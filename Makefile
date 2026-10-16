@@ -1,4 +1,4 @@
-# Anti-REA Skill —— 顶层构建/测试入口
+# REA-Shield —— 顶层构建/测试入口
 # 用法：make build / make test / make e2e / make ci / make clean
 
 LLVM ?= /opt/anti-rea-toolchain/clang+llvm-18.1.8-x86_64-linux-gnu-ubuntu-18.04

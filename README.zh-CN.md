@@ -1,8 +1,8 @@
 [English](README.md) | **简体中文**
 
-# Anti-REA Skill
+# REA-Shield
 
-> **哪里有矛，哪里就有盾——本技能项目就是针对 REA 的盾。**
+> **哪里有矛，哪里就有盾。REA 是矛，本技能就是盾。**
 >
 > **目前**本技能**仅在 Linux x86_64** 上提供端到端防护；其变换引擎基于 **LLVM IR**，可面向 ARM64 / Windows x64 / WASM 等目标构建（IR 级支持，端到端实测目前仅 Linux x86_64）；其它平台 / OS 会在后续版本持续增加。
 >
@@ -33,7 +33,7 @@
 ## 目录结构
 
 ```text
-anti-rea/
+REA-Shield/
 ├── plan/                     # 方案与项目计划
 │   ├── anti-rea-plan.md              # 原始技术方案（能力模块导向）
 │   └── anti-rea-project-plan.md      # 全生命周期项目计划（阶段/里程碑/出口准则）

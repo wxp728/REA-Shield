@@ -22,7 +22,7 @@ def _find_integrations(start):
 
 _INT = _find_integrations(HERE)
 if _INT is None:
-    sys.exit("pilotext: 未找到 integrations/python（请在 Anti-REA 仓库内构建）")
+    sys.exit("pilotext: 未找到 integrations/python（请在 REA-Shield 仓库内构建）")
 sys.path.insert(0, _INT)
 
 from setuptools import Extension, setup  # noqa: E402

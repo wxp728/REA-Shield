@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Anti-REA CI 门禁（plan §5.1：lint + 单测 + 覆盖率 + 构建）
+# REA-Shield CI 门禁（plan §5.1：lint + 单测 + 覆盖率 + 构建）
 # 用法：bash ci/ci.sh
 set -euo pipefail
 

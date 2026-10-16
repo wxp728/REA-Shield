@@ -1,6 +1,6 @@
 # 项目状态与交接（Handoff）
 
-> **新会话请从这里开始。** 本文件描述 Anti-REA Skill 项目的当前进度、已完成的交付物、已决 / 待决事项，以及**下一步该做什么**。
+> **新会话请从这里开始。** 本文件描述 REA-Shield 项目的当前进度、已完成的交付物、已决 / 待决事项，以及**下一步该做什么**。
 
 ## 0. 快照
 
@@ -264,7 +264,7 @@ python -m core.mcp            # 或 anti-rea-mcp（stdio MCP Server）
 
 **建议开场提示词：**
 
-> 请阅读仓库根目录 `README.md` 与 `docs/STATUS.md`，了解 Anti-REA Skill 项目的当前进度；
+> 请阅读仓库根目录 `README.md` 与 `docs/STATUS.md`，了解 REA-Shield 项目的当前进度；
 > M0–M7 均已通过（tag `m0-baseline` / `m1-architecture` / `m2-design` / `m3-r1` / `m4-r2` / `m5-frozen` / `m6-verified` / `m7-pilot`），
 > **S3（R1/R2/R3）、S4（验证）、S5（试点）已完成**（`make ci` 全绿；S4/S5 报告见 `docs/release/`）。
 > 请按 `plan/anti-rea-project-plan.md §8` 进入 **S6（正式发布 v1.0，M8）**。

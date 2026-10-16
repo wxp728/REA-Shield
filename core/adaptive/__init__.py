@@ -1,4 +1,4 @@
-"""Anti-REA 自适应策略引擎（FR-F1…F4）。
+"""REA-Shield 自适应策略引擎（FR-F1…F4）。
 
 - `evolve`：策略遗传进化（FR-F3）；
 - `knowledge`：策略知识库与迁移推荐（FR-F4）；
