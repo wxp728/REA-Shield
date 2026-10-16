@@ -53,6 +53,31 @@ anti-rea buildenv out/protection_policy.yaml --root /path/to/project --protect-a
 > **整文件保护（`--protect-all`）** 建议与「已收窄的 scope」搭配：先把范围限定到自有
 > 敏感模块，再整文件保护，避免把整个工程（含第三方/上游代码）都纳入变换。
 
+## 导出收敛（隐藏内部符号名）
+
+真实工程多 TU 构建下**外部符号名会保留**（改名会与他 TU 断链），看符号表即知「这是什么库」。
+两步收敛：
+
+```sh
+# 1) 由公共头文件生成链接版本脚本（只导出公共 API，其余本地化）
+anti-rea exportmap src/include/yourmodule -o out/exports.map
+
+# 2) buildenv 带上版本脚本 + strip（链接后去本地符号）
+anti-rea buildenv out/protection_policy.yaml --root . --protect-all \
+    --exports out/exports.map --strip -o out/scope.env
+source out/scope.env && export CC=$PWD/integrations/cc-wrapper/anti-rea-cc
+make -j"$(nproc)"
+```
+
+- 版本脚本让**非 API 符号**（含引擎注入的 `anti_rea_vm_run`、函数拆分产物）从 `.dynsym`
+  消失——不再提示「有虚拟化保护」；
+- `ANTI_REA_STRIP=1` 在链接后 `strip --strip-unneeded`，去掉 `.symtab`（本地符号）；
+- 效果（真实加密库实测）：`.symtab` 本地符号 201 → **0**，算法相关字符串 132 → **64**，
+  `anti_rea_vm_run` 不再导出；**公共 API 名仍可见**（这是库的对外契约，无法也不应隐藏）。
+
+> 前提：该 `.so` 的内部符号不被**其他** `.so`/可执行文件按名引用；否则它们不能被本地化。
+> 若模块被拆成多个共享库互相引用，请把跨库接口一并列入 `exportmap`。
+
 ## 注意事项
 
 - **外部符号名默认保留**：真实构建多编译单元，改名外部链接函数会导致他 TU 按原名引用

@@ -18,7 +18,8 @@ CC_WRAPPER = os.path.join(INT, "cc-wrapper", "anti-rea-cc")
 sys.path.insert(0, REPO)
 
 from core.transform import (  # noqa: E402
-    scope_env as _scope_env, _clang, _find_plugin, build_vm_object as _build_vm_object)
+    scope_env as _scope_env, _clang, _find_plugin, build_vm_object as _build_vm_object,
+    export_map as _export_map)
 
 
 def _env() -> dict:
@@ -107,6 +108,52 @@ def _have_cc_toolchain() -> bool:
         return os.path.exists(CC_WRAPPER)
     except Exception:
         return False
+
+
+class TestExports(unittest.TestCase):
+    """导出收敛：由头文件生成版本脚本 + 包装器链接期应用 + strip。"""
+
+    def test_export_map_from_header(self):
+        with tempfile.TemporaryDirectory() as d:
+            hdr = os.path.join(d, "api.h")
+            with open(hdr, "w", encoding="utf-8") as fh:
+                fh.write("int api_pub(int a);\nvoid internal_extra(void);\n")
+            out = os.path.join(d, "exports.map")
+            res = _export_map([hdr], out)
+            self.assertIn("api_pub", res["symbols"])
+            self.assertIn("internal_extra", res["symbols"])
+            with open(out, encoding="utf-8") as fh:
+                text = fh.read()
+            self.assertIn("global:", text)
+            self.assertIn("local:", text)
+            self.assertIn("api_pub;", text)
+
+    @unittest.skipUnless(_have_cc_toolchain(), "需要 clang 与包装器")
+    def test_version_script_and_strip_hide_nonapi(self):
+        with tempfile.TemporaryDirectory() as d:
+            lib = os.path.join(d, "l.c")
+            hdr = os.path.join(d, "l.h")
+            with open(lib, "w", encoding="utf-8") as fh:
+                fh.write("int api_pub(int a){return a+1;}\n"
+                         "int internal_extra(int a){return a*2;}\n")
+            with open(hdr, "w", encoding="utf-8") as fh:
+                fh.write("int api_pub(int a);\n")
+            vmap = os.path.join(d, "exports.map")
+            _export_map([hdr], vmap)
+            obj = os.path.join(d, "l.o")
+            subprocess.run([_clang(), "-O1", "-fPIC", "-c", lib, "-o", obj],
+                           check=True, capture_output=True)
+            so = os.path.join(d, "libl.so")
+            env = dict(os.environ)
+            env.update({"ANTI_REA_REAL_CC": _clang(),
+                        "ANTI_REA_VERSION_SCRIPT": vmap, "ANTI_REA_STRIP": "1"})
+            r = subprocess.run([CC_WRAPPER, "-shared", "-fPIC", obj, "-o", so],
+                               capture_output=True, text=True, env=env)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            dyn = subprocess.run(["nm", "-D", so], capture_output=True,
+                                 text=True).stdout
+            self.assertIn("api_pub", dyn)          # 公共 API 保留
+            self.assertNotIn("internal_extra", dyn)  # 非 API 本地化
 
 
 @unittest.skipUnless(_have_cc_toolchain(), "需要已构建的 engine 插件与 clang")

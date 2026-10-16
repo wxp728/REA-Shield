@@ -43,9 +43,34 @@ if [ "$inject" = "1" ]; then
   exec "$real" -fpass-plugin="$ANTI_REA_PLUGIN" "$@"
 fi
 
-# 链接步骤：若启用了代码虚拟化，并入 VM 运行期对象（anti_rea_vm_run 的实现）。
+# ---------- 链接步骤 ----------
+# 1) 若启用代码虚拟化，并入 VM 运行期对象（anti_rea_vm_run 的实现）；
+# 2) 若提供版本脚本，只导出公共 API（其余符号本地化，`.dynsym` 不再带内部名）。
+extra=()
 if [ -n "${ANTI_REA_VM_OBJ:-}" ] && [ -f "${ANTI_REA_VM_OBJ}" ]; then
-  exec "$real" "$@" "$ANTI_REA_VM_OBJ"
+  extra+=("$ANTI_REA_VM_OBJ")
+fi
+if [ -n "${ANTI_REA_VERSION_SCRIPT:-}" ] && [ -f "${ANTI_REA_VERSION_SCRIPT}" ]; then
+  extra+=("-Wl,--version-script=$ANTI_REA_VERSION_SCRIPT")
 fi
 
-exec "$real" "$@"
+if [ "${ANTI_REA_STRIP:-0}" != "1" ]; then
+  exec "$real" "$@" ${extra[@]+"${extra[@]}"}
+fi
+
+# strip 模式：先链接，再对产物去本地符号（保留 .dynsym 中的公共 API）
+"$real" "$@" ${extra[@]+"${extra[@]}"}
+rc=$?
+if [ "$rc" -eq 0 ]; then
+  out=""
+  prev=""
+  for a in "$@"; do
+    if [ "$prev" = "-o" ]; then out="$a"; break; fi
+    prev="$a"
+  done
+  if [ -n "$out" ] && [ -f "$out" ] && \
+     file "$out" 2>/dev/null | grep -qE 'ELF .*(shared object|executable)'; then
+    strip --strip-unneeded "$out" 2>/dev/null || strip "$out" 2>/dev/null || true
+  fi
+fi
+exit "$rc"

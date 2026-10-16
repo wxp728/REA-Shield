@@ -15,7 +15,8 @@ import sys
 from . import common
 from .scanner import scan as _scan
 from .strategy import plan as _plan
-from .transform import protect as _protect, scope_env as _scope_env, build_vm_object as _build_vm_object
+from .transform import (protect as _protect, scope_env as _scope_env,
+                        build_vm_object as _build_vm_object, export_map as _export_map)
 from .evaluate import verify as _verify
 from .evaluate import attack_sim as _attack_sim
 from . import report as _report
@@ -88,6 +89,11 @@ def _cmd_buildenv(args) -> int:
             env["ANTI_REA_VM_OBJ"] = vm_obj
         except Exception as exc:  # noqa: BLE001
             print("buildenv: 警告：VM 运行期对象预编译失败（%s）" % exc, file=sys.stderr)
+    # 导出收敛：版本脚本 + strip
+    if args.exports:
+        env["ANTI_REA_VERSION_SCRIPT"] = os.path.abspath(args.exports)
+    if args.strip:
+        env["ANTI_REA_STRIP"] = "1"
     lines = ["# REA-Shield 构建注入环境（anti-rea buildenv 生成）",
              "# 用法：source <本文件>；再把 CC 指向 integrations/cc-wrapper/anti-rea-cc"]
     for k in sorted(env):
@@ -101,6 +107,15 @@ def _cmd_buildenv(args) -> int:
             args.out, len(wl), env.get("ANTI_REA_STRATEGIES", "")))
     else:
         sys.stdout.write(text)
+    return EXIT_OK
+
+
+def _cmd_exportmap(args) -> int:
+    """由公共头文件生成链接版本脚本（导出收敛）。"""
+    res = _export_map(args.path, args.out)
+    print("exportmap: %s (%d 个公共符号)" % (res["out"], res["count"]))
+    if args.json:
+        print(json.dumps(res, ensure_ascii=False, indent=2))
     return EXIT_OK
 
 
@@ -247,8 +262,16 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--root", default=".")
     s.add_argument("--protect-all", action="store_true")
     s.add_argument("--plugin", default="", help="覆盖变换插件路径")
+    s.add_argument("--exports", default="", help="链接版本脚本（导出收敛，由 exportmap 生成）")
+    s.add_argument("--strip", action="store_true", help="链接后 strip 本地符号")
     s.add_argument("-o", "--out", default="", help="写入文件（缺省打印到 stdout）")
     s.set_defaults(func=_cmd_buildenv)
+
+    s = sub.add_parser("exportmap", help="由公共头文件生成链接版本脚本（只导出公共 API）")
+    s.add_argument("path", nargs="+", help="公共头文件或目录（递归 .h/.hpp）")
+    s.add_argument("-o", "--out", required=True)
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=_cmd_exportmap)
 
     s = sub.add_parser("verify", help="功能保持验证（差分）")
     s.add_argument("artifacts")

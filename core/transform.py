@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import subprocess
 
 from . import common
@@ -158,6 +159,52 @@ def scope_env(policy: dict, root: str = ".", protect_all: bool = False,
         except Exception:  # noqa: BLE001
             pass
     return env
+
+
+# 头文件里的函数声明（用于生成导出白名单）。仅扫 .h/.hpp，避免 .c 中 `return foo(x);`
+# 之类的误报。函数指针/嵌套括号声明可能漏匹配，属可接受范围。
+_DECL_RE = re.compile(
+    r"^[A-Za-z_][\w\s\*]*?\b([A-Za-z_]\w*)\s*\([^;{)]*\)\s*;", re.M)
+_C_KEYWORDS = {
+    "if", "for", "while", "switch", "return", "sizeof", "do", "else", "case",
+    "typedef", "struct", "union", "enum", "static", "inline", "extern", "void",
+    "int", "char", "long", "short", "unsigned", "signed", "float", "double",
+}
+
+
+def export_map(paths: list[str], out_path: str) -> dict:
+    """由公共头文件生成链接版本脚本，只导出公共 API（其余符号本地化）。
+
+    产物形如 `{ global: foo; bar; local: *; };`。用法：链接时 `-Wl,--version-script`。
+    非 API 符号本地化后，`.dynsym`/`.dynstr` 不再携带内部名（配合 strip 效果更佳）。
+    仅扫 `.h/.hpp`（声明）；给目录则递归。
+    """
+    files: list[str] = []
+    for p in paths:
+        if os.path.isdir(p):
+            for dp, _, fns in os.walk(p):
+                for fn in fns:
+                    if os.path.splitext(fn)[1].lower() in (".h", ".hpp"):
+                        files.append(os.path.join(dp, fn))
+        elif os.path.splitext(p)[1].lower() in (".h", ".hpp"):
+            files.append(p)
+    syms: set[str] = set()
+    for f in files:
+        try:
+            with open(f, encoding="utf-8", errors="ignore") as fh:
+                text = fh.read()
+        except OSError:
+            continue
+        for m in _DECL_RE.finditer(text):
+            name = m.group(1)
+            if name not in _C_KEYWORDS:
+                syms.add(name)
+    lines = ["{", "  global:"]
+    lines += ["    %s;" % s for s in sorted(syms)]
+    lines += ["  local:", "    *;", "};", ""]
+    with open(out_path, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(lines))
+    return {"out": out_path, "count": len(syms), "symbols": sorted(syms)}
 
 
 def build_vm_object(out_path: str) -> str:
