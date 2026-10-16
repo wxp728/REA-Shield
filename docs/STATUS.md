@@ -8,19 +8,22 @@
 | :--- | :--- |
 | 日期 | 2026-10-16 |
 | 分支 | `master` |
-| 基线 tag | `m0-baseline`（M0 需求基线）、`m1-architecture`（M1 架构基线）、`m2-design`（M2 设计基线）、`m3-r1`（M3 R1）、`m4-r2`（M4 R2）、`m5-frozen`（M5 R3）、`m6-verified`（M6 验证）、`m7-pilot`（M7 试点） |
+| 基线 tag | `m0-baseline`（M0 需求基线）、`m1-architecture`（M1 架构基线）、`m2-design`（M2 设计基线）、`m3-r1`（M3 R1）、`m4-r2`（M4 R2）、`m5-frozen`（M5 R3）、`m6-verified`（M6 验证）、`m7-pilot`（M7 试点）、`v1.0.0`（正式发布） |
 | 远端 | `git@gitee.com:wxp728/anti-rea.git` |
 | 最近提交 | 见 `git log -1`（本文件随该提交一并推送） |
 | 工作区 | 干净（无未提交改动） |
 
 ## 1. 一句话现状
 
-**S5 Beta 试点（M7）已完成：** 3 个**不同语言 / 构建系统 / 敏感度**的试点工程
-（C/CMake/P0、C++/Make/P1、Python C 扩展/build_ext/P2）**均按文档独立完成保护闭环**——
-功能保持通过、对抗判定通过（内置 + 独立工具不矛盾）；改进项清单、合规审查结论、
-发布清单（Go/No-Go）、安装/升级指南均已产出（`docs/release/`、`docs/INSTALL.md`）。
-**S3（R1/R2/R3）、S4（M6）、S5（M7）全部完成，CI 全绿（69 用例）。**
-下一步：按 `plan §8` 进入 **S6（正式发布 v1.0，M8）**。
+**S6 正式发布 v1.0（M8）已完成：** 版本号统一为 `1.0.0`；面向外部使用者/Agent 的
+**技能入口**（根 `SKILL.md` + 机器可读 `skill.json` + `.agents/skills/anti-rea/SKILL.md`）、
+**环境自检** `anti-rea doctor`、**去除硬编码路径**（`core/toolchain.py` 自动探测）、
+**容器镜像**（根 `Dockerfile`）、**MCP 客户端配置**（`docs/mcp-clients.md`）、
+**端到端示例**（`examples/quickstart/`）与 `docs/FAQ.md` / `docs/troubleshooting.md` /
+`README.en.md` / `LICENSE` / `CHANGELOG.md` 均已产出；发布打包器 `tools/release.py`
+与发布说明 `docs/release/RELEASE-1.0.0.md`、上传清单 `upload-checklist.md` 就绪。
+**S3（R1/R2/R3）、S4（M6）、S5（M7）、S6（M8）全部完成，CI 全绿。**
+下一步：按 `plan §9` 进入 **S7（持续改进 / 条件项补测）**。
 
 > **两项条件项**（随发布说明披露，S7 持续补测）：NFR-02 的 **Token 消耗倍数 ≥ 100x**
 > 与**外部第三方红队结论**需真实 LLM 会话（CQ-05 出站控制 + 多模型）；无 LLM 时评估降级
@@ -38,7 +41,7 @@
 | **M5 编码 R3** | ✅ 已完成 | 评估/进化/MCP/产物管理；`make ci` 全绿；tag `m5-frozen` |
 | **M6 验证 S4** | ✅ 已完成 | 差分 fuzz/性能/对抗/可复现/稳健/兼容/安全/文档验证全绿；报告 `docs/release/`；tag `m6-verified` |
 | **M7 试点 S5** | ✅ 已完成 | 3 试点（C/C++/Python-ext）独立闭环；改进/合规/发布清单/安装指南；tag `m7-pilot` |
-| M8 发布 S6 | ⬜ 未开始 | v1.0 版本冻结/构建/发布说明/支持渠道 |
+| **M8 发布 S6** | ✅ 已完成 | v1.0.0：技能入口/自检/去硬编码/容器/MCP 配置/示例/发布打包；tag `v1.0.0` |
 
 ## 3. 已完成交付物清单
 
@@ -90,6 +93,15 @@
 | S5 | 改进项 / 合规审查 / 发布清单（Go-No-Go） | `docs/release/{improvements,compliance-review,release-checklist}.md` | v1.0 |
 | S5 | 安装与升级指南 | `docs/INSTALL.md` | v1.0 |
 | S5 | 试点自动化用例 | `tests/test_pilots.py` | — |
+| S6 | 技能入口（人读 + 机器可读） | `SKILL.md`、`skill.json`、`.agents/skills/anti-rea/SKILL.md` | v1.0 |
+| S6 | 环境自检 + 工具链探测（去硬编码） | `core/toolchain.py`、`anti-rea doctor`、`core/platform_info.py` | v0.1 |
+| S6 | 容器镜像 + 入口脚本 | `Dockerfile`、`.dockerignore`、`deploy/entrypoint.sh` | v1.0 |
+| S6 | MCP 客户端配置 | `docs/mcp-clients.md` | v1.0 |
+| S6 | 端到端示例 | `examples/quickstart/`（`victim.c` / `run.sh` / `README.md`） | v1.0 |
+| S6 | 使用者文档（FAQ/排障/英文 README/许可证/变更记录） | `docs/{FAQ,troubleshooting}.md`、`README.en.md`、`LICENSE`、`CHANGELOG.md` | v1.0 |
+| S6 | 发布打包器 + 发布说明 + 上传清单 | `tools/release.py`、`docs/release/{RELEASE-1.0.0,upload-checklist}.md` | v1.0 |
+| S6 | 支持渠道（Issue 模板） | `.github/ISSUE_TEMPLATE/{bug_report,feature_request}.md` | v1.0 |
+| S6 | 打包/自检自动化用例 | `tests/test_toolchain.py` | — |
 | S2+ | REA 对手分析（针对性设计输入，非需求） | `docs/analysis/rea-threat-analysis.md` | v0.1 |
 
 ## 4. 已决决策（**不要重新讨论**）
@@ -240,6 +252,32 @@ python -m core.mcp            # 或 anti-rea-mcp（stdio MCP Server）
 
 > **下一步**：按 `plan §8` 进入 **S6（正式发布 v1.0）**。
 
+### 6.5 阶段 S6：正式发布 v1.0（M8，已完成）
+
+对照 `plan §8.1` 发布步骤与 `§8.2` 出口准则：
+
+| 发布项 | 交付物 | 证据 |
+| :--- | :--- | :--- |
+| 版本冻结 | `pyproject.toml` = `1.0.0`、`core.__version__`、`skill.json.version` 一致 | `python tools/release.py --check` 通过 |
+| 构建与打包 | `tools/release.py`（wheel + sdist + **全仓自包含 bundle** + `MANIFEST.sha256` + `SIGNING.md`） | `python tools/release.py` / `--verify dist` |
+| 发布说明 | `docs/release/RELEASE-1.0.0.md`、`CHANGELOG.md` | 已产出 |
+| 上传清单（需凭据，维护者执行） | `docs/release/upload-checklist.md`（Gitee/GitHub Release、PyPI、npm） | 签名私钥不入库（OI-05） |
+| **可用性：技能入口** | `SKILL.md` + `skill.json` + `.agents/skills/anti-rea/SKILL.md` | 外部 Agent 可自举 |
+| **可用性：环境自检** | `anti-rea doctor`（缺件快速失败并给指引，`--json`） | `tests/test_toolchain.py` |
+| **可用性：去硬编码路径** | `core/toolchain.py`（环境变量 > PATH > 常见目录）；`Makefile`/`ci/ci.sh`/`INSTALL.md` 同步 | 换机无需改代码 |
+| **可用性：容器** | `Dockerfile`（钉死 Python3.11 + LLVM18 + 预构建插件；`mcp` 子命令） | `docker build` / `docker run` |
+| **可用性：平台探测修正** | `core/platform_info.py`（`target_platform` 按主机探测，可覆盖） | `tests/test_toolchain.py` |
+| **可用性：Agent 接入** | `docs/mcp-clients.md`（Claude Desktop / Cursor / 通用 stdio 可直接粘贴） | — |
+| **可用性：示例与支持** | `examples/quickstart/`、`docs/FAQ.md`、`docs/troubleshooting.md`、`README.en.md`、Issue 模板 | 端到端可运行 |
+
+**M8 出口准则核对**：版本冻结 ✅；可构建可复现产物（bundle 主产物 + 哈希清单）✅；
+发布说明 + 变更记录 ✅；支持渠道（Issue 模板 / FAQ / 排障）✅；安装体验（doctor +
+容器 + 示例）✅；**NFR-02（Token ≥ 100x）与外部第三方红队** ⏳ 需真实 LLM，
+随发布说明披露、**顺延 S7**。
+
+> **下一步**：按 `plan §9` 进入 **S7（持续改进）**；条件项（真实 LLM 会话下的
+> NFR-02 与外部红队）在具备 LLM 出站环境时补测。
+
 ## 7. 新环境准备（**已完成，记录实测**）
 
 本项目 PoC 环境已在 **RHEL 系 Linux（x86_64）** 上搭建完成：
@@ -264,14 +302,15 @@ python -m core.mcp            # 或 anti-rea-mcp（stdio MCP Server）
 
 **建议开场提示词：**
 
-> 请阅读仓库根目录 `README.md` 与 `docs/STATUS.md`，了解 Anti-REA Skill 项目的当前进度；
-> M0–M7 均已通过（tag `m0-baseline` / `m1-architecture` / `m2-design` / `m3-r1` / `m4-r2` / `m5-frozen` / `m6-verified` / `m7-pilot`），
-> **S3（R1/R2/R3）、S4（验证）、S5（试点）已完成**（`make ci` 全绿；S4/S5 报告见 `docs/release/`）。
-> 请按 `plan/anti-rea-project-plan.md §8` 进入 **S6（正式发布 v1.0，M8）**。
+> 请阅读仓库根目录 `README.md`（或 `SKILL.md`）与 `docs/STATUS.md`，了解 Anti-REA Skill 项目的当前进度；
+> M0–M8 均已通过（tag `m0-baseline` / `m1-architecture` / `m2-design` / `m3-r1` / `m4-r2` / `m5-frozen` / `m6-verified` / `m7-pilot` / `v1.0.0`），
+> **S3（R1/R2/R3）、S4（验证）、S5（试点）、S6（正式发布 v1.0）已完成**（`make ci` 全绿；报告见 `docs/release/`）。
+> 请按 `plan/anti-rea-project-plan.md §9` 进入 **S7（持续改进）**，优先补测两项条件项
+> （NFR-02 Token 倍数 ≥ 100x、外部第三方红队，均需真实 LLM 会话 CQ-05）。
 > 注意：需求已基线（tag `m0-baseline`），变更须走变更流程；所有跨模块数据须过 `schemas/` 校验；
-> NFR-02 的 Token 倍数 ≥ 100x 与外部第三方红队结论需真实 LLM（CQ-05），作为发布条件项随发布说明披露。
+> 面向使用者的入口是 `SKILL.md` / `docs/INSTALL.md` / `docs/mcp-clients.md`。
 
-**接手顺序**：`README.md` → `docs/STATUS.md`（本文）→ `plan/anti-rea-project-plan.md`（§5 S3）→ `engine/README.md` → `core/cli.py`。
+**接手顺序**：`README.md` → `docs/STATUS.md`（本文）→ `plan/anti-rea-project-plan.md`（§9 S7）→ `engine/README.md` → `core/cli.py`。
 
 ## 9. 约定与注意事项
 
@@ -286,6 +325,14 @@ python -m core.mcp            # 或 anti-rea-mcp（stdio MCP Server）
 
 | 想找…… | 路径 |
 | :--- | :--- |
+| **使用者/Agent 入口（先看这个）** | `SKILL.md`、`skill.json` |
+| **安装 / 构建 / 环境变量 / Docker** | `docs/INSTALL.md` |
+| **MCP 客户端配置（可直接粘贴）** | `docs/mcp-clients.md` |
+| **常见问题 / 排障** | `docs/FAQ.md`、`docs/troubleshooting.md` |
+| **端到端示例** | `examples/quickstart/` |
+| **发布说明 / 上传清单** | `docs/release/RELEASE-1.0.0.md`、`upload-checklist.md` |
+| 工具链探测与自检 | `core/toolchain.py`、`core/platform_info.py` |
+| 发布打包器 | `tools/release.py` |
 | 项目要做什么 / 为什么这样做 | `plan/anti-rea-plan.md` |
 | 全生命周期流程、里程碑、出口准则、风险 | `plan/anti-rea-project-plan.md` |
 | 需求、验收标准、优先级 | `docs/requirements/SRS.md` |
