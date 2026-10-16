@@ -1,48 +1,102 @@
 # 安装与升级指南（Install & Upgrade）
 
-> 面向 **Linux x86_64**（已实测平台）。其他平台见 `docs/release/compatibility-matrix.md`。
+> 面向 **Linux x86_64**（v1.0 已实测平台）。其他平台见
+> `docs/release/compatibility-matrix.md`。
+
+## 0. 最快路径：容器（推荐给新用户）
+
+不想手工拼装 LLVM18 + 插件？用仓库根目录的钉死镜像，开箱即用：
+
+```sh
+git clone https://gitee.com/wxp728/anti-rea.git   # 或 github 镜像
+cd anti-rea
+docker build -t anti-rea:1.0.0 .
+
+# 直接跑 CLI（宿主目录挂进 /work）
+docker run --rm -v "$PWD:/work" anti-rea:1.0.0 doctor
+docker run --rm -v "$PWD:/work" anti-rea:1.0.0 scan /work/tests/samples -o /work/out
+
+# 以 MCP stdio 服务器方式运行（供上层 Agent 调用）
+docker run --rm -i anti-rea:1.0.0 mcp
+```
+
+镜像内固定 Python 3.11 + LLVM/clang 18 + 已构建的变换插件，`doctor` 在构建期
+即自检通过。**Windows 用户建议用 Docker 或 WSL**（变换引擎是 Linux 共享库插件）。
 
 ## 1. 依赖
 
 | 组件 | 版本 | 用途 | 是否必需 |
 | :--- | :--- | :--- | :--- |
-| Python | 3.11 | 编排核心 / 评估 | 必需 |
-| LLVM/clang | 18.x | 变换引擎宿主 + 编译 | 必需 |
-| CMake | ≥ 3.10 | 构建引擎、CMake 集成 | 必需 |
+| Python | ≥ 3.11 | 编排核心 / 评估 | 必需 |
 | Python 包 | `jsonschema`、`PyYAML`、`deap` | Schema 校验 / 配置 / 遗传进化 | 必需 |
-| binutils | `nm`/`objdump`/`strings` | 静态特征 / 独立验证 | 必需 |
+| LLVM/clang | 18.x | 变换引擎宿主 + 编译 | 必需③ |
+| CMake | ≥ 3.16 | 构建引擎 | 必需③ |
+| binutils | `nm`/`objdump`/`strings` | 静态特征 / 独立验证 | 必需③ |
 | Node.js / npm | ≥ 18 | npm 集成 | 可选 |
 | rustc / cargo | ≥ 1.75 | Cargo 集成（C/FFI 源） | 可选 |
 | JDK + Ghidra | 21 + 12.x | 可选独立验证（PyGhidra） | 可选 |
 
-## 2. 安装
+③ `scan`/`plan` 只需要 Python + Python 包；LLVM/CMake/binutils 是
+`protect`/`verify` 的依赖。缺什么、怎么修，`anti-rea doctor` 会直接告诉你。
+
+## 2. 安装（源码）
 
 ```sh
-git clone git@gitee.com:wxp728/anti-rea.git
+git clone https://gitee.com/wxp728/anti-rea.git    # 或 git@gitee.com:wxp728/anti-rea.git
 cd anti-rea
 
-# （推荐）安装到虚拟环境或直接使用系统 Python
-pip install jsonschema PyYAML deap
+# 依赖
+pip install -r requirements.txt      # 等价：pip install jsonschema PyYAML deap
 
-# 构建变换引擎（LLVM Pass 插件）
-export PATH=/opt/anti-rea-toolchain/clang+llvm-18.1.8-x86_64-linux-gnu-ubuntu-18.04/bin:$PATH
-cmake -S engine -B engine/build -DLLVM_DIR=$LLVM_DIR/lib/cmake/llvm -DCMAKE_BUILD_TYPE=Release
-cmake --build engine/build -j
+# 构建变换引擎（LLVM Pass 插件）——路径**自动探测**，不必写死
+make build                           # 等价于 cmake -S engine -B engine/build \
+                                     #          -DLLVM_DIR=$(llvm-config --cmakedir) && cmake --build engine/build -j
 
-# 自检
-python -m core.cli scan tests/samples -o /tmp/ar && echo OK
+# 环境自检（缺件会给出明确指引）
+anti-rea doctor                      # 或：python -m core.cli doctor
 ```
+
+### LLVM 定位（不再写死路径）
+
+工具链定位优先级：**环境变量 > PATH > 常见安装目录**。若 clang 不在 PATH：
+
+```sh
+export ANTI_REA_LLVM=/usr/lib/llvm-18          # LLVM 安装前缀（其下有 bin/）
+# 或 make/ci 时：make build LLVM=/usr/lib/llvm-18
+# 或单独指定可执行文件：
+export ANTI_REA_CLANG=/usr/lib/llvm-18/bin/clang
+```
+
+`anti-rea doctor --llvm /usr/lib/llvm-18` 可临时指定前缀做自检。
+
+### 常用环境变量
+
+| 变量 | 作用 |
+| :--- | :--- |
+| `ANTI_REA_LLVM` / `ANTI_REA_LLVM_BIN` | LLVM 前缀 / bin 目录 |
+| `ANTI_REA_CLANG` / `ANTI_REA_OPT` | 显式指定可执行文件 |
+| `ANTI_REA_PLUGIN` / `ANTI_REA_VM_BC` | 插件 / VM 解释器路径 |
+| `ANTI_REA_WHITELIST` / `ANTI_REA_STRATEGIES` / `ANTI_REA_SEED` | 变换白名单 / 策略 / 随机种子 |
+| `ANTI_REA_GHIDRA=1` + `GHIDRA_INSTALL_DIR` | 启用 Ghidra 独立验证 |
+| `ANTI_REA_LLM_CMD` / `ANTI_REA_LLM_ENDPOINT` 等 | 接入真实 LLM 会话（攻击模拟） |
+| `ANTI_REA_ROOT` | wheel 安装场景下指向含 `schemas/`、`policies/` 的目录 |
 
 ## 3. 快速上手（保护闭环）
 
 ```sh
-python -m core.cli scan      <你的工程> -o build/run
-python -m core.cli plan      build/run/asset_manifest.json -o build/run
-python -m core.cli protect   build/run/protection_policy.yaml \
-                             --root <你的工程> --source <敏感源文件> -o build/run
-python -m core.cli verify    build/run
-python -m core.cli attack_sim build/run --benchmark benchmarks/bench-crypto-001.yaml
-python -m core.cli report    build/run --format all
+anti-rea scan       <你的工程> -o build/run
+anti-rea plan       build/run/asset_manifest.json -o build/run
+anti-rea protect    build/run/protection_policy.yaml \
+                    --root <你的工程> --source <敏感源文件> -o build/run
+anti-rea verify     build/run
+anti-rea attack_sim build/run --mode all
+anti-rea report     build/run --format all
+```
+
+端到端可运行示例见 [`../examples/quickstart/`](../examples/quickstart/)：
+
+```sh
+bash examples/quickstart/run.sh
 ```
 
 - `attack_sim` 无 LLM 时自动降级 `static_only`（以静态代理指标判定）。
@@ -69,13 +123,20 @@ anti-rea-mcp            # 或 python -m core.mcp
 ```
 
 stdio JSON-RPC 2.0，暴露 7 个工具：`anti_rea.scan/plan/protect/verify/attack_sim/report/evolve`。
+面向常见客户端的**可直接粘贴配置**见 [`mcp-clients.md`](mcp-clients.md)。
 
 ## 6. 升级
 
 ```sh
 git fetch --tags && git checkout v1.0.0
-cmake --build engine/build -j          # 引擎需随版本重建
-python -m core.cli --version           # 确认版本
+make build                             # 引擎需随版本重建
+anti-rea --version                     # 确认版本
 ```
 
-> 数据契约（`schemas/`）向后兼容；跨大版本升级请阅读对应 `CHANGELOG.md` 的「破坏性变更」小节。
+> 数据契约（`schemas/`）向后兼容；跨大版本升级请阅读 [`CHANGELOG.md`](../CHANGELOG.md)
+> 的「破坏性变更」小节。
+
+## 7. 卸载
+
+源码安装：删除目录即可（Python 包为可编辑/就地使用，不污染环境）。
+容器安装：`docker rmi anti-rea:1.0.0`。
