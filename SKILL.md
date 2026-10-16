@@ -101,6 +101,21 @@ anti-rea-mcp        # stdio JSON-RPC，暴露 7 个工具
 | `report` | 生成人读保护报告 | `run` |
 | `evolve` | 策略遗传进化（DEAP） | `manifest` |
 
+## 多编译单元工程 / Multi-TU projects
+
+`protect` 通过 `clang -fpass-plugin` 施加变换，Pass **逐编译单元（TU）** 运行。当工程由多个
+`.c/.cpp` 组成（`--source a.c --source b.c ...`）时：
+
+- **标识符重命名会自动降级**：外部链接函数可能被其它 TU 按原名引用，改名会导致
+  `undefined reference`。故 `protect` 检测到多源时自动设 `ANTI_REA_RENAME_EXTERNAL=0`
+  ——只改名 static/内部函数，公共符号名保留（REA 仍能在符号表看到导出名）。单文件工程/
+  整程序编译默认全量改名（`ANTI_REA_RENAME_EXTERNAL=1`）。
+- **`verify` 的对抗诱导变体**会与全部源文件一起链接（`metadata.json` 记录 `sources`）；
+  变体是 `sources[0]` 的副本，源文件里的**相对 `#include "../..."` 会被自动改写为绝对
+  路径**，避免副本挪到 `out_dir` 后断链。
+- **口径提示**：`baseline` 用 `clang -O0`、`protected` 用 `clang -O1`，两者的体积/符号差异
+  含优化因素，不全是混淆所致；需严格对比时请自行对齐优化级别。
+
 ## 安全边界 / Safety & Limits (v1.0)
 
 - **只加固你拥有的代码**。开放源码组件默认跳过（`allow_unknown_owner` 可覆盖）。

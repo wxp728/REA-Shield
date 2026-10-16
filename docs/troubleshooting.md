@@ -94,6 +94,18 @@ SRS 的「识别语言」≠「可变换语言」。
 某些工具链的无害告警，可忽略或
 `... 2>&1 | grep -v libtinfo`。
 
+### 9. 多编译单元工程：`undefined reference` / 变体编译失败
+
+工程由多个 `.c/.cpp` 组成时：
+
+- **`protect` 报 `undefined reference to <导出函数>`**：`rename` 改掉了别处仍按原名引用的
+  外部链接符号。`protect` 检测到多源会自动降级（`ANTI_REA_RENAME_EXTERNAL=0`，只改
+  static）；若你手工传了 `ANTI_REA_RENAME_EXTERNAL=1`，请去掉。
+- **`verify` 报编译对抗变体失败**：变体是 `sources[0]` 的副本，含相对 `#include "../..."`
+  的源文件在副本挪位后会断链；生成器已自动把这类相对 include 绝对化。若仍失败，检查
+  include 是否指向**源文件目录之外且不存在**的路径（这种无法自动定位，需改用 `-I` 或
+  绝对路径）。
+
 ## CI / 脚本
 
 ```sh

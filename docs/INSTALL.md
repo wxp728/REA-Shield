@@ -78,6 +78,7 @@ export ANTI_REA_CLANG=/usr/lib/llvm-18/bin/clang
 | `ANTI_REA_CLANG` / `ANTI_REA_OPT` | 显式指定可执行文件 |
 | `ANTI_REA_PLUGIN` / `ANTI_REA_VM_BC` | 插件 / VM 解释器路径 |
 | `ANTI_REA_WHITELIST` / `ANTI_REA_STRATEGIES` / `ANTI_REA_SEED` | 变换白名单 / 策略 / 随机种子 |
+| `ANTI_REA_RENAME_EXTERNAL` | 是否重命名**外部链接**函数（默认 `1`）。多编译单元工程改名会断链，`protect` 多源时自动置 `0`；单文件/整程序可保持 `1`。 |
 | `ANTI_REA_GHIDRA=1` + `GHIDRA_INSTALL_DIR` | 启用 Ghidra 独立验证 |
 | `ANTI_REA_LLM_CMD` / `ANTI_REA_LLM_ENDPOINT` 等 | 接入真实 LLM 会话（攻击模拟） |
 | `ANTI_REA_ROOT` | wheel 安装场景下指向含 `schemas/`、`policies/` 的目录 |
