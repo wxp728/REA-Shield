@@ -932,11 +932,31 @@ static bool constEncodableInst(const Instruction &I) {
          !isa<CatchPadInst>(I) && !isa<CleanupPadInst>(I);
 }
 
+// 整型常量是否值得编码（大小 >= 0x10000 且不是 2^k-1 掩码）
+static bool constEncodableValue(unsigned W, uint64_t V) {
+  if (W < 32 || W > 64) return false;
+  if (V < 0x10000ULL) return false;        // 小常数不值得编码
+  return (V & (V + 1)) != 0;               // 跳过 2^k-1 掩码
+}
+
+// 取出「整型常量向量」（如 clang -O2 把一组 IV 合并成的 <4 x i32>）的各 lane。
+// 全部 lane 都是 ConstantInt 时返回 true 并填充 Out；否则返回 false（保守跳过）。
+static bool constVectorLanes(Constant *C, SmallVectorImpl<ConstantInt *> &Out) {
+  auto *VT = dyn_cast<FixedVectorType>(C->getType());
+  if (!VT || !VT->getElementType()->isIntegerTy()) return false;
+  for (unsigned i = 0, n = VT->getNumElements(); i < n; ++i) {
+    auto *CI = dyn_cast<ConstantInt>(C->getAggregateElement(i));
+    if (!CI) return false;
+    Out.push_back(CI);
+  }
+  return !Out.empty();
+}
+
 // 常数编码：把白名单函数里「可疑的整型立即数」（算法指纹，如 SM4 FK 0xa3b1bac6、
 // SM3 IV 0x7380166f）收进本函数的本地常量池，用运行期解码的载荷替换立即数；池随后由
 // applyStringEncrypt 的整型数组编码进一步异或——同时隐藏「立即数」与「池字节」。
 // 逐函数建池：解码桩只为「本函数实际用到」的常量付出代价，避免跨函数放大代码体积。
-// 跳过小常数（<0x10000）与 2^k-1 掩码；单池上限 256 个元素（<=2KB，仍在编码器的 4KB 内）。
+// 标量与整型常量向量（<N x i32>）的操作数都覆盖；单池上限 256 个元素（<=2KB，仍在编码器 4KB 内）。
 static bool applyConstantEncode(Module &M, unsigned Seed) {
   LLVMContext &Ctx = M.getContext();
   IntegerType *I64 = IntegerType::get(Ctx, 64);
@@ -945,21 +965,27 @@ static bool applyConstantEncode(Module &M, unsigned Seed) {
   for (Function &F : M) {
     if (F.isDeclaration() || !whitelisted(F.getName())) continue;
 
-    // 1) 收集本函数的候选立即数
+    // 1) 收集本函数的候选立即数（标量常量 + 常量向量的各 lane）
     std::map<uint64_t, unsigned> Cands;
     for (BasicBlock &BB : F) {
       for (Instruction &I : BB) {
         if (!constEncodableInst(I)) continue;
         for (const Use &U : I.operands()) {
-          auto *CI = dyn_cast<ConstantInt>(U.get());
-          if (!CI) continue;
-          unsigned W = CI->getType()->getIntegerBitWidth();
-          if (W < 32 || W > 64) continue;
-          uint64_t V = CI->getZExtValue();
-          if (V < 0x10000ULL) continue;        // 小常数不值得编码
-          if ((V & (V + 1)) == 0) continue;    // 2^k-1 掩码
-          auto It = Cands.find(V);
-          if (It == Cands.end() || It->second < W) Cands[V] = W;
+          SmallVector<ConstantInt *, 8> LaneCIs;
+          if (auto *CI = dyn_cast<ConstantInt>(U.get())) {
+            LaneCIs.push_back(CI);
+          } else if (auto *C = dyn_cast<Constant>(U.get())) {
+            if (!constVectorLanes(C, LaneCIs)) continue;
+          } else {
+            continue;
+          }
+          for (ConstantInt *CI : LaneCIs) {
+            unsigned W = CI->getType()->getIntegerBitWidth();
+            uint64_t V = CI->getZExtValue();
+            if (!constEncodableValue(W, V)) continue;
+            auto It = Cands.find(V);
+            if (It == Cands.end() || It->second < W) Cands[V] = W;
+          }
         }
       }
     }
@@ -983,18 +1009,43 @@ static bool applyConstantEncode(Module &M, unsigned Seed) {
       for (Instruction &I : BB) {
         if (!constEncodableInst(I)) continue;
         for (unsigned Op = 0, NOps = I.getNumOperands(); Op < NOps; ++Op) {
-          auto *CI = dyn_cast<ConstantInt>(I.getOperand(Op));
-          if (!CI) continue;
-          auto It = Idx.find(CI->getZExtValue());
-          if (It == Idx.end()) continue;
+          Value *O = I.getOperand(Op);
+          SmallVector<ConstantInt *, 8> LaneCIs;
+          auto *VecTy = dyn_cast<FixedVectorType>(O->getType());
+          if (auto *CI = dyn_cast<ConstantInt>(O)) {
+            LaneCIs.push_back(CI);
+          } else if (VecTy && VecTy->getElementType()->isIntegerTy()) {
+            auto *C = dyn_cast<Constant>(O);
+            if (!C || !constVectorLanes(C, LaneCIs)) continue;
+          } else {
+            continue;
+          }
           IRBuilder<NoFolder> B(&I);
-          Value *Gep = B.CreateGEP(ArrTy, Pool, {B.getInt64(0), B.getInt64(It->second)});
-          Value *Ld = B.CreateLoad(I64, Gep);
-          Value *Cv = (CI->getType()->getIntegerBitWidth() == 64)
-                          ? Ld
-                          : B.CreateTrunc(Ld, CI->getType());
-          I.setOperand(Op, Cv);
-          Changed = true;
+          // 单个 lane 的载荷：按索引从池中取值（未入池的 lane 保留原常量）
+          auto Lane = [&](ConstantInt *CI) -> Value * {
+            auto It = Idx.find(CI->getZExtValue());
+            if (It == Idx.end()) return CI;
+            Value *Gep = B.CreateGEP(ArrTy, Pool, {B.getInt64(0), B.getInt64(It->second)});
+            Value *Ld = B.CreateLoad(I64, Gep);
+            return (CI->getBitWidth() == 64) ? Ld : B.CreateTrunc(Ld, CI->getType());
+          };
+          if (!VecTy) {
+            I.setOperand(Op, Lane(LaneCIs[0]));
+            Changed = true;
+            continue;
+          }
+          // 常量向量：逐 lane 取值后用 insertelement 重建成向量
+          Value *Vec = PoisonValue::get(VecTy);
+          bool Any = false;
+          for (unsigned L = 0, N = LaneCIs.size(); L < N; ++L) {
+            Value *LV = Lane(LaneCIs[L]);
+            if (LV != LaneCIs[L]) Any = true;
+            Vec = B.CreateInsertElement(Vec, LV, B.getInt64(L));
+          }
+          if (Any) {
+            I.setOperand(Op, Vec);
+            Changed = true;
+          }
         }
       }
     }

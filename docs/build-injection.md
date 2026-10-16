@@ -107,3 +107,9 @@ make -j"$(nproc)"
   （NFR-04/08）。
 - **验证**：`anti-rea verify` 的差分验证面向独立可执行文件；对长驻服务/`.so` 请改用工程
   自带的回归测试（如 PostgreSQL 的 `make check`）。
+- **点名构建目标**：有些工程（如 PostgreSQL 的 `src/common`）在子目录里直接 `make` 是空动作
+  （默认目标由 `Makefile.global` 的 `all:` 处理）。此时须显式点名目标，例如
+  `make -C src/common all CC=$PWD/integrations/cc-wrapper/anti-rea-cc`，否则不会重编、也看不出注入。
+- **优化档会影响常量形态**：`-O2` 下 clang 会把连续常量存储 SLP 向量化成 `<N x i32>` 常量；
+  常数编码（`ANTI_REA_CONST_ENCODE`）已覆盖整型常量与常量向量两种操作数，但**不要**只在
+  `-O1` 上验指纹——高优化档能看到额外的常量形态。
