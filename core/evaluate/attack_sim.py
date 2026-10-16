@@ -39,6 +39,11 @@ def _secrets(bm: dict) -> list[str]:
     return out
 
 
+def _ratio(prot: float, base: float) -> float:
+    """受保护/baseline 的倍数；baseline 为 0 时记 0（未测量）。"""
+    return round(prot / base, 4) if base else 0.0
+
+
 # ------------------------- 动态攻击（FR-E4，best-effort）-------------------------
 def dynamic_sim(protected_exe: str, secrets: list[str], workdir: str) -> dict:
     """在受控调试会话中转储进程内存并搜索 ground truth 秘密（S4）。
@@ -98,6 +103,7 @@ def attack_sim(artifacts_dir: str, *, benchmark: str | None = None,
 
     bm = _load_benchmark(benchmark)
     targets = _targets(bm)
+    bm_targets = bm.get("targets", [])
     secrets = _secrets(bm)
 
     reasons: list[str] = []
@@ -105,23 +111,51 @@ def attack_sim(artifacts_dir: str, *, benchmark: str | None = None,
     baseline_m: dict = {}
     protected_m: dict = {}
 
-    use_llm = llm.available(allow_llm)
-    if use_llm:
-        reasons.append("LLM 会话判定已启用")
-        # 会话编排（FR-E3）由 provider 实现；此处预留接口，未配置输出则视为未测量
-        reasons.append("LLM 已配置，但会话编排为 v0.1 预留（见 dd-07 §11 后续动作）")
-
-    # 静态代理指标
+    # 静态代理指标（始终计算：无 LLM 时用于判定，有 LLM 时作为辅助）
     met = M.compute_static(baseline, protected, targets)
     ratio = None
     rea_success = None
-    static_only = not use_llm
+
+    use_llm = llm.available(allow_llm)
+    if use_llm:
+        from . import rea_session
+        reasons.append("LLM 会话判定已启用（FR-E3）")
+        try:
+            # 同协议：baseline 与 protected 使用同一提示模板、同一模型（OI-07 §5）
+            base_s = rea_session.run_session(baseline, bm_targets)
+            prot_s = rea_session.run_session(protected, bm_targets)
+        except Exception as exc:  # noqa: BLE001 - 出站失败降级 static_only（OI-07 §D5）
+            use_llm = False
+            reasons.append("LLM 会话执行失败，降级 static_only（%s）" % exc)
+        else:
+            baseline_m = {"token_usage": base_s["tokens"],
+                          "analysis_time_sec": base_s["seconds"]}
+            protected_m = {"token_usage": prot_s["tokens"],
+                           "analysis_time_sec": prot_s["seconds"]}
+            met["name_recovery_accuracy"] = prot_s["name_recovery_accuracy"]
+            met["function_judgement_accuracy"] = prot_s["function_judgement_accuracy"]
+            met["token_ratio"] = _ratio(prot_s["tokens"], base_s["tokens"])
+            met["time_ratio"] = _ratio(prot_s["seconds"], base_s["seconds"])
+            met["session_context_used_ratio"] = prot_s["context_used_ratio"]
+            met["rea_success"] = prot_s["rea_success"]
+            ratio = prot_s["context_used_ratio"]
+            rea_success = prot_s["rea_success"]
+            llm_meta = {"provider": prot_s["provider"], "model": prot_s["model"],
+                        "session_context_window": prot_s["context_window"],
+                        "context_used_ratio": prot_s["context_used_ratio"]}
+            reasons.append("LLM 会话指标：name=%.2f func=%.2f token_ratio=%.2f time_ratio=%.2f"
+                           % (prot_s["name_recovery_accuracy"],
+                              prot_s["function_judgement_accuracy"],
+                              met["token_ratio"], met["time_ratio"]))
+            hit = [k for k, v in prot_s["signals"].items() if v]
+            reasons.append("REA 成功信号：" + ", ".join(hit) if hit
+                           else "REA 未出现 S1–S4 成功信号")
 
     # 动态攻击（可选）
     if mode in ("dynamic", "all"):
         dyn = dynamic_sim(protected, secrets, artifacts_dir)
         if dyn.get("measured"):
-            protected_m["analysis_time_sec"] = 0.0
+            protected_m.setdefault("analysis_time_sec", 0.0)
             if dyn["secret_hits"]:
                 rea_success = True  # S4
                 reasons.append("动态攻击命中 S4：内存中发现秘密")
@@ -143,7 +177,6 @@ def attack_sim(artifacts_dir: str, *, benchmark: str | None = None,
     else:
         reasons.append("静态代理指标（无 LLM；见 dd-07 §5）")
         verdict = M.judge(met, static_only=True)
-
     report = {
         "schema_version": common.SCHEMA_VERSION,
         "run_id": run_id,
@@ -156,8 +189,11 @@ def attack_sim(artifacts_dir: str, *, benchmark: str | None = None,
         report["llm"] = {
             "provider": llm_meta.get("provider", os.environ.get("ANTI_REA_LLM_PROVIDER", "env")),
             "model": llm_meta.get("model", os.environ.get("ANTI_REA_LLM_MODEL", "default")),
-            "session_context_window": llm.context_window(),
+            "session_context_window": llm_meta.get("session_context_window")
+            or llm.context_window(),
         }
+        if llm_meta.get("context_used_ratio") is not None:
+            report["llm"]["context_used_ratio"] = llm_meta["context_used_ratio"]
     if baseline_m:
         report["baseline"] = baseline_m
     if protected_m:
