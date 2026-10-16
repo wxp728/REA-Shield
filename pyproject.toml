@@ -4,16 +4,38 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "anti-rea"
-version = "0.1.0"
-description = "Anti-REA Skill：AI Agent 可调用的代码反逆向加固引擎（R1 骨架）"
+version = "1.0.0"
+description = "Anti-REA Skill：AI Agent 可调用的代码反逆向加固工具链（LLVM Pass + CLI + MCP）"
+readme = "README.md"
 requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Anti-REA Skill contributors" }]
+keywords = ["obfuscation", "reverse-engineering", "llvm", "mcp", "anti-rea"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: C",
+    "Programming Language :: C++",
+    "Topic :: Security",
+    "Topic :: Software Development :: Compilers",
+]
 dependencies = [
     "jsonschema>=4.0",
     "PyYAML>=6.0",
+    "deap>=1.4",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=7", "ruff", "black"]
+
+[project.urls]
+Homepage = "https://gitee.com/wxp728/anti-rea"
+Repository = "https://gitee.com/wxp728/anti-rea"
+Documentation = "https://gitee.com/wxp728/anti-rea/blob/master/SKILL.md"
 
 [project.scripts]
 anti-rea = "core.cli:main"
@@ -25,6 +47,7 @@ packages = [
     "core.scanner",
     "core.strategy",
     "core.evaluate",
+    "core.verify",
     "core.wbc",
     "core.adversarial",
     "core.adaptive",

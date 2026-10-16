@@ -9,10 +9,10 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import shutil
 import subprocess
 
 from . import common
+from . import toolchain
 from .scanner import scanner
 from . import wbc
 from . import adversarial
@@ -55,35 +55,36 @@ SUPPORTED_REQ = {"cff": "FR-C1", "mba": "FR-C2", "opaque": "FR-C3",
                  "virtualize": "FR-C7", "func_split": "FR-C4", "noise": "FR-C5",
                  "rename": "dd-03§7", "string_encrypt": "dd-03§7"}
 
-_DEFAULT_LLVM_BIN = "/opt/anti-rea-toolchain/clang+llvm-18.1.8-x86_64-linux-gnu-ubuntu-18.04/bin"
-
-
 def _find_plugin() -> str:
-    cand = os.path.join(common.REPO_ROOT, "engine", "build", "anti_rea_passes.so")
-    if not os.path.exists(cand):
+    cand = toolchain.find_plugin()
+    if not cand:
         raise FileNotFoundError(
-            "E_TRANSFORM_FAILED: 未找到插件 %s，请先构建 engine/" % cand)
+            "E_TRANSFORM_FAILED: 未找到变换插件 anti_rea_passes.so。\n"
+            "请先构建引擎：make build（或 cmake -S engine -B engine/build "
+            "-DLLVM_DIR=$(llvm-config --cmakedir) && cmake --build engine/build）。\n"
+            "也可用环境变量 ANTI_REA_PLUGIN 直接指定插件路径。\n"
+            "自检：anti-rea doctor")
     return cand
 
 
 def _find_vm_bc() -> str:
-    cand = os.path.join(common.REPO_ROOT, "engine", "build", "vm_interp.bc")
-    if not os.path.exists(cand):
+    cand = toolchain.find_vm_bc()
+    if not cand:
         raise FileNotFoundError(
-            "E_TRANSFORM_FAILED: 未找到 VM 解释器 %s，请先构建 engine/" % cand)
+            "E_TRANSFORM_FAILED: 未找到 VM 解释器 vm_interp.bc（随引擎一同构建）。\n"
+            "请先构建引擎：make build。也可用 ANTI_REA_VM_BC 指定路径。")
     return cand
 
 
 def _clang() -> str:
-    if os.environ.get("ANTI_REA_CLANG"):
-        return os.environ["ANTI_REA_CLANG"]
-    c = shutil.which("clang")
+    c = toolchain.find_clang()
     if c:
         return c
-    c = os.path.join(_DEFAULT_LLVM_BIN, "clang")
-    if os.path.exists(c):
-        return c
-    raise FileNotFoundError("E_BUILD_FAILED: 未找到 clang")
+    raise FileNotFoundError(
+        "E_BUILD_FAILED: 未找到 clang。\n"
+        "protect 需要 LLVM/clang >= 18。请安装后设置 ANTI_REA_LLVM=<LLVM 前缀>"
+        "（或用 ANTI_REA_CLANG 指定可执行文件），或把 clang 放进 PATH。\n"
+        "自检：anti-rea doctor")
 
 
 def _whitelist_symbols(policy: dict, root: str, only: str) -> list[str]:

@@ -1,6 +1,7 @@
-# Anti-REA core 运行依赖（R1）
+# Anti-REA 运行依赖（安装：pip install -r requirements.txt）
 jsonschema>=4.0
 PyYAML>=6.0
+deap>=1.4
 
 # 开发/测试（可选）
 # pytest>=7

@@ -13,6 +13,7 @@ import hashlib
 from typing import Any
 
 from .. import common
+from .. import platform_info
 
 # 语言/构建/平台识别信号
 _EXT_LANG = {
@@ -69,7 +70,8 @@ def _shannon_entropy(s: str) -> float:
     return -sum((c / n) * math.log2(c / n) for c in freq.values())
 
 
-def _detect_project(root: str) -> dict:
+def _detect_project(root: str, options: dict | None = None) -> dict:
+    options = options or {}
     lang_votes: dict[str, float] = {}
     build = "unknown"
     total_ext = 0
@@ -92,8 +94,11 @@ def _detect_project(root: str) -> dict:
             language = "mixed"
         else:
             language = top[0]
+    # 目标平台：显式指定 > 主机探测（dd-01 §目标平台 优先级的前两项）
+    target = platform_info.normalize(options.get("target_platform")) \
+        or platform_info.host_platform()
     return {"root": root, "language": language, "build_system": build,
-            "target_platform": "linux-x86_64"}
+            "target_platform": target}
 
 
 def _function_body(text: str, brace_pos: int) -> str:
@@ -212,7 +217,7 @@ def scan(root: str, options: dict | None = None) -> dict:
     if not _ownership_ok(root, allow_unknown):
         raise PermissionError("E_REFUSED: 所有权不明，拒绝执行（可用 --allow-unknown-owner 覆盖）")
 
-    project = _detect_project(root)
+    project = _detect_project(root, options)
     include = set(options.get("include", []) or [])
     exclude = set(options.get("exclude", []) or [])
 

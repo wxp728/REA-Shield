@@ -15,10 +15,13 @@ import json
 import os
 import platform
 import subprocess
+import sys
 from importlib import metadata
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LLVM_BIN = "/opt/anti-rea-toolchain/clang+llvm-18.1.8-x86_64-linux-gnu-ubuntu-18.04/bin"
+if REPO not in sys.path:
+    sys.path.insert(0, REPO)
+from core import toolchain  # noqa: E402
 
 PY_PACKAGES = ["jsonschema", "PyYAML", "deap", "numpy", "setuptools"]
 
@@ -63,7 +66,7 @@ def python_components() -> list[dict]:
 
 
 def external_components() -> list[dict]:
-    clang = os.path.join(LLVM_BIN, "clang")
+    clang = toolchain.find_clang() or "clang"
     comps = [
         {"name": "LLVM/clang", "version": _cmd_version([clang, "--version"]),
          "license": "Apache-2.0 WITH LLVM-exception"},

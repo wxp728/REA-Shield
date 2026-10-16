@@ -1,0 +1,170 @@
+{
+  "name": "anti-rea",
+  "version": "1.0.0",
+  "description": "AI Agent-callable code-protection toolchain that raises the cost of automated reverse engineering (REA) for code you own. LLVM-based obfuscation transforms + CLI + MCP server.",
+  "license": "MIT",
+  "homepage": "https://gitee.com/wxp728/anti-rea",
+  "repository": "https://gitee.com/wxp728/anti-rea",
+  "skill_document": "SKILL.md",
+  "entrypoints": {
+    "doctor": {
+      "command": "anti-rea doctor",
+      "description": "Environment self-check; fast-fails with guidance when a required component is missing."
+    },
+    "cli": {
+      "command": "anti-rea",
+      "description": "Command-line interface.",
+      "subcommands": ["doctor", "scan", "plan", "protect", "verify", "report", "attack_sim", "diff", "regress", "evolve"]
+    },
+    "mcp": {
+      "command": "anti-rea-mcp",
+      "transport": "stdio",
+      "protocol_version": "2024-11-05",
+      "description": "MCP server exposing the tools below over stdio JSON-RPC."
+    }
+  },
+  "tools": [
+    {
+      "name": "anti_rea.scan",
+      "description": "Scan a project and produce an asset manifest (asset_manifest schema). Read-only, idempotent.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["path"],
+        "properties": {
+          "path": {"type": "string"},
+          "options": {"type": "object"}
+        }
+      }
+    },
+    {
+      "name": "anti_rea.plan",
+      "description": "Generate a protection policy from a manifest, under a performance budget.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["manifest"],
+        "properties": {
+          "manifest": {"type": "object"},
+          "budget": {"type": "object"},
+          "seed": {"type": "integer"}
+        }
+      }
+    },
+    {
+      "name": "anti_rea.protect",
+      "description": "Apply transforms per policy; produces protected artifacts + transform log (deterministic per seed).",
+      "inputSchema": {
+        "type": "object",
+        "required": ["policy", "out"],
+        "properties": {
+          "policy": {"type": "object"},
+          "root": {"type": "string"},
+          "sources": {"type": "array", "items": {"type": "string"}},
+          "out": {"type": "string"},
+          "seed": {"type": "integer"},
+          "run_id": {"type": "string"}
+        }
+      }
+    },
+    {
+      "name": "anti_rea.verify",
+      "description": "Functional-preservation + performance verification (differential). Read-only, idempotent.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["artifacts"],
+        "properties": {
+          "artifacts": {"type": "string"},
+          "test_args": {"type": "array", "items": {"type": "string"}},
+          "max_overhead": {"type": "number"}
+        }
+      }
+    },
+    {
+      "name": "anti_rea.attack_sim",
+      "description": "Attack simulation (static/dynamic/cross-version). Read-only, idempotent; LLM egress requires allow_llm.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["artifacts"],
+        "properties": {
+          "artifacts": {"type": "string"},
+          "benchmark": {"type": "string"},
+          "mode": {"type": "string", "enum": ["static", "dynamic", "crossver", "all"]},
+          "allow_llm": {"type": "boolean"},
+          "db": {"type": "string"}
+        }
+      }
+    },
+    {
+      "name": "anti_rea.report",
+      "description": "Generate a human-readable protection report (json/md/html).",
+      "inputSchema": {
+        "type": "object",
+        "required": ["run"],
+        "properties": {
+          "run": {"type": "string"},
+          "format": {"type": "string", "enum": ["json", "md", "html"]}
+        }
+      }
+    },
+    {
+      "name": "anti_rea.evolve",
+      "description": "Genetic strategy evolution (DEAP); returns the best policy and fitness.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "assets": {"type": "array", "items": {"type": "object"}},
+          "manifest": {"type": "object"},
+          "seed": {"type": "integer"},
+          "pop": {"type": "integer"},
+          "gens": {"type": "integer"},
+          "metrics": {"type": "object"}
+        }
+      }
+    }
+  ],
+  "requirements": {
+    "python": ">=3.11",
+    "python_packages": ["jsonschema>=4.0", "PyYAML>=6.0", "deap>=1.4"],
+    "llvm": ">=18 (clang, opt, llvm-config)",
+    "cmake": ">=3.16",
+    "binutils": ["nm", "objdump", "strings"],
+    "optional": {
+      "ghidra": ">=12 with PyGhidra (set ANTI_REA_GHIDRA=1 for independent verification)",
+      "rustc_cargo": "for Rust C/FFI-source pilot",
+      "node_npm": "for JS/TS scanning only"
+    },
+    "environment_variables": {
+      "ANTI_REA_LLVM": "LLVM install prefix",
+      "ANTI_REA_LLVM_BIN": "LLVM bin directory",
+      "ANTI_REA_CLANG": "explicit clang executable",
+      "ANTI_REA_OPT": "explicit opt executable",
+      "ANTI_REA_PLUGIN": "path to anti_rea_passes.so",
+      "ANTI_REA_VM_BC": "path to vm_interp.bc",
+      "ANTI_REA_WHITELIST": "transform whitelist (symbols)",
+      "ANTI_REA_STRATEGIES": "transform strategies",
+      "ANTI_REA_SEED": "deterministic seed",
+      "ANTI_REA_LLM_CMD": "external LLM session command",
+      "ANTI_REA_GHIDRA": "set to 1 to enable Ghidra independent verification"
+    }
+  },
+  "supported": {
+    "platforms": {
+      "fully_tested": ["linux-x86_64"],
+      "partial": ["linux-aarch64", "macos-*", "windows-*"],
+      "note": "scan/plan run anywhere Python does; protect requires a built LLVM pass plugin and is validated on linux-x86_64 only."
+    },
+    "languages": {
+      "ir_transforms": ["c", "cpp", "rust (C/FFI sources only)", "python (C extensions only)"],
+      "scan_only": ["rust", "java", "csharp", "javascript", "typescript", "python"]
+    }
+  },
+  "quickstart": [
+    "pip install -r requirements.txt",
+    "anti-rea doctor",
+    "make build",
+    "anti-rea scan /path/to/your/project -o out",
+    "anti-rea plan out/asset_manifest.json -o out",
+    "anti-rea protect out/protection_policy.yaml --root /path/to/your/project --source /path/to/your/project/src/main.c -o out",
+    "anti-rea verify out",
+    "anti-rea attack_sim out --mode all"
+  ]
+}

@@ -265,7 +265,9 @@ def _write_docs(res: dict, docs_dir: str, docverify: list[dict]) -> None:
 def doc_verification(workdir: str) -> list[dict]:
     """执行文档中的关键命令，记录退出码。"""
     py = os.environ.get("ANTI_REA_PYTHON", sys.executable)
-    llvm = "export PATH=/opt/anti-rea-toolchain/clang+llvm-18.1.8-x86_64-linux-gnu-ubuntu-18.04/bin:$PATH; "
+    from core import toolchain
+    _bin = toolchain.llvm_bin()
+    llvm = ("export PATH=%s:$PATH; " % _bin) if _bin else ""
     out = os.path.join(workdir, "docrun")
     cmds = [
         "scan tests/samples -o %s" % out,
