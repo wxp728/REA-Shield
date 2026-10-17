@@ -1,7 +1,7 @@
 {
   "name": "anti-rea",
   "version": "1.0.0",
-  "description": "AI Agent-callable code-protection toolchain that raises the cost of automated reverse engineering (REA) for code you own. LLVM-based obfuscation transforms + CLI + MCP server.",
+  "description": "AI Agent-callable code-protection toolchain that raises the cost of automated reverse engineering (REA) for code you own. LLVM-based obfuscation transforms + CLI + MCP server. Phased workflow: read-only survey -> transformation proposal for user review -> user picks a mode (one-shot build / build-architecture transformation with an anti-REA build environment) -> flexible execution. Provides information and methodology; does not auto-modify the target project's build system.",
   "license": "MIT",
   "homepage": "https://gitee.com/wxp728/REA-Shield",
   "repository": "https://gitee.com/wxp728/REA-Shield",
@@ -22,6 +22,48 @@
       "transport": "stdio",
       "protocol_version": "2024-11-05",
       "description": "MCP server exposing the tools below over stdio JSON-RPC."
+    }
+  },
+  "workflow": {
+    "principle": "Do not auto-modify the target project's build system. Provide information + methodology + commands; the agent works in phases with the user, and each phase ends with something reviewable before proceeding.",
+    "phases": [
+      {
+        "id": "P0",
+        "name": "survey",
+        "readonly": true,
+        "actions": ["anti-rea doctor", "anti-rea scan", "read target build system (Makefile/CMake/build.rs/package.json/CI)"],
+        "outputs": ["environment self-check", "asset manifest", "build profile (entry point, compiler selection, artifact form, deps, CI, self-tests)"]
+      },
+      {
+        "id": "P1",
+        "name": "proposal",
+        "readonly": true,
+        "actions": ["draft out/PROPOSAL.md for user review"],
+        "outputs": ["proposal: scope, build profile, dependency/environment install list, recommended mode + rationale, step-by-step plan, verification & rollback"],
+        "gate": "user approval required before any change"
+      },
+      {
+        "id": "P2",
+        "name": "decide",
+        "actions": ["user picks mode A (one-shot build) / B (transform build architecture + anti-REA build environment) / C (A then B)"]
+      },
+      {
+        "id": "P3",
+        "name": "execute",
+        "actions": ["mode A: scan->plan->protect", "mode B: buildenv + inject clang+plugin into the project's own build (CC wrapper / toolchain file / build script edits)"],
+        "rules": ["show diffs of any build-file change to the user before applying", "adapt injection to the project's build system (autoconf/Make/CMake/Meson/Cargo/node-gyp/Bazel/scripted)", "report honestly if a dependency cannot be installed"]
+      },
+      {
+        "id": "P4",
+        "name": "verify",
+        "actions": ["anti-rea verify", "anti-rea attack_sim (--allow-llm for real LLM red-team sessions)", "anti-rea report"],
+        "outputs": ["verification report, eval report, human-readable report, rollback/rebuild instructions"]
+      }
+    ],
+    "modes": {
+      "A": "one-shot build: no changes to the target project; protect produces standalone baseline/protected artifacts under out/",
+      "B": "build-architecture transformation: inject the compiler wrapper into the project's own build (e.g. CC=anti-rea-cc after sourcing buildenv scope.env), producing native artifacts (.so etc.) and a reusable anti-REA build environment (script/make target/CI job)",
+      "C": "A then B: first validate policy/cost with a one-shot build, then transform the build architecture"
     }
   },
   "tools": [
@@ -166,6 +208,8 @@
     "anti-rea plan out/asset_manifest.json -o out",
     "anti-rea protect out/protection_policy.yaml --root /path/to/your/project --source /path/to/your/project/src/main.c -o out",
     "anti-rea verify out",
-    "anti-rea attack_sim out --mode all"
+    "anti-rea attack_sim out --mode all",
+    "# mode B (native artifacts like .so): anti-rea buildenv out/protection_policy.yaml --root <project> --protect-all -o out/scope.env; source out/scope.env; export CC=<repo>/integrations/cc-wrapper/anti-rea-cc; <build the project as usual>",
+    "# before changing anything in the target project, follow the phased workflow in SKILL.md: P0 survey -> P1 proposal (user review) -> P2 mode choice -> P3 execute -> P4 verify"
   ]
 }

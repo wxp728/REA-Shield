@@ -16,6 +16,19 @@
   会话判定子项）；`docs/requirements/rtm.md` / `docs/STATUS.md` / `docs/release/RELEASE-1.0.0.md`
   已同步标注（SRS 条目内容未改，需求已基线）。
 
+### 变更（技能改进 · 分阶段改造工作流）
+
+- **SKILL.md 新增「工作流：先方案、后改造」**：P0 勘察（只读，含目标工程**构建画像**）
+  → P1 改造方案（模板化产出 `out/PROPOSAL.md`，**交用户审查**）→ P2 用户选执行模式
+  （**A 一次性构建 / B 改造构建架构 + 防 REA 构建环境 / C 先 A 后 B**）→ P3 执行
+  （模式 B 含各构建体系注入点方法论：autoconf/Make/CMake/Meson/Cargo/node-gyp/Bazel/
+  自研脚本；改构建文件先给用户看 diff）→ P4 验证交付。
+- **定位声明**：技能只提供信息 + 方法论 + 命令，**不自动修改目标工程构建体系**、
+  不替用户把改造跑完；依赖安装清单（技能侧 + 工程侧）纳入 P1 方案。
+- `skill.json` 增 `workflow`（phases/modes/principle）与模式 B 的 quickstart 提示；
+  `.agents/skills/anti-rea/SKILL.md` TL;DR 同步；`docs/build-injection.md` 顶部
+  加工作流指引（模式 B 动手前先 P0–P2）。
+
 ## [1.0.0] — 2026-10-16
 
 首个正式版本。REA-Shield Skill 是一个 AI Agent 可调用的**代码反逆向加固工具链**，

@@ -8,6 +8,11 @@ description: >-
   apply obfuscation transforms (control-flow flattening, MBA, opaque predicates,
   string encryption, virtualization, noise), verify functional equivalence, and
   simulate an attack to measure effectiveness. Callable from the CLI or over MCP.
+  Works in phases: read-only survey → transformation proposal for user review →
+  user picks a mode (one-shot build, or transforming the target project's build
+  architecture and standing up an anti-REA build environment) → flexible
+  execution. The skill provides information and methodology; it does not
+  automatically modify the target project's build system.
 license: MIT
 version: 1.0.0
 entrypoints:
@@ -32,8 +37,107 @@ MCP Server (`anti-rea-mcp`)，让上层 Agent 用工具调用而不是手工拼�
   希望提高自动化逆向/反编译的成本。
 - 你想让 Agent 自动完成：扫描敏感资产 → 生成加固策略 → 施加变换 → 验证功能
   保持 → 攻击模拟评估 → 出报告。
+- 你想让 Agent **分阶段**带你看方案再动手：先只读勘察 + 出改造方案给你审查，
+  再按你选的模式（一次性构建 / 改造目标工程的构建架构并搭起防 REA 构建环境）执行。
 - 目标语言为纯 Rust / Java / .NET / JS/TS 时，v1.0 **不支持** IR 层变换
   （见「限制」）。
+
+## 工作流：先方案、后改造 / Phased workflow
+
+> **本技能不自动修改目标工程的构建体系，也不会替你把改造跑完。**
+> 各项目的构建工具、依赖与 CI 千差万别，本技能提供的是**信息 + 方法论 + 命令**，
+> 由 AI/Agent 按下述阶段与用户协作落地。**每阶段结束先产出可审查的东西给用户，
+> 得到确认后再进入下一阶段。**
+
+| 阶段 | 动手与否 | 产出（交用户审查） |
+| :--- | :--- | :--- |
+| **P0 勘察**（survey） | **只读** | 环境自检 + 资产清单 + **构建画像**（目标工程怎么构建，见下） |
+| **P1 方案**（proposal） | **只读** | 一份改造方案文档（模板见下），**等用户批准** |
+| **P2 选模式**（decide） | 用户决策 | 用户在模式 A / B / C 中选定，并提出修改要求 |
+| **P3 执行**（execute） | 按所选模式 | 按方案逐步执行；**改构建文件必须先给用户看 diff** |
+| **P4 验证交付**（verify） | 产物 | `verify` / `attack_sim` / `report` + 回退说明 |
+
+### P0 · 勘察（只读，不改任何文件）
+
+1. 本技能工具链自检：`anti-rea doctor`（缺什么、怎么修）。
+2. 资产扫描：`anti-rea scan <project> [-o out]`（范围收窄见「Scoping」节）。
+3. **构建画像**——读取目标工程（Makefile / configure / CMakeLists / build.rs /
+   package.json / CI 配置 …），回答以下问题并记入方案：
+   - 构建入口与构建工具是什么（autoconf+make / CMake / Meson / Cargo / node-gyp /
+     Bazel / 自研脚本）？
+   - 编译器怎么被指定（`CC=` 变量、toolchain 文件、硬编码 gcc/clang）？
+   - 产物形态（可执行 / `.so` / 静态库 / Python 扩展 / 安装包）与平台？
+   - 工程自身依赖（头文件、第三方库、交叉编译）有哪些、如何安装？
+   - 有没有多变体构建（PIC/非 PIC、`_srv`/`_shlib` 对象）与 CI 流水线？
+   - 目标工程**自身**有哪些功能测试（用于加固后回归）？
+
+### P1 · 改造方案（plan / proposal 模式，**先给用户审查**）
+
+> 注意与工具区分：此处的「方案」是 **Agent 起草、给用户审查的工程改造方案文档**，
+> 不是 CLI 的 `anti-rea plan` 子命令（后者只把资产清单变成 `protection_policy.yaml`
+> 策略文件，是方案里「策略」一节的输入）。
+
+把 P0 结果整理为一份方案文档（建议放 `out/PROPOSAL.md`，Agent 起草、用户改），
+**至少**包含：
+
+1. **目标与范围**：保护哪些模块/目录；白名单与导出契约（哪些公共 API 名必然保留）。
+2. **构建画像**：P0 第 3 步的结论。
+3. **依赖与环境安装清单**：本技能侧（LLVM 18、Python 包、插件构建，`anti-rea doctor`
+   输出）+ 目标工程侧（工程自己的依赖怎么装）；可用 Docker 镜像替代手工安装。
+4. **推荐模式与理由**：模式 A / B / C（见 P2），预估代价（体积、构建时间、运行开销）。
+5. **分步骤执行计划**：每步一条命令或一处脚本改动点，标注改哪个文件。
+6. **验证与回退**：baseline 对照怎么留、`verify`/`attack_sim` 怎么跑、如何还原
+   （构建注入不改源码；确需改构建文件的，保留原文件副本或 VCS 分支）。
+
+> 方案必须**停下等用户批准**；用户可能改范围、换模式、加要求——按其修订后再进入 P3。
+
+### P2 · 用户选择执行模式（用户决策点）
+
+| 模式 | 适用 | 改目标工程的构建体系？ | 产物 | 典型路径 |
+| :--- | :--- | :--- | :--- | :--- |
+| **A · 一次性构建** | 快速验证效果、小而自包含的目标、试点 | **否** | `out/` 下独立 baseline/protected 产物 | `scan → plan → protect → verify` |
+| **B · 改造构建架构 + 防 REA 构建环境** | 真实工程长期交付（`.so`、安装包、进 CI） | **是**（构建脚本/环境/CI） | 工程**原生形态**的真实产物（如 `.so`） | `scan → plan → buildenv → 注入原有构建 → verify` |
+| **C · 先 A 后 B**（推荐给大型工程） | 先低成本验收策略与开销，再落地架构改造 | A 否 → B 是 | 先对照产物、后真实产物 | A 路径 + B 路径顺序执行 |
+
+选择时给用户摆清楚：A 的局限（`protect` 只产出独立可执行文件，产不出 `.so`/多文件
+真实产物）、B 的成本（要动构建脚本、装依赖、可能改 CI）、C 的顺序建议。
+
+### P3 · 执行（按用户所选模式；Agent 灵活适配，**不套死模板**）
+
+- **模式 A**：即「Quickstart」四步。
+- **模式 B**：核心是**构建注入**——不替换目标工程的构建系统，而是把
+  「clang + 变换插件」挂进其原有构建（编译挂插件、链接透传），并把这套做法
+  **固化成目标工程可复用的构建环境**（如工程内脚本 / Makefile 目标 / CI job）：
+
+  ```sh
+  anti-rea buildenv out/protection_policy.yaml --root <project> --protect-all -o out/scope.env
+  source out/scope.env
+  export CC=<repo>/integrations/cc-wrapper/anti-rea-cc
+  <目标工程照常构建>          # ./configure && make / cmake --build / cargo build ...
+  ```
+
+  **常见构建体系的注入点（方法论参考，按工程实际灵活裁剪）**：
+
+  | 构建体系 | 注入方式 |
+  | :--- | :--- |
+  | autoconf + Make | `CC=包装器` 传给 `./configure` 与 `make`；configure 探测可用 `ANTI_REA_DISABLE=1` |
+  | 纯 Makefile | `make CC=包装器`，或 Makefile 中 `CC ?=` 允许外部覆盖 |
+  | CMake | `-DCMAKE_C_COMPILER=<包装器>` 或 toolchain 文件里设 `CMAKE_C_COMPILER` |
+  | Meson | native file 的 `c/cpp` compiler 字段，或 `-Dc_args` 仅传插件参数 |
+  | Cargo（Rust C/FFI） | 经 `cc` crate 的 `CC` 环境变量注入（仅 C/FFI 源受保护） |
+  | node-gyp / npm | `CC` 环境变量（仅 C 扩展部分受保护） |
+  | Bazel | 自定义 C++ toolchain 或 `--action_env=CC=包装器` |
+  | 自研脚本 / 硬编码编译器 | 改脚本把编译命令指到包装器，或加 PATH shim；**改动先给用户看** |
+
+  **执行纪律**：改任何构建文件/CI 前，把 diff 贴给用户过目；只加不删（保留原构建
+  路径可随时回退）；工程依赖安装按 P1 清单执行，装不上的项如实回报用户而不是跳过。
+
+### P4 · 验证与交付
+
+`anti-rea verify`（功能保持 + 开销）→ `anti-rea attack_sim`（`--allow-llm` 走真实
+LLM 红队会话）→ `anti-rea report`；附回退说明与后续再构建的操作方式
+（模式 B：如何一条命令再产出受保护产物）。
+
 
 ## 前置条件 / Prerequisites
 
@@ -54,6 +158,9 @@ LLVM 位置无需写死：通过 `ANTI_REA_LLVM=<前缀>` 或把工具放进 `PA
 `doctor` 也接受 `--llvm <前缀>`。
 
 ## 快速开始 / Quickstart (CLI)
+
+> 以下即工作流 **模式 A（一次性构建）** 的最短路径；对应「先方案、后改造」的
+> P0/P3——正式改造前仍建议先走 P1 出方案给用户审查。
 
 ```bash
 # 0) 自检
@@ -133,10 +240,12 @@ anti-rea plan out/asset_manifest.json --only-path 'src/common/crypto_*/*' --only
 - `protect --protect-all`：**整文件保护**——白名单取 scope 内文件**全部函数**（含
   `sm4_key_expand` 这类名字不含关键词的内部辅助函数），推荐与已收窄的 scope 搭配。
 
-## 保护真实工程产物（`.so`/大型构建）
+## 保护真实工程产物（`.so`/大型构建）——工作流模式 B
 
-`protect` 只产出**独立可执行文件**，产不出 PG 扩展 `.so` 这类真实产物。此时用**构建注入**：
+`protect` 只产出**独立可执行文件**，产不出 PG 扩展 `.so` 这类真实产物。此时用**构建注入**（工作流模式 B）：
 把「clang + 变换插件」挂进原有构建（编译挂插件、链接透传），产出真正的 `.so`：
+**不替换**目标工程的构建系统，也不替用户把改造跑完——按工作流 P1 先把注入点、
+依赖安装与改动 diff 方案交给用户，再据其选择执行并固化为可复用的构建环境：
 
 ```sh
 anti-rea buildenv out/protection_policy.yaml --root /path/to/project --protect-all -o out/scope.env
@@ -154,6 +263,8 @@ export CC=$PWD/integrations/cc-wrapper/anti-rea-cc
 - 变换引擎基于 LLVM Pass：支持 C/C++；Rust 仅 C/FFI 源、Python 仅 C 扩展。
   纯 Rust / Java / .NET / JS/TS 无 IR 层防护（ADR-006）。
 - 默认平台 Linux x86_64；其他平台可运行 scan/plan，protect 需自行验证。
+- **不越权改造**：本技能只提供信息与方法论；对目标工程构建体系的任何修改
+  （构建脚本、CI、环境）都须先经工作流 P1 出方案、用户审查后再动，且只改用户批准的项。
 - 详细兼容性与实测结论见 `docs/release/`、`docs/INSTALL.md`。
 
 ## 进一步阅读 / See also
