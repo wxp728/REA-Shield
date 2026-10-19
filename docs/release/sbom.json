@@ -6,42 +6,47 @@
     "system": "Linux",
     "machine": "x86_64"
   },
-  "generated_at": "2026-10-15T16:38:19.304816+00:00",
+  "generated_at": "2026-10-19T09:39:03.994344+00:00",
   "components": [
     {
       "type": "library",
       "name": "jsonschema",
       "version": "4.26.0",
       "license": "MIT",
-      "ecosystem": "pypi"
+      "ecosystem": "pypi",
+      "provisioning_tier": "T0"
     },
     {
       "type": "library",
       "name": "PyYAML",
       "version": "6.0.3",
       "license": "MIT",
-      "ecosystem": "pypi"
+      "ecosystem": "pypi",
+      "provisioning_tier": "T0"
     },
     {
       "type": "library",
       "name": "deap",
       "version": "1.4.4",
       "license": "LGPL",
-      "ecosystem": "pypi"
+      "ecosystem": "pypi",
+      "provisioning_tier": "T3"
     },
     {
       "type": "library",
       "name": "numpy",
       "version": "2.4.6",
       "license": "BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0",
-      "ecosystem": "pypi"
+      "ecosystem": "pypi",
+      "provisioning_tier": "T3"
     },
     {
       "type": "library",
       "name": "setuptools",
       "version": "65.5.0",
       "license": "MIT License",
-      "ecosystem": "pypi"
+      "ecosystem": "pypi",
+      "provisioning_tier": "T0"
     },
     {
       "name": "LLVM/clang",

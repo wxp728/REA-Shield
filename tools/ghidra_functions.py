@@ -11,19 +11,29 @@ import sys
 import tempfile
 
 
+def _scan_opt(prefix: str) -> str | None:
+    """在 /opt 及其一级子目录下找 <prefix>* 目录（不写死任何内部路径）。"""
+    root = "/opt"
+    if not os.path.isdir(root):
+        return None
+    bases = [root] + [os.path.join(root, d) for d in sorted(os.listdir(root))
+                      if os.path.isdir(os.path.join(root, d))]
+    for base in bases:
+        for d in sorted(os.listdir(base)):
+            if d.lower().startswith(prefix):
+                return os.path.join(base, d)
+    return None
+
+
 def _autodetect():
     if not os.environ.get("GHIDRA_INSTALL_DIR"):
-        for root in ("/opt/anti-rea-toolchain", "/opt"):
-            if os.path.isdir(root):
-                for d in sorted(os.listdir(root)):
-                    if d.lower().startswith("ghidra_"):
-                        os.environ["GHIDRA_INSTALL_DIR"] = os.path.join(root, d)
+        home = _scan_opt("ghidra_")
+        if home:
+            os.environ["GHIDRA_INSTALL_DIR"] = home
     if not os.environ.get("JAVA_HOME"):
-        for root in ("/opt/anti-rea-toolchain", "/opt"):
-            if os.path.isdir(root):
-                for d in sorted(os.listdir(root)):
-                    if d.lower().startswith("jdk"):
-                        os.environ["JAVA_HOME"] = os.path.join(root, d)
+        home = _scan_opt("jdk")
+        if home:
+            os.environ["JAVA_HOME"] = home
 
 
 def main() -> int:

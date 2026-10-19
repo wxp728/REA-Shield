@@ -97,9 +97,13 @@ def external_components() -> list[dict]:
 
 
 def _ghidra_version() -> str:
-    for root in ("/opt/anti-rea-toolchain", "/opt"):
-        if os.path.isdir(root):
-            for d in sorted(os.listdir(root)):
+    """在 /opt（及其一级子目录）下探测 ghidra_* 目录；不写死内部路径。"""
+    root = "/opt"
+    if os.path.isdir(root):
+        bases = [root] + [os.path.join(root, d) for d in sorted(os.listdir(root))
+                          if os.path.isdir(os.path.join(root, d))]
+        for base in bases:
+            for d in sorted(os.listdir(base)):
                 if d.lower().startswith("ghidra_"):
                     return d
     return "absent"
