@@ -30,8 +30,9 @@ from . import common
 
 # 兜底搜索目录（通配符），仅在本机确实存在时命中
 _BIN_GLOBS = [
-    "/opt/anti-rea-toolchain/clang+llvm-*/bin",
-    "/opt/anti-rea-toolchain/llvm*/bin",
+    "/opt/*/clang+llvm-*/bin",
+    "/opt/clang+llvm-*/bin",
+    "/opt/*/llvm*/bin",
     "/usr/lib/llvm-*/bin",
     "/usr/local/opt/llvm/bin",
     "/opt/homebrew/opt/llvm/bin",
@@ -39,6 +40,19 @@ _BIN_GLOBS = [
 ]
 
 MIN_PYTHON = (3, 11)
+
+# --------------------------------------------------------------------------
+# 分级安装（provisioning）：tier 表示「什么时候才需要装」
+#
+# 原则：**不打包、不预装第三方工具**。最小安装只装核心；其余按「用户选定的
+# 语言 / 工作流模式 / 是否需要独立验证」按需获取（详见 docs/PROVISIONING.md）。
+# --------------------------------------------------------------------------
+PROVISION_TIERS = {
+    "T0": "核心（必装，最小）：scan / plan / doctor / report / diff / regress",
+    "T1": "原生变换（按需）：要对 C/C++（或 Rust C-FFI、Python C 扩展）施加变换时才需要",
+    "T2": "语言与平台扩展（按需）：按目标语言、构建体系或宿主平台选装",
+    "T3": "可选增强（按需，最迟）：独立验证 / 进化搜索 / LLM 红队会话",
+}
 
 
 def _env_path(*names: str) -> str | None:
@@ -179,24 +193,35 @@ def checks() -> list[dict]:
     py = "%d.%d.%d" % sys.version_info[:3]
     rows.append({
         "name": "python",
+        "tier": "T0",
+        "when": "始终",
         "required": True,
         "ok": python_ok(),
         "detail": "Python %s (%s)" % (py, sys.executable),
         "hint": "需要 Python >= %d.%d" % MIN_PYTHON,
     })
 
-    for mod, req in (("jsonschema", True), ("yaml", True), ("deap", False)):
+    for mod, req, tier, when in (
+            ("jsonschema", True, "T0", "始终（清单/策略校验）"),
+            ("yaml", True, "T0", "始终（策略与基准读写）"),
+            ("deap", False, "T3", "只在运行 `anti-rea evolve`（进化式策略搜索）时"),
+    ):
         rows.append({
             "name": "py:%s" % mod,
+            "tier": tier,
+            "when": when,
             "required": req,
             "ok": _mod_ok(mod),
             "detail": "import %s" % mod,
-            "hint": "pip install -r requirements.txt",
+            "hint": ("pip install -r requirements.txt" if req
+                     else "按需安装：pip install -r requirements-optional.txt"),
         })
 
     clang = find_clang()
     rows.append({
         "name": "clang",
+        "tier": "T1",
+        "when": "选定工作流模式 A/B 且要对原生代码施加变换（protect）时",
         "required": False,  # scan/plan 不需要；protect 需要
         "ok": bool(clang),
         "detail": clang or "未找到",
@@ -207,6 +232,8 @@ def checks() -> list[dict]:
     opt = find_opt()
     rows.append({
         "name": "opt",
+        "tier": "T1",
+        "when": "同上（protect 的变换流水线）",
         "required": False,
         "ok": bool(opt),
         "detail": opt or "未找到",
@@ -216,6 +243,8 @@ def checks() -> list[dict]:
     plugin = find_plugin()
     rows.append({
         "name": "engine-plugin",
+        "tier": "T1",
+        "when": "同上（protect 前构建本仓库插件，不随包分发预编译产物）",
         "required": False,
         "ok": bool(plugin),
         "detail": plugin or "未构建",
@@ -226,6 +255,8 @@ def checks() -> list[dict]:
     cmake = find_cmake()
     rows.append({
         "name": "cmake",
+        "tier": "T1",
+        "when": "同上（构建引擎插件）",
         "required": False,
         "ok": bool(cmake),
         "detail": cmake or "未找到",
@@ -236,6 +267,8 @@ def checks() -> list[dict]:
         w = shutil.which(tool)
         rows.append({
             "name": "binutils:%s" % tool,
+            "tier": "T1",
+            "when": "同上（verify / attack_sim 的产物静态核验）",
             "required": False,
             "ok": bool(w),
             "detail": w or "未找到",
@@ -244,6 +277,8 @@ def checks() -> list[dict]:
 
     rows.append({
         "name": "platform",
+        "tier": "T2",
+        "when": "宿主不是 linux-x86_64 时（改用容器镜像或自行验证）",
         "required": False,
         "ok": platform_info.is_supported(),
         "detail": "%s (%s %s)" % (platform_info.host_platform(),
@@ -251,18 +286,87 @@ def checks() -> list[dict]:
         "hint": ("v1.0 实测支持 linux-x86_64；其他平台可运行 scan/plan，"
                  "protect 需自行验证（见 docs/release/compatibility-matrix.md）"),
     })
+
+    # ---- 语言扩展（按目标语言选装；本技能不代装）----
+    for name, exe, when in (
+            ("rust-cargo", "cargo", "目标含 Rust C/FFI 源（经 Cargo 集成）时"),
+            ("node-npm", "npm", "目标含 JS/TS（仅扫描/识别）时"),
+    ):
+        w = shutil.which(exe)
+        rows.append({
+            "name": name,
+            "tier": "T2",
+            "when": when,
+            "required": False,
+            "ok": bool(w),
+            "detail": w or "未找到",
+            "hint": "按需安装（由目标项目的语言工具链提供；本技能不代装）",
+        })
+
+    dh = shutil.which("docker") or shutil.which("podman")
+    rows.append({
+        "name": "container-runtime",
+        "tier": "T2",
+        "when": "不想在宿主安装 LLVM 18、或宿主平台与插件不匹配时（改用镜像）",
+        "required": False,
+        "ok": bool(dh),
+        "detail": dh or "未找到",
+        "hint": "可选：用本仓库 Dockerfile 自建镜像（镜像构建期会联网获取 LLVM）",
+    })
+
+    # ---- 可选增强（最迟按需）----
+    ghidra = os.environ.get("ANTI_REA_GHIDRA", "")
+    rows.append({
+        "name": "ghidra",
+        "tier": "T3",
+        "when": "需要独立（第三方引擎）交叉验证时，例如跑 `verify --ghidra`",
+        "required": False,
+        "ok": bool(ghidra and ghidra != "0"),
+        "detail": "ANTI_REA_GHIDRA=%s" % (ghidra or "未设置"),
+        "hint": ("按需自备 Ghidra + PyGhidra（不随本技能分发）：从官方发布页获取，"
+                 "装好后设 ANTI_REA_GHIDRA=1"),
+    })
+
+    llm = bool(os.environ.get("ANTI_REA_LLM_ENDPOINT")
+               or os.environ.get("ANTI_REA_LLM_CMD"))
+    rows.append({
+        "name": "llm-egress",
+        "tier": "T3",
+        "when": "要跑真实 LLM 红队会话（`attack_sim --allow-llm`）时",
+        "required": False,
+        "ok": llm,
+        "detail": "已配置" if llm else "未配置（默认纯静态评估可用）",
+        "hint": ("按需自备模型/网关：设 ANTI_REA_LLM_ENDPOINT（或 "
+                 "ANTI_REA_LLM_CMD 钩子）；凭据与配额由用户自管"),
+    })
+
     return rows
 
 
-def doctor() -> dict:
-    """环境自检报告（dict）。`ok` 表示必需项是否齐备。"""
+def doctor(only_tier: str | None = None) -> dict:
+    """环境自检报告（dict）。`ok` 表示必需项是否齐备。
+
+    `only_tier` 只保留某个分级（T0/T1/T2/T3）的自检项——用于「按需安装」：
+    只看当前工作流模式/语言真正需要的部分。
+    """
     rows = checks()
+    if only_tier:
+        rows = [r for r in rows if r.get("tier") == only_tier]
     hard_fails = [r for r in rows if r["required"] and not r["ok"]]
     # protect 关键项缺失时给出 warning（非致命，scan/plan 仍可用）
     warns = [r for r in rows if not r["required"] and not r["ok"]]
+    by_tier: dict[str, dict] = {}
+    for r in rows:
+        t = r.get("tier", "T0")
+        slot = by_tier.setdefault(t, {"desc": PROVISION_TIERS.get(t, ""),
+                                      "missing": []})
+        if not r["ok"]:
+            slot["missing"].append(r["name"])
     return {
         "ok": not hard_fails,
         "toolchain_ready": not warns,
+        "tier": only_tier,
+        "tiers": by_tier,
         "checks": rows,
         "failed": hard_fails,
         "warnings": warns,
@@ -271,17 +375,38 @@ def doctor() -> dict:
 
 def format_report(report: dict) -> str:
     lines = ["REA-Shield 环境自检 (doctor)", "=" * 40]
-    for r in report["checks"]:
+    if report.get("tier"):
+        lines.append("（只显示分级 %s：%s）"
+                     % (report["tier"], PROVISION_TIERS.get(report["tier"], "")))
+    rows = report["checks"]
+    t0 = [r for r in rows if r.get("tier", "T0") == "T0"]
+    later = [r for r in rows if r.get("tier", "T0") != "T0"]
+
+    def _line(r: dict) -> str:
         tag = "OK  " if r["ok"] else ("MISS" if r["required"] else "warn")
-        lines.append("[%s] %-16s %s" % (tag, r["name"], r["detail"]))
+        return "[%s] %-18s %s" % (tag, r["name"], r["detail"])
+
+    for r in t0:
+        lines.append(_line(r))
+    if later:
+        lines.append("-" * 40)
+        lines.append("按需组件（未选到对应语言 / 模式 / 可选功能时，无需安装）：")
+        for tier in sorted({r.get("tier", "T0") for r in later}):
+            lines.append("  %s · %s" % (tier, PROVISION_TIERS.get(tier, "")))
+            for r in [x for x in later if x.get("tier") == tier]:
+                lines.append("    %s" % _line(r))
+                if not r["ok"]:
+                    lines.append("        何时需要：%s" % r.get("when", "-"))
+                    lines.append("        怎么装：  %s" % r["hint"])
     lines.append("-" * 40)
     if report["ok"] and report["toolchain_ready"]:
         lines.append("结果：环境就绪，scan/plan/protect 全流程可用。")
     elif report["ok"]:
         lines.append("结果：核心依赖就绪（scan/plan 可用）。")
-        lines.append("以下可选组件缺失，protect/verify 可能不可用：")
+        lines.append("以下按需组件尚未安装（选到对应功能时再装即可，详见 docs/PROVISIONING.md）：")
         for r in report["warnings"]:
-            lines.append("  - %s: %s" % (r["name"], r["hint"]))
+            lines.append("  - %s [%s]：%s" % (r["name"], r.get("tier", "-"),
+                                             r.get("when", r["hint"])))
     else:
         lines.append("结果：缺少必需依赖，请先修复：")
         for r in report["failed"] + report["warnings"]:

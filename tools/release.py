@@ -12,8 +12,10 @@
   python tools/release.py               # 构建全部产物到 dist/
   python tools/release.py --check       # 只做一致性/自检（CI 用，不构建）
   python tools/release.py --verify dist # 校验既有 dist/MANIFEST.sha256
+  python tools/release.py --skill dist  # 只生成最小技能包（skill-only deploy）
 
 设计：plan §8.2（M8 出口）。主产物为「全仓自包含包」，wheel 为次要件。
+最小技能包用于「把技能装到别的项目」（按需获取，见 docs/PROVISIONING.md）。
 """
 from __future__ import annotations
 
@@ -41,6 +43,81 @@ _EXCLUDE_DIRS = {
 }
 _EXCLUDE_SUFFIX = (".pyc", ".pyo", ".so", ".o", ".a", ".dylib", ".dll", ".exe")
 _EXCLUDE_SUFFIX_KEEP = ("anti_rea_passes.so",)  # 通常也不打包引擎产物（由用户构建）
+
+# --------------------------------------------------------------------------
+# 技能部署集（skill-only deploy，见 docs/PROVISIONING.md §2）
+#
+# 用途：把本技能装到**别的项目/环境**时，只带运行与接线需要的东西，
+#      不带开发/审计/复现材料（tests/、ci/、benchmarks/、pilots/、poc/、
+#      设计文档等）——降低部署代价，后续按需再取。
+# --------------------------------------------------------------------------
+SKILL_FILES = [
+    "SKILL.md", "skill.json", "README.md", "README.zh-CN.md", "LICENSE",
+    "requirements.txt", "requirements-optional.txt", "pyproject.toml",
+    "Makefile", "Dockerfile",
+]
+SKILL_DIRS = ["core", "schemas", "policies", "integrations", "engine", "tools"]
+SKILL_DOC_FILES = [
+    "docs/INSTALL.md", "docs/FAQ.md", "docs/troubleshooting.md",
+    "docs/build-injection.md", "docs/PROVISIONING.md", "docs/mcp-clients.md",
+    "docs/java-anti-rea.md", "docs/java-anti-rea-options.yaml",
+]
+# 不进技能部署集（开发 / 审计 / 复现用；需要时再从仓库取）
+SKILL_EXCLUDE = [
+    "tests", "ci", "benchmarks", "pilots", "poc", "examples",
+    "docs/design", "docs/release", "docs/analysis", "docs/requirements",
+    "docs/STATUS.md", "AGENTS.md",
+]
+
+
+def skill_file_set() -> list[str]:
+    """技能部署集的相对文件列表（纯函数，便于自检/测试）。"""
+    files: list[str] = []
+
+    def _add(rel: str) -> None:
+        p = os.path.join(REPO, rel)
+        if os.path.isfile(p):
+            files.append(rel.replace("\\", "/"))
+
+    for rel in SKILL_FILES + SKILL_DOC_FILES:
+        _add(rel)
+    for d in SKILL_DIRS:
+        root = os.path.join(REPO, d)
+        if not os.path.isdir(root):
+            continue
+        for dirpath, dirnames, filenames in os.walk(root):
+            rel_dir = os.path.relpath(dirpath, REPO).replace("\\", "/")
+            if rel_dir in _EXCLUDE_DIRS:
+                dirnames[:] = []
+                continue
+            for fn in filenames:
+                rel = ("%s/%s" % (rel_dir, fn)).replace("\\", "/")
+                if rel in _EXCLUDE_DIRS or rel.startswith("dist/"):
+                    continue
+                if fn.endswith(_EXCLUDE_SUFFIX) and fn not in _EXCLUDE_SUFFIX_KEEP:
+                    continue
+                _add(rel)
+    return sorted(set(files))
+
+
+def skill_bundle(dist: str, ver: str) -> str:
+    """最小技能包（skill-only deploy）——不含 tests/ci/poc/pilots/设计文档。"""
+    out = os.path.join(dist, "anti-rea-skill-%s.tar.gz" % ver)
+    if os.path.exists(out):
+        os.remove(out)
+    prefix = "anti-rea-skill-%s/" % ver
+    files = skill_file_set()
+    with tarfile.open(out, "w:gz") as tf:
+        for rel in files:
+            tf.add(os.path.join(REPO, rel), arcname=prefix + rel)
+    listing = os.path.join(dist, "SKILL-FILES.txt")
+    with open(listing, "w", encoding="utf-8") as fh:
+        fh.write("# 最小技能集文件清单（%d 个）\n" % len(files))
+        fh.write("# 未包含（开发/审计/复现用，见 docs/PROVISIONING.md §2）：\n")
+        for d in SKILL_EXCLUDE:
+            fh.write("#   - %s\n" % d)
+        fh.write("\n".join(files) + "\n")
+    return out
 
 
 def _version() -> str:
@@ -72,9 +149,10 @@ def check() -> list[str]:
     # 关键文件存在
     required = [
         "SKILL.md", "skill.json", "README.md", "README.zh-CN.md", "LICENSE",
-        "requirements.txt", "pyproject.toml", "Dockerfile",
+        "requirements.txt", "requirements-optional.txt", "pyproject.toml",
+        "Dockerfile",
         ".agents/skills/anti-rea/SKILL.md",
-        "docs/INSTALL.md", "docs/mcp-clients.md",
+        "docs/INSTALL.md", "docs/mcp-clients.md", "docs/PROVISIONING.md",
         "docs/java-anti-rea.md", "docs/java-anti-rea-options.yaml",
         "engine/CMakeLists.txt", "core/common.py", "core/toolchain.py",
     ]
@@ -318,6 +396,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", default=os.path.join(REPO, "dist"), help="输出目录")
     ap.add_argument("--check", action="store_true", help="只做一致性自检")
     ap.add_argument("--verify", metavar="DIST", default=None, help="校验既有 dist/MANIFEST.sha256")
+    ap.add_argument("--skill", metavar="DIST", default=None,
+                    help="生成最小技能包（skill-only deploy，见 docs/PROVISIONING.md）")
     args = ap.parse_args(argv)
 
     if args.verify:
@@ -330,6 +410,13 @@ def main(argv: list[str] | None = None) -> int:
                 print("  - %s" % p, file=sys.stderr)
             return 1
         print("发布自检通过（版本 %s，关键文件/包/skill.json 均 OK）" % _version())
+        return 0
+    if args.skill:
+        os.makedirs(args.skill, exist_ok=True)
+        out = skill_bundle(args.skill, _version())
+        print("最小技能包：%s (%d B, %d 个文件)"
+              % (out, os.path.getsize(out), len(skill_file_set())))
+        print("文件清单：%s" % os.path.join(args.skill, "SKILL-FILES.txt"))
         return 0
     problems = check()
     if problems:

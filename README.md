@@ -52,16 +52,17 @@ Protection effect (baseline → protected):
 | :--- | :--- |
 | Teach an agent to use this skill | **[`SKILL.md`](SKILL.md)** + [`skill.json`](skill.json) (machine-readable) |
 | Install / build / environment variables / Docker | [`docs/INSTALL.md`](docs/INSTALL.md) |
+| Install minimally & fetch components on demand (tiers) | [`docs/PROVISIONING.md`](docs/PROVISIONING.md) |
 | Wire the MCP server into my client | [`docs/mcp-clients.md`](docs/mcp-clients.md) |
 | Run an end-to-end example | [`examples/quickstart/`](examples/quickstart/) |
 | Protect a **Java / Android** project (option menu J0–J8) | [`docs/java-anti-rea.md`](docs/java-anti-rea.md) |
 | Troubleshoot | [`docs/FAQ.md`](docs/FAQ.md), [`docs/troubleshooting.md`](docs/troubleshooting.md) |
 
 ```bash
-pip install -r requirements.txt   # jsonschema / PyYAML / deap
-anti-rea doctor                   # environment self-check with fix guidance
-make build                        # build the LLVM transform plugin
-docker build -t anti-rea:1.0.0 .  # or: pinned image, no manual LLVM18 setup
+pip install -r requirements.txt   # minimal (T0): jsonschema + PyYAML; extras: requirements-optional.txt
+anti-rea doctor                   # environment self-check, grouped by provisioning tier
+make build                        # build the LLVM transform plugin (T1, only needed for protect)
+docker build -t anti-rea:1.0.0 .  # or: pinned image (heavier path), no manual LLVM18 setup
 ```
 
 ## Repository Status

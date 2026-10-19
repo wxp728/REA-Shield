@@ -29,14 +29,20 @@ Machine-readable manifest: **[`skill.json`](../../../skill.json)**
 ## TL;DR
 
 ```bash
-pip install -r requirements.txt     # jsonschema, PyYAML, deap
-anti-rea doctor                     # environment self-check (fast-fails w/ guidance)
-make build                          # build the LLVM transform plugin
+pip install -r requirements.txt     # minimal (T0): jsonschema + PyYAML
+anti-rea doctor                     # environment self-check, grouped by tier
+anti-rea doctor --tier T0           # core only; T1/T2/T3 are fetched on demand
+make build                          # build the LLVM transform plugin (T1; protect only)
 anti-rea scan  <your-project> -o out
 anti-rea plan  out/asset_manifest.json -o out
 anti-rea protect out/protection_policy.yaml --root <your-project> --source <your-project>/src/main.c -o out
 anti-rea verify out && anti-rea attack_sim out --mode all
 ```
+
+Install minimally and fetch optional, language/platform-specific components only
+when the chosen mode needs them — third-party tools are never bundled, only their
+sources are recorded. See `docs/PROVISIONING.md`; to hand just the skill to
+another project: `python tools/release.py --skill dist`.
 
 Or use the MCP server: `anti-rea-mcp` (stdio JSON-RPC, 7 tools — see
 `docs/mcp-clients.md`).

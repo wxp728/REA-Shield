@@ -1,9 +1,11 @@
-# REA-Shield 运行依赖（安装：pip install -r requirements.txt）
+# REA-Shield —— 核心运行依赖（最小安装）
+#
+# 只装这些即可跑：doctor / scan / plan / report / diff / regress /（无 LLVM 的）文档与清单工作。
+# 安装：pip install -r requirements.txt
+#
+# 按需组件（只有用到对应功能/语言时才装）见 requirements-optional.txt 与 docs/PROVISIONING.md；
+# 第三方工具（LLVM、Ghidra、Java 加固产品等）**不由本技能分发**，只记录获取源与用法。
 jsonschema>=4.0
 PyYAML>=6.0
-deap>=1.4
 
-# 开发/测试（可选）
-# pytest>=7
-# ruff
-# black
+# 开发/测试（可选）：pytest>=7 / ruff / black

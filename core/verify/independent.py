@@ -56,13 +56,20 @@ def ghidra_available() -> bool:
 
 
 def _ghidra_home() -> str | None:
+    """定位 Ghidra 安装目录：GHIDRA_INSTALL_DIR > /opt 下常见布局（不写死内部路径）。"""
     if os.environ.get("GHIDRA_INSTALL_DIR"):
         return os.environ["GHIDRA_INSTALL_DIR"]
-    for root in ("/opt/anti-rea-toolchain", "/opt"):
-        if os.path.isdir(root):
-            for d in sorted(os.listdir(root)):
-                if d.lower().startswith("ghidra_"):
-                    return os.path.join(root, d)
+    root = "/opt"
+    if not os.path.isdir(root):
+        return None
+    # 覆盖 /opt/ghidra_* 与 /opt/<toolchain>/ghidra_* 两种布局
+    bases = [root] + [os.path.join(root, d)
+                      for d in sorted(os.listdir(root))
+                      if os.path.isdir(os.path.join(root, d))]
+    for base in bases:
+        for d in sorted(os.listdir(base)):
+            if d.lower().startswith("ghidra_"):
+                return os.path.join(base, d)
     return None
 
 

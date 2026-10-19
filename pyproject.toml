@@ -26,10 +26,11 @@ classifiers = [
 dependencies = [
     "jsonschema>=4.0",
     "PyYAML>=6.0",
-    "deap>=1.4",
 ]
 
 [project.optional-dependencies]
+# 按需：`anti-rea evolve`（进化式策略搜索）才需要（会连带 numpy）
+evolve = ["deap>=1.4"]
 dev = ["pytest>=7", "ruff", "black"]
 
 [project.urls]

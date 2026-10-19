@@ -24,6 +24,9 @@ if REPO not in sys.path:
 from core import toolchain  # noqa: E402
 
 PY_PACKAGES = ["jsonschema", "PyYAML", "deap", "numpy", "setuptools"]
+# 分级：deap/numpy 是 T3 按需依赖（仅 `anti-rea evolve`，见 docs/PROVISIONING.md）
+PY_PACKAGE_TIERS = {"jsonschema": "T0", "PyYAML": "T0", "setuptools": "T0",
+                    "deap": "T3", "numpy": "T3"}
 
 
 def _version(pkg: str) -> str:
@@ -62,7 +65,9 @@ def _cmd_version(cmd: list[str]) -> str:
 
 def python_components() -> list[dict]:
     return [{"type": "library", "name": p, "version": _version(p),
-             "license": _license(p), "ecosystem": "pypi"} for p in PY_PACKAGES]
+             "license": _license(p), "ecosystem": "pypi",
+             "provisioning_tier": PY_PACKAGE_TIERS.get(p, "T0")}
+            for p in PY_PACKAGES]
 
 
 def external_components() -> list[dict]:

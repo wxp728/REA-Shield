@@ -1,0 +1,8 @@
+# REA-Shield —— 按需依赖（可选，装了你才会用到对应功能）
+#
+# 原则：不必需的功能不预装，等用户选到该功能时再装（详见 docs/PROVISIONING.md）。
+# 安装：pip install -r requirements-optional.txt
+#
+# deap → `anti-rea evolve`（进化式策略搜索）。注意：deap 会连带安装 numpy，
+#        这是本技能唯一"偏重"的 Python 依赖，因此默认不装。
+deap>=1.4

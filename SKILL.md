@@ -12,7 +12,10 @@ description: >-
   user picks a mode (one-shot build, or transforming the target project's build
   architecture and standing up an anti-REA build environment) → flexible
   execution. The skill provides information and methodology; it does not
-  automatically modify the target project's build system.
+  automatically modify the target project's build system. It installs minimally
+  by default and fetches optional, language/platform-specific components on
+  demand -- third-party tools are never bundled, only their sources and usage
+  are recorded.
   For Java / Android (no LLVM IR transforms) it provides a selectable anti-REA
   option menu — server-side logic, bytecode obfuscation, packing, bytecode
   virtualization, offloading to native (JNI/JNA/FFM), GraalVM native-image,
@@ -67,7 +70,8 @@ MCP Server (`anti-rea-mcp`)，让上层 Agent 用工具调用而不是手工拼�
 
 ### P0 · 勘察（只读，不改任何文件）
 
-1. 本技能工具链自检：`anti-rea doctor`（缺什么、怎么修）。
+1. 本技能工具链自检：`anti-rea doctor`（按分级分组：缺什么、**何时需要**、怎么修）。
+   P0 **只装 T0**（`requirements.txt`）——LLVM/镜像/Ghidra 等留到 P2 用户选定模式后再装。
 2. 资产扫描：`anti-rea scan <project> [-o out]`（范围收窄见「Scoping」节）。
 3. **构建画像**——读取目标工程（Makefile / configure / CMakeLists / build.rs /
    package.json / CI 配置 …），回答以下问题并记入方案：
@@ -90,8 +94,14 @@ MCP Server (`anti-rea-mcp`)，让上层 Agent 用工具调用而不是手工拼�
 
 1. **目标与范围**：保护哪些模块/目录；白名单与导出契约（哪些公共 API 名必然保留）。
 2. **构建画像**：P0 第 3 步的结论。
-3. **依赖与环境安装清单**：本技能侧（LLVM 18、Python 包、插件构建，`anti-rea doctor`
-   输出）+ 目标工程侧（工程自己的依赖怎么装）；可用 Docker 镜像替代手工安装。
+3. **依赖与环境安装清单**：按分级（[`docs/PROVISIONING.md`](docs/PROVISIONING.md)）分三档列出并**说明触发条件**：
+   - **现在就装（T0）**：`pip install -r requirements.txt`；
+   - **选定模式后再装（T1）**：LLVM 18、cmake、binutils、`make build`（模式 A/B 要 protect 时才需要）；
+   - **用到才装（T2/T3）**：按目标语言（rustc/cargo、node/npm、JDK 用工程自带）、是否要独立验证
+     （Ghidra）、是否跑 `evolve`（`requirements-optional.txt`）、是否走红队会话（LLM 端点）；
+     可用 Docker 镜像替代宿主安装（属较重路径）。
+
+   目标工程侧（工程自己的依赖怎么装）另列；**未选到的组件标注"延后安装"**，不要在 P1 就预装。
 4. **推荐模式与理由**：模式 A / B / C（见 P2），预估代价（体积、构建时间、运行开销）。
 5. **分步骤执行计划**：每步一条命令或一处脚本改动点，标注改哪个文件。
 6. **语言特定的可选手段**（目标为 Java / Android 时**必填**）：从
@@ -157,21 +167,50 @@ LLM 红队会话）→ `anti-rea report`；附回退说明与后续再构建的�
 
 ## 前置条件 / Prerequisites
 
-- Linux x86_64（v1.0 实测唯一完整支持平台）。
-- Python >= 3.11，LLVM/clang >= 18，CMake >= 3.16，binutils (nm/objdump/strings)。
-- 安装依赖并自检：
+**分级（默认最小安装，其余按需）**——不必然用到的组件**先不下载**：
+
+| 分级 | 什么时候才需要 | 组成 |
+| :--- | :--- | :--- |
+| **T0 核心（必装）** | 始终（`scan` / `plan` / `doctor` / `report` 只需这些） | Python >= 3.11 + `jsonschema` + `PyYAML`（`requirements.txt`） |
+| **T1 原生变换** | 选定模式 A/B 且要 `protect` / `verify` / `attack_sim` | LLVM/clang >= 18、CMake >= 3.16、binutils、`make build` |
+| **T2 语言与平台** | 按目标语言 / 构建体系 / 宿主平台 | rustc+cargo（Rust C/FFI）、node+npm（JS/TS 仅扫描）、JDK（Java 勘察用工程自带）、容器运行时 |
+| **T3 可选增强** | 只在用到该功能时 | Ghidra+PyGhidra（独立验证）、`deap`（`evolve`，`requirements-optional.txt`）、LLM 端点（红队会话） |
+| **T4 永不下发** | — | Java/Android 第三方加固工具/产品（只记录获取源，见 `docs/java-anti-rea.md`） |
+
+> **本技能不打包、不预装、不代下载任何第三方工具**；第三方组件一律只记录**获取源与用法**。
+> 完整策略、体量量级与最小部署集见 [`docs/PROVISIONING.md`](docs/PROVISIONING.md)。
 
 ```bash
-pip install -r requirements.txt
-anti-rea doctor          # 打印环境自检；缺什么、怎么修一目了然
+pip install -r requirements.txt     # T0 最小：够跑 scan/plan/doctor/report
+anti-rea doctor                     # 按分级分组：缺什么、何时需要、怎么装一目了然
+anti-rea doctor --tier T0           # 只看最小集；--tier T1 只看原生变换所需
 ```
 
-`doctor` 会检查 Python、jsonschema/PyYAML/deap、clang/opt、引擎插件、cmake、
-binutils、平台，并在缺件时给出明确指引。**环境不满足时它会快速失败，而不是
-到 protect 才报一个模糊错误。**
+`doctor` 检查 Python、`jsonschema`/`PyYAML`/`deap`、clang/opt、引擎插件、cmake、
+binutils、平台，并在缺件时给出明确指引。**T0 缺件会快速失败，而不是到 protect 才报
+一个模糊错误**；T1/T2/T3 缺件只提示"选到该功能时再装"，**不阻塞** scan/plan。
 
 LLVM 位置无需写死：通过 `ANTI_REA_LLVM=<前缀>` 或把工具放进 `PATH` 即可；
 `doctor` 也接受 `--llvm <前缀>`。
+
+## 安装与按需获取 / Provisioning（不打包第三方）
+
+**纪律（Agent 自查）**：
+
+1. **先最小、后按需**：P0 只装 T0 + 跑 `scan`；**在用户选定模式之前**不装 LLVM、不拉镜像、不下载 Ghidra。
+2. **只读需要的那一篇文档**：`SKILL.md` + 与当前语言/模式相关的**一篇**（`docs/build-injection.md`
+   或 `docs/java-anti-rea.md`）；不要把 `docs/` 全量读进上下文（省 token 也是省部署代价）。
+3. **把"要装什么"写进 P1 方案**：按「现在就装（T0）/ 选定模式后再装（T1）/ 用到才装（T2/T3）」
+   三档列出，附触发条件；T4 只给获取源。
+4. **安装动作先经用户确认**：装系统包、拉镜像、下载第三方工具前说明体量与影响；工具许可与
+   凭据由用户自管。
+5. **装不上如实回报**，不要悄悄换组件或假装成功。
+
+**只把技能装到别的项目**（不带开发/审计材料：`tests/`、`ci/`、`poc/`、`pilots/`、`benchmarks/`、设计文档）：
+
+```bash
+python tools/release.py --skill dist     # → dist/anti-rea-skill-<version>.tar.gz（附 SKILL-FILES.txt）
+```
 
 ## 快速开始 / Quickstart (CLI)
 
@@ -313,6 +352,7 @@ Java 字节码的验证用反编译器（jadx / CFR / Vineflower）按该文档 
 ## 进一步阅读 / See also
 
 - `docs/INSTALL.md` — 安装、构建、环境变量、Docker。
+- `docs/PROVISIONING.md` — **分级安装与按需获取**（装什么/何时装/不装什么、最小部署集、卸载）。
 - `docs/java-anti-rea.md` — **Java / Android 反 REA 选项目录**（J0–J8 原理/优缺点/影响/获取源/验证方法论）。
 - `docs/mcp-clients.md` — MCP 客户端配置（Claude Desktop / Cursor / 通用 stdio）。
 - `examples/quickstart/` — 端到端可运行示例。

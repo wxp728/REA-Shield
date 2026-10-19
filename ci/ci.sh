@@ -10,7 +10,7 @@ if [ -z "${LLVM:-}" ]; then
   elif command -v llvm-config >/dev/null 2>&1; then
     LLVM="$(dirname "$(dirname "$(command -v llvm-config)")")"
   else
-    LLVM="$(ls -d /opt/anti-rea-toolchain/clang+llvm-* /opt/anti-rea-toolchain/llvm* /usr/lib/llvm-* 2>/dev/null | sort | tail -1)"
+    LLVM="$(ls -d /opt/*/clang+llvm-* /opt/clang+llvm-* /opt/*/llvm* /usr/lib/llvm-* 2>/dev/null | sort | tail -1)"
   fi
 fi
 PY="${PY:-$(command -v python3.11 || command -v python3 || command -v python)}"

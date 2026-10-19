@@ -201,11 +201,17 @@ def _cmd_doctor(args) -> int:
     from . import toolchain
     if args.llvm:
         os.environ["ANTI_REA_LLVM"] = args.llvm
-    report = toolchain.doctor()
+    tier = getattr(args, "tier", None)
+    if tier and tier not in toolchain.PROVISION_TIERS:
+        print("未知分级 %s（可用：%s）"
+              % (tier, " / ".join(sorted(toolchain.PROVISION_TIERS))), file=sys.stderr)
+        return EXIT_ERR
+    report = toolchain.doctor(tier)
     if args.json:
         print(json.dumps(report, ensure_ascii=False, indent=2))
     else:
         print(toolchain.format_report(report))
+        print("\n分级安装策略（按需获取，不打包第三方）：docs/PROVISIONING.md")
     return EXIT_OK if report["ok"] else EXIT_ERR
 
 
@@ -219,6 +225,8 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("doctor", help="环境自检：检查 Python/LLVM/插件/工具链是否就绪")
     s.add_argument("--llvm", default=None,
                    help="指定 LLVM 前缀（等价于设置 ANTI_REA_LLVM）")
+    s.add_argument("--tier", default=None,
+                   help="只看某个分级：T0 核心 / T1 原生变换 / T2 语言与平台 / T3 可选增强")
     s.add_argument("--json", action="store_true")
     s.set_defaults(func=_cmd_doctor)
 

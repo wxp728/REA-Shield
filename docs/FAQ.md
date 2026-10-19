@@ -58,6 +58,23 @@ export ANTI_REA_LLVM=/usr/lib/llvm-18     # 指向你的 LLVM 前缀
 
 工具链路径**已不再写死**，按「环境变量 > PATH > 常见目录」自动探测。
 
+## 安装这个 skill 会下载什么？可以只装一部分吗？
+
+可以，而且**默认就是最小安装**——本技能**只交付自己的源码**，第三方工具一律不分发，
+只记录获取源与用法。按需分档（详见 [`PROVISIONING.md`](PROVISIONING.md)）：
+
+- **T0 核心（必装，最小）**：`pip install -r requirements.txt`（只装 `jsonschema` + `PyYAML`，
+  数 MB），够跑 `scan`/`plan`/`doctor`/`report`；
+- **T1 原生变换**：要 `protect`/`verify`/`attack_sim` 时，自行安装 LLVM/clang 18、CMake、
+  binutils，再 `make build`（本技能不分发这些系统组件）；
+- **T2 语言与平台**：按目标语言/构建体系选装（rustc+cargo、node+npm、JDK 用工程自带、容器）；
+- **T3 可选增强**：只在用到时（Ghidra+PyGhidra 独立验证、`deap`→`pip install -r
+  requirements-optional.txt`、LLM 红队端点）；
+- **T4 永不下发**：Java/Android 第三方加固工具与商用产品。
+
+只看最小集：`anti-rea doctor --tier T0`。**只把技能装到别的项目**（不带测试/开发材料）：
+`python tools/release.py --skill dist`。缺 T1/T2/T3 **不阻塞** `scan`/`plan`。
+
 ## 需要联网/LLM 吗？
 
 核心闭环**不需要**。`attack_sim` 在没有真实 LLM 会话时自动降级为

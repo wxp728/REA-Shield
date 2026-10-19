@@ -52,16 +52,17 @@
 | :--- | :--- |
 | 让 AI / Agent 学会用这个技能 | **[`SKILL.md`](SKILL.md)** + [`skill.json`](skill.json)（机器可读清单） |
 | 安装、构建、环境变量、Docker | [`docs/INSTALL.md`](docs/INSTALL.md) |
+| 最小安装、按需获取组件（分级） | [`docs/PROVISIONING.md`](docs/PROVISIONING.md) |
 | 把 MCP Server 接进我的客户端 | [`docs/mcp-clients.md`](docs/mcp-clients.md) |
 | 跑一个端到端示例 | [`examples/quickstart/`](examples/quickstart/) |
 | 加固 **Java / Android** 项目（选项目录 J0–J8） | [`docs/java-anti-rea.md`](docs/java-anti-rea.md) |
 | 出问题了 | [`docs/FAQ.md`](docs/FAQ.md)、[`docs/troubleshooting.md`](docs/troubleshooting.md) |
 
 ```bash
-pip install -r requirements.txt   # jsonschema / PyYAML / deap
-anti-rea doctor                   # 环境自检：缺什么、怎么修，一目了然
-make build                        # 构建 LLVM 变换插件
-docker build -t anti-rea:1.0.0 .  # 或：用钉死的容器镜像，免手工装 LLVM18
+pip install -r requirements.txt   # 最小（T0）：jsonschema + PyYAML；按需：requirements-optional.txt
+anti-rea doctor                   # 环境自检（按分级分组：缺什么、何时需要、怎么修）
+make build                        # 构建 LLVM 变换插件（T1，仅 protect 需要）
+docker build -t anti-rea:1.0.0 .  # 或：用钉死的容器镜像（较重路径），免手工装 LLVM18
 ```
 
 ## 仓库现状

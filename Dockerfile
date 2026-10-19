@@ -7,10 +7,16 @@
 #
 # 说明：v1.0 的变换引擎是 Linux 共享库插件，protect 仅支持 Linux。
 # 本镜像固定 LLVM 18 + Python 3.11，开箱即用，无需在宿主机安装工具链。
+#
+# 这是「较重」的一条路径（镜像里带整套 LLVM）。如果只想跑 scan/plan，不必用镜像：
+# 最小安装（Python + pip 依赖）即可，见 docs/PROVISIONING.md。
 
 FROM python:3.11-slim-bookworm
 
 ARG LLVM_VERSION=18
+# 是否把「按需」Python 依赖（deap/numpy，仅 evolve 需要）也打进镜像。
+# 默认 0：镜像只带核心依赖，体积与构建时间更小；需要 evolve 时用 --build-arg WITH_EXTRAS=1。
+ARG WITH_EXTRAS=0
 ARG DEBIAN_FRONTEND=noninteractive
 
 # ---- LLVM/clang 18 + 构建与核验工具 ----
@@ -37,9 +43,15 @@ ENV ANTI_REA_LLVM=/usr/lib/llvm-18 \
     PYTHONUNBUFFERED=1
 
 # ---- 项目 ----
+# 说明：本镜像之所以"开箱即用"，是因为在**镜像构建期**联网获取第三方工具链
+# （Debian 包：LLVM/clang 18、cmake、binutils）。这不是把第三方软件打包进本仓库——
+# 仓库里只有本技能自己的源码（插件在镜像构建期由源码编译）。按需安装策略见
+# docs/PROVISIONING.md。
 WORKDIR /opt/anti-rea
 COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements-optional.txt ./
+RUN pip install --no-cache-dir -r requirements.txt \
+ && if [ "$WITH_EXTRAS" = "1" ]; then pip install --no-cache-dir -r requirements-optional.txt; fi
 
 COPY . .
 # 构建 LLVM 变换插件（engine/build/anti_rea_passes.so）与 VM 解释器

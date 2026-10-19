@@ -5,6 +5,36 @@
 
 ## [Unreleased]
 
+### 变更（技能改进 · 分级安装 / 按需获取，不打包第三方）
+
+- **新增 [`docs/PROVISIONING.md`](docs/PROVISIONING.md)**：安装与按需获取策略——**本技能只交付自己的源码**，
+  第三方工具/商用产品**不打包、不预装、不代下载**，只记录获取源与用法。定义 **T0 核心（必装，最小）/
+  T1 原生变换 / T2 语言与平台 / T3 可选增强 / T4 永不下发** 五档及**触发条件**，附"安装会下载什么"对照表、
+  **最小部署集**（哪些文件不必下发）、Agent 侧纪律（省 token）、与 P0–P4 工作流的接线、卸载回退，以及
+  **C/C++（原生）侧审查结论**（原生侧从不打包第三方；插件由本仓库源码本地编译；仅 `Dockerfile` 在镜像
+  构建期联网取 Debian 包，属可选容器路径）。
+- **依赖拆分（降部署代价）**：`requirements.txt` 收敛为**核心**（`jsonschema` + `PyYAML`）；
+  新增 [`requirements-optional.txt`](requirements-optional.txt) 承载**按需**依赖 `deap`（会连带 numpy，
+  仅 `anti-rea evolve` 需要）——`deap` 从硬依赖改为**可选 extra**（`pyproject.toml` 增 `evolve` extra，
+  代码里本就惰性导入）；`Makefile` 增 `install-extras` 目标；`Dockerfile` 增 `ARG WITH_EXTRAS`（默认不装）。
+- **`anti-rea doctor` 分级化**：每项自检带 `tier` / `when`（何时需要），报告中 **T0 在前、按需项分组显示
+  并解释"何时需要 / 怎么装"**；新增 `--tier T0|T1|T2|T3` 只看某一档；新增自检项 `rust-cargo`、`node-npm`、
+  `container-runtime`、`ghidra`、`llm-egress`（均为按需、不阻塞）。缺 T1/T2/T3 **不影响** `scan`/`plan`。
+- **最小技能包**：`python tools/release.py --skill <dir>` 产出 `anti-rea-skill-<ver>.tar.gz` +
+  `SKILL-FILES.txt`（只含运行与接线所需文件；`tests/`、`ci/`、`poc/`、`pilots/`、`benchmarks/`、
+  设计/审计文档不下发）。`tools/release.py` 自检必查文件增 `requirements-optional.txt`、`docs/PROVISIONING.md`。
+- **接线**：`SKILL.md`（前置条件改为分级表 + 新增「安装与按需获取」一节，P0/P1 按档说明"现在就装/选定
+  模式后再装/用到才装"、See also、frontmatter description）、`skill.json`（新增 `provisioning`（tiers /
+  deferral_rules / commands）与 `deploy`（minimal / add_for_protect / optional / dev_only_not_shipped /
+  bundle_cmd））、`docs/INSTALL.md`（重构为 §0 分级安装策略 + 依赖表增"分级"列 + T1 按需说明 + 卸载回退）、
+  `docs/FAQ.md`（新增「安装这个 skill 会下载什么？可以只装一部分吗？」）、`README.md` / `README.zh-CN.md`、
+  `docs/STATUS.md`、`.agents/skills/anti-rea/SKILL.md`。
+- **新增测试** [`tests/test_provisioning.py`](tests/test_provisioning.py)（20 例）：tiers/deploy 结构与自洽、
+  核心依赖不含 `deap`、`doctor` 分级与 `--tier` 过滤、最小技能包不含开发材料、文档接线。
+- **顺带修正（与"不提交本地环境信息"一致）**：工具链兜底搜索路径由写死的本机目录改为通用通配
+  （`core/toolchain.py`、`Makefile`、`ci/ci.sh`、`integrations/anti-rea`、`core/verify/independent.py`
+  的 Ghidra 定位），**行为不变**、换机更稳。
+
 ### 变更（技能改进 · Java / Android 反 REA 选项目录）
 
 - **新增 [`docs/java-anti-rea.md`](docs/java-anti-rea.md)**：Java / Android 的**反 REA 选项目录**

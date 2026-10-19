@@ -9,7 +9,7 @@
 LLVM ?= $(shell \
   if [ -n "$$ANTI_REA_LLVM" ]; then echo "$$ANTI_REA_LLVM"; \
   elif command -v llvm-config >/dev/null 2>&1; then dirname "$$(dirname "$$(command -v llvm-config)")"; \
-  else ls -d /opt/anti-rea-toolchain/clang+llvm-* /opt/anti-rea-toolchain/llvm* /usr/lib/llvm-* 2>/dev/null | sort | tail -1; fi)
+  else ls -d /opt/*/clang+llvm-* /opt/clang+llvm-* /opt/*/llvm* /usr/lib/llvm-* 2>/dev/null | sort | tail -1; fi)
 PY   ?= $(shell command -v python3.11 2>/dev/null || command -v python3 2>/dev/null || command -v python)
 LLVM_CMAKE_DIR ?= $(shell llvm-config --cmakedir 2>/dev/null || echo "$(LLVM)/lib/cmake/llvm")
 OUT  ?= build/run
@@ -18,14 +18,17 @@ ifneq ($(strip $(LLVM)),)
 export PATH := $(LLVM)/bin:$(PATH)
 endif
 
-.PHONY: build test e2e doctor install ci fmt clean docker
+.PHONY: build test e2e doctor install install-extras ci fmt clean docker
 
-build: ## 构建 LLVM 变换插件 + VM 解释器
+build: ## 构建 LLVM 变换插件 + VM 解释器（按需：仅 protect/verify 需要）
 	cmake -S engine -B engine/build -DLLVM_DIR=$(LLVM_CMAKE_DIR) -DCMAKE_BUILD_TYPE=Release
 	cmake --build engine/build -j
 
-install: ## 安装 Python 依赖
+install: ## 最小安装：核心 Python 依赖（够跑 scan/plan/doctor/report）
 	$(PY) -m pip install -r requirements.txt
+
+install-extras: ## 按需依赖（evolve 等；会连带 numpy）
+	$(PY) -m pip install -r requirements-optional.txt
 
 doctor: ## 环境自检
 	$(PY) -m core.cli doctor

@@ -89,6 +89,7 @@
   },
   "guides": {
     "install": "docs/INSTALL.md",
+    "provisioning": "docs/PROVISIONING.md",
     "build_injection": "docs/build-injection.md",
     "java_anti_rea": "docs/java-anti-rea.md",
     "java_anti_rea_catalog": "docs/java-anti-rea-options.yaml",
@@ -193,16 +194,74 @@
       }
     }
   ],
+  "provisioning": {
+    "principle": "Ship only the skill's own source. Never bundle, pre-install or auto-download third-party tools; record their sources and usage instead, and let the user install them when the chosen language / mode / feature requires it. Minimal install by default; fetch everything else on demand.",
+    "guide": "docs/PROVISIONING.md",
+    "tiers": {
+      "T0": {
+        "name": "core (always required, minimal)",
+        "when": "always",
+        "components": ["python>=3.11", "jsonschema>=4.0", "PyYAML>=6.0", "skill source: core/ schemas/ policies/"],
+        "install": "pip install -r requirements.txt",
+        "bundled": "skill's own source only"
+      },
+      "T1": {
+        "name": "native transforms (on demand)",
+        "when": "mode A/B selected AND own native code (C/C++, Rust C/FFI sources, Python C extensions) is to be transformed: protect / verify / attack_sim",
+        "components": ["LLVM/clang 18 (clang, opt, llvm-config)", "cmake>=3.16", "binutils (nm/objdump/strings)", "file", "`make build` compiles this skill's pass from source"],
+        "install": "user-provided system packages; then run `make build`",
+        "bundled": false
+      },
+      "T2": {
+        "name": "language & platform extensions (on demand)",
+        "when": "depends on the target language / build system / host platform",
+        "components": ["rustc+cargo (Rust C/FFI sources)", "node+npm (JS/TS scanning only)", "JDK + build tools (Java/Android survey - use the target project's own toolchain)", "container runtime (host platform mismatch, or no LLVM on the host)"],
+        "bundled": false
+      },
+      "T3": {
+        "name": "optional enhancements (on demand, at the latest)",
+        "when": "only when the corresponding feature is used",
+        "components": ["Ghidra>=12 + PyGhidra (independent cross-check)", "deap>=1.4 (`anti-rea evolve`, pulls numpy)", "LLM egress endpoint (`attack_sim --allow-llm` red-team session)"],
+        "install": "pip install -r requirements-optional.txt  # evolve only; the rest are user-provided",
+        "bundled": false
+      },
+      "T4": {
+        "name": "never shipped",
+        "when": "n/a",
+        "components": ["Java/Android third-party hardening tools/products: ProGuard, R8, yGuard, Zelix KlassMaster, Allatori, DashO, DexGuard, GraalVM, jadx, CFR, Vineflower"],
+        "install": "user-provided; sources and usage only (see docs/java-anti-rea.md)",
+        "bundled": false
+      }
+    },
+    "deferral_rules": [
+      "Install T0 only during P0 survey; do not install LLVM, pull images or download Ghidra before the user has chosen a mode.",
+      "In the P1 proposal, list components in three buckets: install now (T0) / install after the mode is chosen (T1) / install only if the feature is used (T2/T3).",
+      "Read only SKILL.md plus the one guide relevant to the chosen language/mode; do not ingest docs/ wholesale (token cost).",
+      "Ask for user confirmation before installing system packages, pulling images or downloading third-party tools; the user owns tool licenses and credentials.",
+      "If a component cannot be installed, report it honestly instead of silently substituting or pretending success."
+    ],
+    "commands": ["anti-rea doctor", "anti-rea doctor --tier T0", "anti-rea doctor --tier T1", "anti-rea doctor --json", "make install", "make install-extras", "python tools/release.py --skill dist"]
+  },
+  "deploy": {
+    "minimal": ["SKILL.md", "skill.json", "core/", "schemas/", "policies/", "requirements.txt", "pyproject.toml"],
+    "add_for_protect": ["engine/", "Makefile", "integrations/"],
+    "optional": ["requirements-optional.txt", "Dockerfile", "docs/"],
+    "dev_only_not_shipped": ["tests/", "ci/", "benchmarks/", "pilots/", "poc/", "examples/", "docs/design/", "docs/release/", "docs/analysis/", "docs/requirements/", "docs/STATUS.md"],
+    "bundle_cmd": "python tools/release.py --skill dist"
+  },
   "requirements": {
+    "policy": "Minimal by default (T0). Optional components are installed only when the chosen language/mode/feature needs them; third-party tools are never bundled or downloaded by this skill. See `provisioning` and docs/PROVISIONING.md.",
+    "tier": "T0",
     "python": ">=3.11",
-    "python_packages": ["jsonschema>=4.0", "PyYAML>=6.0", "deap>=1.4"],
-    "llvm": ">=18 (clang, opt, llvm-config)",
-    "cmake": ">=3.16",
+    "python_packages": ["jsonschema>=4.0", "PyYAML>=6.0"],
+    "llvm": ">=18 (clang, opt, llvm-config) - T1, on demand",
+    "cmake": ">=3.16 - T1, on demand",
     "binutils": ["nm", "objdump", "strings"],
     "optional": {
-      "ghidra": ">=12 with PyGhidra (set ANTI_REA_GHIDRA=1 for independent verification)",
-      "rustc_cargo": "for Rust C/FFI-source pilot",
-      "node_npm": "for JS/TS scanning only"
+      "deap": ">=1.4 - T3, only for `anti-rea evolve` (pip install -r requirements-optional.txt)",
+      "ghidra": ">=12 with PyGhidra (set ANTI_REA_GHIDRA=1 for independent verification) - T3, user-provided",
+      "rustc_cargo": "for Rust C/FFI-source pilot - T2, user-provided",
+      "node_npm": "for JS/TS scanning only - T2, user-provided"
     },
     "environment_variables": {
       "ANTI_REA_LLVM": "LLVM install prefix",
@@ -231,8 +290,9 @@
     }
   },
   "quickstart": [
-    "pip install -r requirements.txt",
-    "anti-rea doctor",
+    "pip install -r requirements.txt   # minimal (T0): scan/plan/doctor/report work with no compiler",
+    "anti-rea doctor                  # grouped by provisioning tier; shows what to install for which feature",
+    "# install the rest on demand only: LLVM/clang 18 + cmake + binutils (T1, for protect/verify), see docs/PROVISIONING.md",
     "make build",
     "anti-rea scan /path/to/your/project -o out",
     "anti-rea plan out/asset_manifest.json -o out",
