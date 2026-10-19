@@ -28,6 +28,11 @@ REA 本身**不实现**反编译/反汇编，而是把"分析引擎"统一编排
   `open_binary` / `analyze_function` / pseudocode / function·string 搜索 / xrefs → **recreate**（重建为自有技术栈）。
 
 > 关键点：REA 面向的"目标"默认是**已发布的二进制/包**（shipped artifact），其证据链要求"shipped-artifact 权威"。
+>
+> 对 **Java / Android** 尤其如此：`JEB`、`apktool` 与浏览器/CDP provider 使其能直接反编译 jar/apk/前端产物，
+> 而字节码的高信息密度让"读源码"几乎零成本。针对这一面的可选手段（服务端化、字节码混淆、加壳、
+> 字节码虚拟化、下沉 native、GraalVM native-image、运行期对抗、密钥管理）见
+> [`../java-anti-rea.md`](../java-anti-rea.md)。
 
 ## 3. REA 的证据/权威模型 —— 对我们最有利的一点
 

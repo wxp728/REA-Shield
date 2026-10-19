@@ -8,7 +8,11 @@ description: >-
   Works in phases: survey -> proposal for user review -> user picks a mode
   (one-shot build / build-architecture transformation) -> verify. The skill
   provides information and methodology; it does not auto-modify the target
-  project's build system.
+  project's build system. For Java / Android (no LLVM IR transforms) it provides
+  a selectable anti-REA option menu (server-side logic, bytecode obfuscation,
+  packing, bytecode virtualization, native offload via JNI/JNA/FFM, GraalVM
+  native-image, runtime hardening, key management) with principles, trade-offs,
+  impacts and tool sources; the user chooses the combination.
 license: MIT
 version: 1.0.0
 ---
@@ -44,6 +48,12 @@ compiler wrapper into the project's own build via `anti-rea buildenv` +
 follow the phased workflow in the root `SKILL.md`: **P0 survey → P1 proposal
 (user review) → P2 mode choice → P3 execute → P4 verify** — the skill provides
 methodology, not automatic build-system rewrites.
+
+**Java / Android** (no LLVM IR transforms): the skill provides a selectable
+anti-REA **option menu** (J0–J8) — see `docs/java-anti-rea.md` (machine-readable
+`docs/java-anti-rea-options.yaml`). Present the candidate combinations with
+principles / trade-offs / impacts to the user and let them choose; third-party
+tools are not bundled, only their sources and usage are recorded.
 
 Scope: only harden code you own. v1.0 fully tested on Linux x86_64 with
 LLVM/clang 18. See `docs/INSTALL.md` for details, Docker, and environment

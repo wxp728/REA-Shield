@@ -101,6 +101,7 @@
 | S6 | 环境自检 + 工具链探测（去硬编码） | `core/toolchain.py`、`anti-rea doctor`、`core/platform_info.py` | v0.1 |
 | S6 | 容器镜像 + 入口脚本 | `Dockerfile`、`.dockerignore`、`deploy/entrypoint.sh` | v1.0 |
 | S6 | MCP 客户端配置 | `docs/mcp-clients.md` | v1.0 |
+| S6 | **Java / Android 反 REA 选项目录**（J0–J8：原理/优缺点/影响/获取源/验证方法论） | `docs/java-anti-rea.md`、`docs/java-anti-rea-options.yaml`、`tests/test_java_options.py` | — |
 | S6 | 端到端示例 | `examples/quickstart/`（`victim.c` / `run.sh` / `README.md`） | v1.0 |
 | S6 | 使用者文档（FAQ/排障/中英 README/许可证/变更记录） | `docs/{FAQ,troubleshooting}.md`、`README.md`、`README.zh-CN.md`、`LICENSE`、`CHANGELOG.md` | v1.0 |
 | S6 | 发布打包器 + 发布说明 + 上传清单 | `tools/release.py`、`docs/release/{RELEASE-1.0.0,upload-checklist}.md` | v1.0 |
@@ -272,6 +273,7 @@ python -m core.mcp            # 或 anti-rea-mcp（stdio MCP Server）
 | **可用性：容器** | `Dockerfile`（钉死 Python3.11 + LLVM18 + 预构建插件；`mcp` 子命令） | `docker build` / `docker run` |
 | **可用性：平台探测修正** | `core/platform_info.py`（`target_platform` 按主机探测，可覆盖） | `tests/test_toolchain.py` |
 | **可用性：Agent 接入** | `docs/mcp-clients.md`（Claude Desktop / Cursor / 通用 stdio 可直接粘贴） | — |
+| **可用性：Java / Android 选项菜单** | `docs/java-anti-rea.md`（J0–J8 原理/优缺点/影响/获取源）+ `skill.json.java_anti_rea` / `guides`；工具不由本技能分发 | `tests/test_java_options.py` |
 | **可用性：示例与支持** | `examples/quickstart/`、`docs/FAQ.md`、`docs/troubleshooting.md`、中英 README、Issue 模板 | 端到端可运行 |
 
 **M8 出口准则核对**：版本冻结 ✅；可构建可复现产物（bundle 主产物 + 哈希清单）✅；
@@ -334,6 +336,7 @@ NFR-02 Token 倍数子项 **S7 评估后废弃**（见 §1 说明）。
 | **使用者/Agent 入口（先看这个）** | `SKILL.md`、`skill.json` |
 | **安装 / 构建 / 环境变量 / Docker** | `docs/INSTALL.md` |
 | **MCP 客户端配置（可直接粘贴）** | `docs/mcp-clients.md` |
+| **Java / Android 反 REA 选项目录（J0–J8）** | `docs/java-anti-rea.md`、`docs/java-anti-rea-options.yaml` |
 | **常见问题 / 排障** | `docs/FAQ.md`、`docs/troubleshooting.md` |
 | **端到端示例** | `examples/quickstart/` |
 | **发布说明 / 上传清单** | `docs/release/RELEASE-1.0.0.md`、`upload-checklist.md` |

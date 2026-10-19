@@ -66,6 +66,35 @@
       "C": "A then B: first validate policy/cost with a one-shot build, then transform the build architecture"
     }
   },
+  "java_anti_rea": {
+    "ir_transforms": false,
+    "note": "Java/Android has no LLVM IR transforms; the skill provides a selectable option menu (principles, pros/cons/impacts, sources and usage) and lets the user choose. Third-party tools and commercial hardening products are NOT bundled or downloaded by this skill -- only their sources and usage are recorded.",
+    "guide": "docs/java-anti-rea.md",
+    "catalog": "docs/java-anti-rea-options.yaml",
+    "options": [
+      {"id": "J0", "name": "server-side logic (core algorithms/keys stay off the client)"},
+      {"id": "J1", "name": "shrink + name obfuscation (ProGuard / R8 / yGuard; baseline)"},
+      {"id": "J2", "name": "string/constant encryption + control-flow obfuscation (commercial or in-house)"},
+      {"id": "J3", "name": "class encryption + custom ClassLoader packing"},
+      {"id": "J4", "name": "bytecode virtualization (VMP-style; highest single-point cost on the Java layer)"},
+      {"id": "J5", "name": "offload sensitive core to native (JNI / JNA / Panama FFM) then harden with this skill"},
+      {"id": "J6", "name": "GraalVM native-image (whole-app AOT; closed-world + per-platform)"},
+      {"id": "J7", "name": "runtime hardening (anti-debug / integrity / environment checks)"},
+      {"id": "J8", "name": "key management off-client (Keystore/TEE/HSM) + watermarking"}
+    ],
+    "verification": {
+      "note": "verify/attack_sim target LLVM native artifacts and do NOT apply to Java bytecode; use decompilers (jadx/CFR/Vineflower) per the guide's methodology.",
+      "tools": ["jadx", "CFR", "Vineflower", "Procyon", "javap", "apktool"]
+    }
+  },
+  "guides": {
+    "install": "docs/INSTALL.md",
+    "build_injection": "docs/build-injection.md",
+    "java_anti_rea": "docs/java-anti-rea.md",
+    "java_anti_rea_catalog": "docs/java-anti-rea-options.yaml",
+    "threat_analysis": "docs/analysis/rea-threat-analysis.md",
+    "faq": "docs/FAQ.md"
+  },
   "tools": [
     {
       "name": "anti_rea.scan",
@@ -197,7 +226,8 @@
     },
     "languages": {
       "ir_transforms": ["c", "cpp", "rust (C/FFI sources only)", "python (C extensions only)"],
-      "scan_only": ["rust", "java", "csharp", "javascript", "typescript", "python"]
+      "scan_only": ["rust", "java", "csharp", "javascript", "typescript", "python"],
+      "java_note": "No IR transforms for Java bytecode; see the top-level `java_anti_rea` option menu (docs/java-anti-rea.md), and let the user choose the combination."
     }
   },
   "quickstart": [

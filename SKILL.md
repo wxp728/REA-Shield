@@ -13,6 +13,12 @@ description: >-
   architecture and standing up an anti-REA build environment) → flexible
   execution. The skill provides information and methodology; it does not
   automatically modify the target project's build system.
+  For Java / Android (no LLVM IR transforms) it provides a selectable anti-REA
+  option menu — server-side logic, bytecode obfuscation, packing, bytecode
+  virtualization, offloading to native (JNI/JNA/FFM), GraalVM native-image,
+  runtime hardening, key management — with principles, trade-offs, impacts and
+  tool sources, plus a decompiler-based verification methodology; the user
+  chooses the combination.
 license: MIT
 version: 1.0.0
 entrypoints:
@@ -40,7 +46,9 @@ MCP Server (`anti-rea-mcp`)，让上层 Agent 用工具调用而不是手工拼�
 - 你想让 Agent **分阶段**带你看方案再动手：先只读勘察 + 出改造方案给你审查，
   再按你选的模式（一次性构建 / 改造目标工程的构建架构并搭起防 REA 构建环境）执行。
 - 目标语言为纯 Rust / Java / .NET / JS/TS 时，v1.0 **不支持** IR 层变换
-  （见「限制」）。
+  （见「限制」）；但 **Java / Android 有专门的替代方案菜单**（服务端化、字节码混淆、
+  加壳、字节码虚拟化、下沉 native、GraalVM native-image、运行期对抗、密钥管理）——
+  见「Java / Android 项目」一节与 [`docs/java-anti-rea.md`](docs/java-anti-rea.md)。
 
 ## 工作流：先方案、后改造 / Phased workflow
 
@@ -86,8 +94,16 @@ MCP Server (`anti-rea-mcp`)，让上层 Agent 用工具调用而不是手工拼�
    输出）+ 目标工程侧（工程自己的依赖怎么装）；可用 Docker 镜像替代手工安装。
 4. **推荐模式与理由**：模式 A / B / C（见 P2），预估代价（体积、构建时间、运行开销）。
 5. **分步骤执行计划**：每步一条命令或一处脚本改动点，标注改哪个文件。
-6. **验证与回退**：baseline 对照怎么留、`verify`/`attack_sim` 怎么跑、如何还原
-   （构建注入不改源码；确需改构建文件的，保留原文件副本或 VCS 分支）。
+6. **语言特定的可选手段**（目标为 Java / Android 时**必填**）：从
+   [`docs/java-anti-rea.md`](docs/java-anti-rea.md)（机器可读：
+   [`docs/java-anti-rea-options.yaml`](docs/java-anti-rea-options.yaml)）的 J0–J8 里
+   挑 1–3 个候选组合，逐一摘要**原理 / 优点 / 缺点 / 影响（性能、体积、构建、可移植性、
+   兼容性）与获取源**，并给"按场景推荐"的取舍——**由用户勾选**；其中 J5/J6 的 native 部分
+   可回归本技能的常规加固链路。
+7. **验证与回退**：baseline 对照怎么留、`verify`/`attack_sim` 怎么跑、如何还原
+   （构建注入不改源码；确需改构建文件的，保留原文件副本或 VCS 分支）；Java 字节码侧
+   按 `docs/java-anti-rea.md` §4 的反编译方法论执行（本技能 `verify`/`attack_sim`
+   不适用于 Java 字节码）。
 
 > 方案必须**停下等用户批准**；用户可能改范围、换模式、加要求——按其修订后再进入 P3。
 
@@ -256,12 +272,39 @@ export CC=$PWD/integrations/cc-wrapper/anti-rea-cc
 
 详见 [`docs/build-injection.md`](docs/build-injection.md)。
 
+## Java / Android 项目——无 IR 变换，提供**选项菜单**
+
+本技能对 Java **不做 IR 层变换**（字节码不经过 LLVM；ADR-006），但**不是没有手段**：
+Java 侧的正确做法是按价值**分层选组合**。完整说明（原理 / 优点 / 缺点 / 影响 / 获取源 / 用法 /
+验证方法论）见 [`docs/java-anti-rea.md`](docs/java-anti-rea.md)，机器可读清单见
+[`docs/java-anti-rea-options.yaml`](docs/java-anti-rea-options.yaml)。九个选项（按"攻击方要多付出什么"排序）：
+
+| ID | 手段 | 一句话 |
+| :--- | :--- | :--- |
+| J0 | 核心逻辑上服务端 | 唯一"逆到底也无产出"的路径；需联网 |
+| J1 | 精简 + 名称混淆（ProGuard / R8 / yGuard） | 必做基线；单层对 REA 约小时级可读通 |
+| J2 | 字符串/常数加密 + 控制流混淆（商用/自研） | 打掉 strings/常量锚点，逼攻击方转动态 |
+| J3 | 类加密 + 自定义 ClassLoader（加壳） | 静态无字节码，必须运行期 dump |
+| J4 | 字节码虚拟化（VMP 类） | Java 层单点成本最高；性能代价数十倍 |
+| J5 | 下沉 native（JNI / JNA / Panama FFM） | 回到本技能主战场；产物可移植性丧失 |
+| J6 | GraalVM native-image（整体 AOT） | 一次到位换赛道；闭世界配置 + 逐平台 |
+| J7 | 运行期对抗（反调试/完整性/环境） | 与 J3/J4 协同，抬高动态 dump 成本 |
+| J8 | 密钥与信任根 + 水印 | 密钥不落客户端；水印用于溯源 |
+
+**用法**：这些手段**由用户选择**——Agent 在 **P1 方案**里按项目画像（是否联网、是否 Android、
+能否改构建、价值等级）给出该文档 §1「选项总览」与 §3「组合阶梯」中的候选组合与取舍，
+用户勾选后再按 **P3（模式 B 纪律：改构建文件先给 diff）** 落地。工具与商用产品
+**不由本技能分发**，只记录**获取源与用法**。
+Java 字节码的验证用反编译器（jadx / CFR / Vineflower）按该文档 §4 方法论执行；下沉到 native
+的部分回流本技能 `verify` / `attack_sim`。
+
 ## 安全边界 / Safety & Limits (v1.0)
 
 - **只加固你拥有的代码**。开放源码组件默认跳过（`allow_unknown_owner` 可覆盖）。
 - 目标是**抬高成本**，不是「不可破解」。任何加固都可被有决心的分析者攻破。
 - 变换引擎基于 LLVM Pass：支持 C/C++；Rust 仅 C/FFI 源、Python 仅 C 扩展。
-  纯 Rust / Java / .NET / JS/TS 无 IR 层防护（ADR-006）。
+  纯 Rust / Java / .NET / JS/TS 无 IR 层防护（ADR-006）；Java / Android 改用
+  「选项菜单 + 方法论」（见上节与 `docs/java-anti-rea.md`）。
 - 默认平台 Linux x86_64；其他平台可运行 scan/plan，protect 需自行验证。
 - **不越权改造**：本技能只提供信息与方法论；对目标工程构建体系的任何修改
   （构建脚本、CI、环境）都须先经工作流 P1 出方案、用户审查后再动，且只改用户批准的项。
@@ -270,6 +313,7 @@ export CC=$PWD/integrations/cc-wrapper/anti-rea-cc
 ## 进一步阅读 / See also
 
 - `docs/INSTALL.md` — 安装、构建、环境变量、Docker。
+- `docs/java-anti-rea.md` — **Java / Android 反 REA 选项目录**（J0–J8 原理/优缺点/影响/获取源/验证方法论）。
 - `docs/mcp-clients.md` — MCP 客户端配置（Claude Desktop / Cursor / 通用 stdio）。
 - `examples/quickstart/` — 端到端可运行示例。
 - `docs/FAQ.md`、`docs/troubleshooting.md` — 常见问题与故障排查。

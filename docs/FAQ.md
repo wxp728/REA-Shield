@@ -26,6 +26,21 @@
 原因见 `docs/design/ADR.md` 的 ADR-006。SRS 中的语言清单是「扫描/识别范围」，
 不等于「变换范围」。
 
+## Java / Android 项目怎么办？有防逆向手段吗？
+
+有，而且不止一种——只是**不在字节码层做 LLVM 变换**。Java/Android 项目请见
+[`docs/java-anti-rea.md`](java-anti-rea.md) 的**选项目录**（机器可读：
+[`docs/java-anti-rea-options.yaml`](java-anti-rea-options.yaml)）：J0 核心逻辑上服务端、
+J1 精简+名称混淆（ProGuard/R8/yGuard）、J2 字符串/常数加密+控制流混淆、J3 类加密+自定义
+ClassLoader 加壳、J4 字节码虚拟化（VMP 类）、J5 下沉 native（JNI/JNA/Panama FFM，可再用
+本技能加固）、J6 GraalVM native-image、J7 运行期对抗、J8 密钥与信任根+水印。每种都给了
+**原理、优点、缺点、影响（性能/体积/构建/可移植性/兼容性）与工具获取源**，由你按场景与
+预算**选择组合**（第三方工具与商用加固产品**不由本技能分发**，只记录获取源与用法）。
+
+验证提醒：本技能 `verify`/`attack_sim` 面向 **LLVM 原生产物**，**不适用于 Java 字节码**——
+Java 侧用反编译器（jadx / CFR / Vineflower）按该文档 §4 的方法论执行；下沉到 native 的部分
+回流本技能常规链路。
+
 ## 支持哪些平台？
 
 v1.0 **完整实测**：Linux x86_64。`scan`/`plan` 在任何能跑 Python 的平台都可用；

@@ -5,6 +5,24 @@
 
 ## [Unreleased]
 
+### 变更（技能改进 · Java / Android 反 REA 选项目录）
+
+- **新增 [`docs/java-anti-rea.md`](docs/java-anti-rea.md)**：Java / Android 的**反 REA 选项目录**
+  （J0–J8，按"攻击方要多付出什么"排序）——核心逻辑上服务端 / 精简+名称混淆（ProGuard、R8、
+  yGuard）/ 字符串与常数加密+控制流混淆（Zelix KlassMaster、Allatori、DashO，或 ASM/ByteBuddy 自研）/
+  类加密+自定义 ClassLoader 加壳 / 字节码虚拟化（VMP 类）/ 下沉 native（JNI、JNA、Panama FFM）/
+  GraalVM native-image / 运行期对抗 / 密钥与信任根+水印。每项给出**原理、优点、缺点、影响
+  （性能、体积、构建、可移植性、兼容性）、获取源与用法要点**，并附**按场景的组合阶梯**与
+  **反编译器验证方法论**（jadx / CFR / Vineflower / Procyon / javap / apktool）。
+- **机器可读清单**：新增 [`docs/java-anti-rea-options.yaml`](docs/java-anti-rea-options.yaml)
+  （options / combinations / verification），供 Agent 在 P1 方案里组装"菜单"。
+- **接线**：`SKILL.md` 何时使用、P1 方案（第 6 条：语言特定可选手段）、新增「Java / Android 项目
+  ——无 IR 变换，提供选项菜单」一节、安全边界与 See also；`skill.json` 增 `java_anti_rea` 与 `guides`；
+  `.agents/skills/anti-rea/SKILL.md`、`README.md` / `README.zh-CN.md`、`docs/FAQ.md` 同步；
+  `docs/analysis/rea-threat-analysis.md` §2 增 Java/Android（REA 的 JEB/apktool provider）交叉引用。
+- **边界**：第三方工具与商用加固产品**不由本技能分发**，只记录获取源与用法；Java 字节码的
+  `verify`/`attack_sim` **不适用**（本技能提供方法论，不代跑），下沉 native 的部分仍走本技能常规链路。
+
 ### 变更（S7 首轮 · 条件项补测）
 
 - **实战红队验证闭环**：对某真实生产 C 工程（约 10 万行 / 59 编译单元 / Linux x86_64 `.so`，
