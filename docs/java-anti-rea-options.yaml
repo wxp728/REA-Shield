@@ -1,0 +1,348 @@
+# Java / Android 反 REA 选项的机器可读清单（供 Agent 在 P1 方案里组装"菜单"）
+#
+# 用法：Agent 读取本文件 → 按项目画像（是否联网 / 是否 Android / 能否改构建 / 价值等级）
+#       筛出 1–3 个候选 → 把 principle / pros / cons / impacts 摘要写进 out/PROPOSAL.md
+#       → 由用户选择（SKILL.md 工作流 P1→P2）。
+#
+# 边界：本技能不分发这里的任何第三方工具；source 字段只是"获取途径"记录。
+# 人类可读版（含说明与场景匹配）：docs/java-anti-rea.md
+
+version: 1
+kind: java-anti-rea-options
+status: guide-only  # 非需求基线，不改变 SRS
+note: >-
+  Java 无 IR 层变换（ADR-006）。本清单按"攻击方要多付出什么"从高到低排列；
+  效果量级是经验排序，不是承诺指标。
+
+# interactions: 组合建议（按场景）
+combinations:
+  - scenario: 内部工具 / 低价值
+    options: [J1]
+  - scenario: 商用小工具、本就要联网
+    options: [J0, J1]
+  - scenario: 商用离线桌面 / CLI
+    options: [J1, J2, J5]
+  - scenario: 可承受架构改造的高价值离线产品
+    options: [J6, J5, J7]
+  - scenario: Android 商用
+    options: [J1, J2, J3, J4, J5, J7]
+  - scenario: 预算充足、需最强
+    options: [J0, J6, J4, J7, J8]
+
+options:
+  - id: J0
+    name: 核心逻辑上服务端
+    principle: 授权/密钥运算/核心算法放服务端 API，客户端只留调用与展示。
+    effect: 攻击方逆到底只能拿到协议调用，无法获得核心资产。
+    effectiveness: highest
+    pros:
+      - 唯一能让"逆到底也没有产出"的路径
+      - 不受 JVM"必须执行完整字节码"的约束
+      - 密钥不进客户端
+    cons:
+      - 需联网；有延迟与服务端容量成本
+      - 离线软件、嵌入式、无网环境不可用
+    impacts:
+      architecture: 最大（常需重写模块边界）
+      runtime: 网络往返延迟
+      ops: 可用性/SLA 成为新的失败点
+      portability: 不变（客户端变薄）
+    tools: []
+    best_for: 产品本就要联网、核心价值可服务化
+    verify: 攻击方视角确认"逆到底得到什么"
+
+  - id: J1
+    name: 精简 + 名称混淆（基线）
+    principle: 删除未使用代码；把包/类/方法/字段重命名为无意义短名。
+    effect: 失去"名字即文档"的锚点，需靠数据流/调用图重建语义；反编译仍成功。
+    effectiveness: low
+    pros:
+      - 开源、零许可成本
+      - 顺带减小体积、加快加载
+      - 任何 Java 项目都应作为第一步
+    cons:
+      - 字符串、常量、控制流完好
+      - 有经验的攻击方小时级即可读通
+    impacts:
+      build: 需维护 keep 规则（反射/序列化/JNI/注解处理器/RMI/资源名）
+      ops: 需归档 mapping 以保证栈跟踪还原与可复现
+      runtime: 通常为正向收益（体积变小）
+      portability: 不变
+    tools:
+      - name: ProGuard
+        kind: oss
+        license: GPL-2.0
+        source: https://github.com/Guardsquare/proguard
+        usage: java -jar proguard.jar @config.pro；-keep 保公共 API；-printmapping 存映射
+      - name: R8 (with D8)
+        kind: oss
+        license: Apache-2.0
+        source: https://r8.googlesource.com/r8
+        usage: Android 走 AGP minifyEnabled + proguard-rules.pro；命令行 java -cp r8.jar com.android.tools.r8.R8 --release --pg-conf rules.pro --lib <rt.jar> in.jar
+      - name: yGuard
+        kind: oss
+        license: MIT
+        source: https://github.com/yWorks/yGuard
+        usage: Ant/Gradle task（Maven 插件 yWorks/yguard-maven-plugin）；官方支持到 Java 21 编译的 class
+    best_for: 所有 Java/Android 项目的第一步
+    verify: 反编译后统计命名可读率
+
+  - id: J2
+    name: 字符串/常数加密 + 控制流混淆
+    principle: 字面量与整数常量运行期解密；分支/循环改写为无源码对应结构（不透明谓词、平坦化）。
+    effect: strings/常量锚点失效；反编译产物出现非法 goto、缺块或失败 → 被迫转动态观察。
+    effectiveness: medium
+    pros:
+      - 不改架构，可按类/方法粒度启用
+      - 对"LLM 读反编译文本"这条最省力路径打击明显
+    cons:
+      - 商用许可成本
+      - 反编译失败不等于不可解：可换反编译器或用 Agent/Instrumentation 动态还原
+    impacts:
+      runtime: 启动与运行开销（解密、膨胀分支），通常可控
+      ops: 调试与栈跟踪可读性下降；反射需工具支持
+      build: 需跟随 JDK 版本升级混淆器
+      portability: 不变
+    tools:
+      - name: Zelix KlassMaster
+        kind: commercial
+        license: proprietary
+        source: https://www.zelix.com/klassmaster/
+        usage: ZKM Script / 构建工具接口；名称与流混淆、字符串与整数常数加密、方法参数与引用混淆、AutoReflection、增量混淆
+      - name: Allatori
+        kind: commercial
+        license: proprietary
+        source: https://www.allatori.com/
+        usage: 字符串加密、流混淆、水印、增量
+      - name: DashO (PreEmptive)
+        kind: commercial
+        license: proprietary
+        source: https://www.preemptive.com/
+        usage: 重命名、字符串加密、控制流、篡改/调试检测、水印（Java 与 Android）
+      - name: 自研 (ASM / ByteBuddy)
+        kind: diy
+        license: n/a
+        source: n/a
+        usage: 常量加密与 CFG 改写；历史原型 JBCO/SandMark 多已停更，仅作参考
+    best_for: 只对 P0/P1 资产启用，P2 保持轻量
+    verify: 反编译失败率 + 字符串明文比例
+
+  - id: J3
+    name: 类加密 + 自定义 ClassLoader（加壳）
+    principle: 类文件加密发布，运行期由自定义 ClassLoader 解密后 defineClass。
+    effect: 静态没有字节码可读，攻击方必须运行期 dump。
+    effectiveness: medium-high
+    pros:
+      - 静态强度显著高于 J1/J2
+      - 可叠加在 J2 之上；Android 侧成熟（DEX 加壳）
+    cons:
+      - 只抬高静态闭合成本，需配合 J7
+      - 对启动耗时与类加载兼容性有要求
+      - 受限类加载、JPMS 强封装、AOT/native-image 场景难做
+    impacts:
+      runtime: 启动开销（解密 + 校验）
+      compatibility: 可能与依赖自定义类加载/反射的框架冲突
+      build: 需保留"无壳降级"路径
+      portability: 不变
+    tools:
+      - name: 商用加固套件 / Android 加固厂商产品线
+        kind: commercial
+        license: proprietary
+        source: 厂商官方渠道（自选）
+        usage: 类/DEX 加密 + 自定义类加载 + 签名校验
+      - name: 自研 ClassLoader 壳
+        kind: diy
+        license: n/a
+        source: n/a
+        usage: 自定义 ClassLoader + 解密 + 完整性校验
+    best_for: 有明确"防静态抄源码"诉求且能接受兼容性约束
+    verify: 静态是否还能读到字节码（jadx/apktool 是否能直接反编译）
+
+  - id: J4
+    name: 字节码虚拟化（VMP 类）
+    principle: 敏感方法编译为自定义指令集（虚拟寄存器/栈 + 随机化 opcode 映射），内嵌解释器运行。
+    effect: 攻击方必须逆解释器并重建 ISA/映射——把"读源码"变成"写反编译器"。
+    effectiveness: highest-Java-layer
+    pros:
+      - Java 层单点成本抬升最大
+      - 与 J2/J3 叠加形成纵深
+    cons:
+      - 实现门槛高、独立工具稀缺（商用或自研）
+      - 与反射/异常/调试的兼容性复杂
+    impacts:
+      runtime: 被虚拟化方法可达几十倍至两个数量级（解释执行）
+      size: 体积增加
+      ops: 异常栈与调试信息失真
+      portability: 不变
+    tools:
+      - name: 商用加固（含 RASP 的套件）
+        kind: commercial
+        license: proprietary
+        source: 厂商官方渠道（自选）
+        usage: 对选定的少量方法启用虚拟化
+      - name: 自研 VMP
+        kind: diy
+        license: n/a
+        source: n/a
+        usage: 自定义 ISA + 解释器；参考 SoK 论文
+      - name: 研究参考
+        kind: reference
+        license: n/a
+        source: https://dl.acm.org/doi/10.1145/3465481.3465772
+        usage: "SoK: Automatic Deobfuscation of Virtualization-protected Applications（学术综述，供参考）"
+    best_for: 只挑 2–5 个最敏感方法；必须做性能 A/B 与回退开关
+    verify: 反编译器能否恢复该方法语义
+
+  - id: J5
+    name: 下沉 native（JNI / JNA / Panama FFM）
+    principle: 敏感核心用 C/C++ 实现为原生库，Java 侧只调用；原生二进制由本技能做 IR 变换加固。
+    effect: 防护强度跳到 native 量级；REA 失去 Java 层的高信息密度优势。
+    effectiveness: high
+    pros:
+      - 直接复用本技能对 native 的加固（CFF/MBA/字符串加密/虚拟化/白盒）
+      - 计算密集段常更快
+    cons:
+      - 可移植性在"产物"层丧失：每平台各一份
+      - 跨语言边界调试困难；JNI 引用/内存管理易错；native 崩溃直接杀 JVM
+    impacts:
+      build: 构建矩阵增加（linux-x64 / linux-arm64 / macos / windows）
+      size: 包体增大
+      compatibility: 不允许 JNI 的托管/沙箱环境不可用
+      portability: 丧失（逐平台产物）
+    interfaces:
+      - name: JNI
+        call_overhead: lowest
+        source: JDK 内置（Oracle JNI 规范）
+        notes: 需手动管理引用/内存；每平台一份产物
+      - name: JNA
+        call_overhead: high  # 比 JNI 慢 10–100×
+        source: https://github.com/java-native-access/jna
+        license: LGPL-2.1 / Apache-2.0（双许可）
+        notes: 无需编译胶水代码；不适合热路径
+      - name: Panama FFM (java.lang.foreign)
+        call_overhead: near-JNI
+        source: https://openjdk.org/jeps/454
+        notes: JDK 22 定稿；Arena 管理生命周期；无需手写胶水
+    tools:
+      - name: anti-rea（本技能）
+        kind: this-skill
+        source: https://gitee.com/wxp728/REA-Shield
+        usage: 对 native 库做 IR 变换；构建注入见 docs/build-injection.md
+    best_for: 必须离线交付、且核心逻辑集中可切分的产品
+    verify: 本技能 verify/attack_sim 直接可用；边界要批量化设计
+
+  - id: J6
+    name: GraalVM native-image（整体 AOT）
+    principle: 构建期把整个应用 AOT 编译为原生可执行文件，字节码与常量池不复存在。
+    effect: REA 退回逆原生二进制，且失去 Java 符号/常量锚点；可继续用本技能加固。
+    effectiveness: high
+    pros:
+      - 一次到位（整应用换赛道）
+      - 启动毫秒级、内存占用小（容器/Serverless）
+      - 无 JVM 依赖的分发
+    cons:
+      - 闭世界分析：反射/动态代理/资源需显式配置
+      - 部分库/框架不兼容；构建时间分钟级
+      - 未做 PGO 时稳态性能可能落后 HotSpot 10–30%
+      - 逐平台产物；JVMTI 等诊断手段受限
+    impacts:
+      build: CI 变慢；需维护 reachability metadata
+      release: 发布矩阵 ×N 平台
+      runtime: 启动/内存显著改善；稳态性能取决于 PGO
+      portability: 丧失（逐平台产物）
+      license: Oracle GraalVM 25.x/21.x 更新按 GFTC（生产免费、可再分发但不得收费）；CE 为 GPLv2 + Classpath 例外；Native Image 属 Early Adopter 技术
+    tools:
+      - name: GraalVM (native-image)
+        kind: jdk
+        source: https://www.graalvm.org/downloads/
+        usage: 先用 -agentlib:native-image-agent=config-output-dir=... 采集配置，全量测试通过后再上 PGO
+    best_for: 可承受构建与发布矩阵改造、且看重启动/内存/防逆向的产品
+    verify: 用 native 侧工具链（本技能 verify/attack_sim）
+
+  - id: J7
+    name: 运行期对抗（反调试 / 完整性 / 环境检测）
+    principle: 检测调试器/Agent/Instrumentation，校验自身完整性（签名/哈希），检测篡改与 ROOT/越狱。
+    effect: 抬高动态 dump、单步跟踪与脚本化批量攻击的成本，尤其配合 J3/J4。
+    effectiveness: supporting
+    pros:
+      - 与静态混淆正交、可叠加
+      - 把便宜的分析变成要花人力的分析
+    cons:
+      - 不阻止静态分析
+      - 误报伤合法用户/调试/无障碍工具
+      - 检测逻辑本身可被 patch
+    impacts:
+      runtime: 启动/运行检测开销（通常可控）
+      ops: 平台适配 + 被检测后的救济通道（合规与支持成本）
+      portability: 不变
+    tools:
+      - name: 商用加固 / RASP 套件
+        kind: commercial
+        license: proprietary
+        source: 厂商官方渠道（自选；DashO、DexGuard 等含此类能力）
+        usage: 篡改/调试/环境检测
+      - name: 自研
+        kind: diy
+        license: n/a
+        source: n/a
+        usage: 签名/哈希自校验 + 调试/Agent 检测 + 降级策略
+    best_for: 与 J3/J4 配合使用；单独使用价值有限
+    verify: 程序在被 attach/篡改时的行为是否符合预期（降级而非崩溃）
+
+  - id: J8
+    name: 密钥与信任根 + 水印
+    principle: 密钥不进客户端（服务端签发 / HSM / TEE / Keystore-StrongBox / SE）；水印用于溯源。
+    effect: 即使代码被逆，也拿不到可用密钥；泄露可追溯。
+    effectiveness: supporting
+    pros:
+      - 让攻击产出不可直接使用
+      - 水印为维权留证
+    cons:
+      - 需要服务端或硬件能力；离线场景受限
+      - 白盒密码在 Java 侧尚未成熟到可放心使用
+    impacts:
+      architecture: 需要服务端/硬件支持
+      ops: 硬件依赖因设备而异
+      portability: 不变
+    tools:
+      - name: 平台密钥能力
+        kind: platform
+        source: Android Keystore / StrongBox、Apple Secure Enclave；服务端 HSM/KMS
+        usage: 密钥生成与使用不出可信边界
+      - name: 水印（商用加固多自带）
+        kind: commercial
+        license: proprietary
+        source: 厂商官方渠道（自选）
+        usage: 嵌入可追溯标记
+    best_for: 所有方案的最后一块拼图（密钥不能落客户端）
+    verify: 客户端产物中是否还能提取到可用密钥
+
+# 验证方法论（Java 侧；本技能 verify/attack_sim 不适用 Java 字节码）
+verification:
+  note: >-
+    本技能 verify/attack_sim 面向 LLVM 原生产物，不适用于 Java 字节码；Java 侧按下列方法论执行
+    （提供方法论与口径，不代跑）。若核心已下沉 native（J5/J6），native 部分照常用本技能链路。
+  tools:
+    - name: jadx
+      license: Apache-2.0
+      source: https://github.com/skylot/jadx
+    - name: CFR
+      license: MIT
+      source: https://www.benf.org/other/cfr/
+    - name: Vineflower
+      license: Apache-2.0
+      source: https://github.com/Vineflower/vineflower
+    - name: Procyon
+      license: Apache-2.0
+      source: https://github.com/mstrobel/procyon
+    - name: javap
+      license: JDK 内置
+      source: 随 JDK
+    - name: apktool
+      license: Apache-2.0
+      source: https://github.com/iBotPeaches/Apktool
+  steps:
+    - 用 2–3 个反编译器交叉验证（单一工具的失败不算数）
+    - 统计命名可读率、字符串明文比例、反编译失败/异常率
+    - 尝试重建可编译源码并计时（工时是最终成本指标）
+    - 记录"逆到底得到了什么"

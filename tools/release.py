@@ -75,6 +75,7 @@ def check() -> list[str]:
         "requirements.txt", "pyproject.toml", "Dockerfile",
         ".agents/skills/anti-rea/SKILL.md",
         "docs/INSTALL.md", "docs/mcp-clients.md",
+        "docs/java-anti-rea.md", "docs/java-anti-rea-options.yaml",
         "engine/CMakeLists.txt", "core/common.py", "core/toolchain.py",
     ]
     for rel in required:
