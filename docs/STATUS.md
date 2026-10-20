@@ -288,16 +288,18 @@ NFR-02 Token 倍数子项 **S7 评估后废弃**（见 §1 说明）。
 
 ## 7. 新环境准备（**已完成，记录实测**）
 
-本项目 PoC 环境已在 **RHEL 系 Linux（x86_64）** 上搭建完成：
+本项目 PoC 环境已在 **RHEL 系 Linux（x86_64）** 上搭建完成。下表的**安装位置**用占位符
+（`/opt/<toolchain>` 表示任意本地前缀，也可用 `$HOME/.local/<toolchain>`）——`doctor` 按
+「环境变量 > PATH > 常见目录」自动探测，不依赖固定路径：
 
-| 组件 | 实测版本 | 安装位置 | 说明 |
+| 组件 | 实测版本 | 安装位置（占位） | 说明 |
 | :--- | :--- | :--- | :--- |
-| LLVM / clang / opt | 18.1.8 | `/opt/anti-rea-toolchain/clang+llvm-18.1.8-x86_64-linux-gnu-ubuntu-18.04` | 官方预编译；发行版源仅 LLVM 10，不满足 |
-| JDK | Temurin 21.0.12.1+1 | `/opt/anti-rea-toolchain/jdk-21.0.12.1+1` | 供 Ghidra |
-| Ghidra | 12.1.4 PUBLIC | `/opt/anti-rea-toolchain/ghidra_12.1.4_PUBLIC` | **12 起无内置 Jython，须用 PyGhidra** |
-| PyGhidra | 3.1.0 | `/opt/anti-rea-toolchain/python3.11` | 随 Ghidra 分发离线安装 |
-| Python | 3.11.9 | `/opt/anti-rea-toolchain/python3.11` | 源码编译（源仅 3.7） |
-| DEAP | 1.4.4 | 同上 site-packages | 策略进化 |
+| LLVM / clang / opt | 18.1.8 | `/opt/<toolchain>/clang+llvm-18.1.8-*` | 官方预编译；发行版源仅 LLVM 10，不满足 |
+| JDK | Temurin 21.0.12.1+1 | `/opt/<toolchain>/jdk-21*` | 供 Ghidra |
+| Ghidra | 12.1.4 PUBLIC | `/opt/<toolchain>/ghidra_12.*` | **12 起无内置 Jython，须用 PyGhidra** |
+| PyGhidra | 3.1.0 | 同 Python 前缀（site-packages） | 随 Ghidra 分发离线安装 |
+| Python | 3.11.9 | `/opt/<toolchain>/python3.11` | 源码编译（源仅 3.7） |
+| DEAP | 1.4.4 | 同上 site-packages | 策略进化（按需：`requirements-optional.txt`） |
 | GCC | 7.3.0（系统） | `/usr/bin` | 样例二进制 / PoC-4 |
 | jsonschema / pyyaml / numpy | 4.26 / 6.0 / 2.4 | 同上 | 数据契约校验 |
 

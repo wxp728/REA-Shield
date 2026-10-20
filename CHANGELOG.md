@@ -5,6 +5,19 @@
 
 ## [Unreleased]
 
+### 变更（文档 / PoC 去本地化）
+
+- 清掉入库文件中残留的本机绝对路径（`/opt/<toolchain>`、`/home/<user>` 等），**不改变任何验证结论**：
+  `docs/STATUS.md` §7 安装位置改占位符；`docs/design/ddd/dd-09-test-plan.md` 工具链前缀占位化；
+  `docs/release/doc-verification.md` 命令改 `python3.11` / `<out>` 占位（并修 `tools/run_s4.py`：
+  生成该文档时自动替换解释器与输出目录，避免下次再写入本机路径）；
+  `examples/quickstart/run.sh`、`pilots/python-ext/README.md` 改用 PATH 中的 Python；
+  `poc/poc2-ghidra-headless/run.sh` 的 Ghidra/JDK/Python 改**通用探测**（环境变量 > 常见位置，
+  含 `/opt/*/ghidra_*`、`$HOME/.local/...`）；`poc/setup_env.sh` 默认前缀改为
+  `$HOME/.local/anti-rea-toolchain`（免 sudo，可用 `PREFIX=` 覆盖）。
+- 复核：`git grep` 已无本机绝对路径（工具链安装前缀、用户主目录等）；单测 135 例、
+  `ci/ci.sh` 8/8 全绿。
+
 ### 变更（技能改进 · 分级安装 / 按需获取，不打包第三方）
 
 - **新增 [`docs/PROVISIONING.md`](docs/PROVISIONING.md)**：安装与按需获取策略——**本技能只交付自己的源码**，

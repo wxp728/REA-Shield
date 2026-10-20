@@ -206,9 +206,20 @@ def _md_matrix(res: dict) -> str:
     return "\n".join(L) + "\n"
 
 
+def _sanitize_cmd(cmd: str, py: str, workdir: str) -> str:
+    """把命令里的本机绝对路径换成占位符（结果文档要入库，不写本地环境）。"""
+    pairs = [(workdir, "<out>"), (REPO, "<repo>"), (py, "python3.11")]
+    for real, ph in sorted(pairs, key=lambda x: len(x[0]), reverse=True):
+        if real:
+            cmd = cmd.replace(real, ph)
+    return cmd
+
+
 def _md_docverify(results: list[dict]) -> str:
     L = ["# 文档验证（按文档从零复现）", "",
          "> 由 `tools/run_s4.py` 生成（§10.3）。逐条执行文档中的命令并记录结果。",
+         "> 命令中的 `python3.11` / `<out>` 为占位写法（生成时已去除本机绝对路径），"
+         "退出码与结果不变。",
          "", "| 命令 | 退出码 | 结果 |", "| :--- | ---: | :--- |"]
     for r in results:
         L.append("| `%s` | %d | %s |" % (r["cmd"], r["rc"],
@@ -283,7 +294,8 @@ def doc_verification(workdir: str) -> list[dict]:
         full = "%s%s -m core.cli %s" % (llvm, py, c)
         p = subprocess.run(["bash", "-lc", full], cwd=REPO, capture_output=True,
                            text=True)
-        results.append({"cmd": "%s -m core.cli %s" % (py, c), "rc": p.returncode})
+        results.append({"cmd": _sanitize_cmd("%s -m core.cli %s" % (py, c), py, out),
+                        "rc": p.returncode})
     return results
 
 

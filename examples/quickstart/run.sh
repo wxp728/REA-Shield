@@ -3,7 +3,7 @@
 #
 # 用法：
 #   bash examples/quickstart/run.sh
-#   PY=/opt/anti-rea-toolchain/python3.11/bin/python3.11 bash examples/quickstart/run.sh
+#   PY=python3.11 bash examples/quickstart/run.sh
 #
 # 前置：已 `pip install -r requirements.txt` 且已 `make build`（构建 LLVM 插件）。
 set -euo pipefail

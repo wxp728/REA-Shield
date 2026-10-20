@@ -7,8 +7,10 @@
 
 ```sh
 cd pilots/python-ext
-ANTI_REA_PYTHON=/opt/anti-rea-toolchain/python3.11/bin/python3.11 \
+# 用你自己的 Python 3.11（在 PATH 中，或用 PYTHON= 指定）
+PYTHON="${PYTHON:-python3.11}"
+ANTI_REA_PYTHON="$PYTHON" \
 ANTI_REA_DRIVER=../../integrations/anti-rea \
-/opt/anti-rea-toolchain/python3.11/bin/python3.11 setup.py build_ext --inplace
-/opt/anti-rea-toolchain/python3.11/bin/python3.11 -c "import pilotext; print(pilotext.transform(7))"
+"$PYTHON" setup.py build_ext --inplace
+"$PYTHON" -c "import pilotext; print(pilotext.transform(7))"
 ```

@@ -7,11 +7,12 @@ set -uo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 cd "$here"
 
-# --- 定位 Ghidra 与 JDK ---
+# --- 定位 Ghidra 与 JDK（通用探测：环境变量 > 常见安装位置，不写死本地路径）---
 GHIDRA_HOME="${1:-${GHIDRA_HOME:-}}"
 if [ -z "$GHIDRA_HOME" ]; then
-  for d in /opt/anti-rea-toolchain/ghidra_* /opt/ghidra_*; do
-    [ -d "$d" ] && GHIDRA_HOME="$d" && break
+  for d in "${GHIDRA_INSTALL_DIR:-}" /opt/ghidra_* /opt/*/ghidra_* \
+           "$HOME"/ghidra_* "$HOME"/.local/ghidra_*; do
+    [ -n "$d" ] && [ -d "$d" ] && GHIDRA_HOME="$d" && break
   done
 fi
 [ -n "$GHIDRA_HOME" ] || { echo "错误: 未找到 Ghidra（设 GHIDRA_HOME 或传入路径）" >&2; exit 1; }
@@ -19,15 +20,16 @@ export GHIDRA_HOME GHIDRA_INSTALL_DIR="$GHIDRA_HOME"
 echo "GHIDRA_INSTALL_DIR = $GHIDRA_HOME"
 
 if [ -z "${JAVA_HOME:-}" ]; then
-  for d in /opt/anti-rea-toolchain/jdk-21* /opt/anti-rea-toolchain/jdk-17*; do
+  for d in /opt/jdk-21* /opt/*/jdk-21* /opt/jdk-17* /opt/*/jdk-17* \
+           "$HOME"/.sdkman/candidates/java/* "$HOME"/jdk-21*; do
     [ -d "$d" ] && export JAVA_HOME="$d" && break
   done
 fi
 [ -n "${JAVA_HOME:-}" ] && echo "JAVA_HOME = $JAVA_HOME"
 export PATH="$JAVA_HOME/bin:$PATH"
 
-# --- 定位 Python（需已安装 pyghidra） ---
-PY="${POC_PYTHON:-/opt/anti-rea-toolchain/python3.11/bin/python3.11}"
+# --- 定位 Python（需已安装 pyghidra；用 PATH 中的 python3 或 POC_PYTHON 指定）---
+PY="${POC_PYTHON:-python3}"
 command -v "$PY" >/dev/null 2>&1 || PY=python3
 "$PY" -c "import pyghidra" 2>/dev/null || {
   echo "错误: $PY 未安装 pyghidra。见 poc-plan §7 或 Ghidra/Features/PyGhidra/pypkg/dist" >&2; exit 1; }

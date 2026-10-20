@@ -3,11 +3,11 @@
 # 该脚本为「记录性脚本」：供新环境参考，非一键幂等安装。执行前请自行确认权限与网络。
 #
 # 关键点：发行版源仅提供 LLVM/clang 10、Python 3.7，均不满足需求，
-#         故 LLVM 18 / Ghidra / JDK21 / Python3.11 均采用官方预编译包或源码编译，
-#         安装到 /opt/anti-rea-toolchain（可改为 $HOME/.local 以免 sudo）。
+#         故 LLVM 18 / Ghidra / JDK21 / Python3.11 均采用官方预编译包或源码编译。
+#         默认安装到用户目录（免 sudo）；也可 PREFIX=/opt/<toolchain> 指定其它前缀。
 set -euo pipefail
 
-PREFIX=${PREFIX:-/opt/anti-rea-toolchain}
+PREFIX=${PREFIX:-$HOME/.local/anti-rea-toolchain}
 DL=${DL:-$HOME/.cache/anti-rea-dl}
 
 # 1) 系统开发依赖（需 sudo）

@@ -30,7 +30,7 @@
 
 ## 3. 测试环境
 
-- **工具链**：`/opt/anti-rea-toolchain`（LLVM 18.1.8、JDK 21、Ghidra 12.1.4 + PyGhidra、Python 3.11、DEAP、Z3）；
+- **工具链**：本地前缀 `/opt/<toolchain>`（LLVM 18.1.8、JDK 21、Ghidra 12.1.4 + PyGhidra、Python 3.11、DEAP、Z3）；
 - **基准题库**：许可证干净、构建确定、含 ground truth（`benchmark.schema.json`，DD-07 §6）；
 - **LLM**：运行环境提供、独立会话、显式出站（CQ-05）。
 
