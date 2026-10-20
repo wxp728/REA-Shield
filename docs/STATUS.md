@@ -102,6 +102,7 @@
 | S6 | 容器镜像 + 入口脚本 | `Dockerfile`、`.dockerignore`、`deploy/entrypoint.sh` | v1.0 |
 | S6 | MCP 客户端配置 | `docs/mcp-clients.md` | v1.0 |
 | S6 | **Java / Android 反 REA 选项目录**（J0–J8：原理/优缺点/影响/获取源/验证方法论） | `docs/java-anti-rea.md`、`docs/java-anti-rea-options.yaml`、`tests/test_java_options.py` | — |
+| S6 | **.NET / Unity 反 REA 选项目录**（D0–D8 + Unity/IL2CPP 特别路径） | `docs/dotnet-anti-rea.md`、`docs/dotnet-anti-rea-options.yaml`、`tests/test_dotnet_options.py` | — |
 | S6 | **分级安装 / 按需获取**（T0–T4、最小部署集、不打包第三方） | `docs/PROVISIONING.md`、`requirements-optional.txt`、`skill.json.provisioning`/`deploy`、`tools/release.py --skill`、`tests/test_provisioning.py` | v1.0 |
 | S6 | 端到端示例 | `examples/quickstart/`（`victim.c` / `run.sh` / `README.md`） | v1.0 |
 | S6 | 使用者文档（FAQ/排障/中英 README/许可证/变更记录） | `docs/{FAQ,troubleshooting}.md`、`README.md`、`README.zh-CN.md`、`LICENSE`、`CHANGELOG.md` | v1.0 |
@@ -275,6 +276,7 @@ python -m core.mcp            # 或 anti-rea-mcp（stdio MCP Server）
 | **可用性：平台探测修正** | `core/platform_info.py`（`target_platform` 按主机探测，可覆盖） | `tests/test_toolchain.py` |
 | **可用性：Agent 接入** | `docs/mcp-clients.md`（Claude Desktop / Cursor / 通用 stdio 可直接粘贴） | — |
 | **可用性：Java / Android 选项菜单** | `docs/java-anti-rea.md`（J0–J8 原理/优缺点/影响/获取源）+ `skill.json.java_anti_rea` / `guides`；工具不由本技能分发 | `tests/test_java_options.py` |
+| **可用性：.NET / Unity 选项菜单** | `docs/dotnet-anti-rea.md`（D0–D8 + NativeAOT/IL2CPP 路径）+ `skill.json.dotnet_anti_rea` / `guides`；工具不由本技能分发 | `tests/test_dotnet_options.py` |
 | **可用性：分级安装 / 按需获取** | `docs/PROVISIONING.md`（T0–T4：装什么/何时装/不装什么）；`anti-rea doctor --tier T0/T1`；`requirements.txt`（核心）+ `requirements-optional.txt`（deap）；`python tools/release.py --skill dist`（最小技能包） | `tests/test_provisioning.py` |
 | **可用性：示例与支持** | `examples/quickstart/`、`docs/FAQ.md`、`docs/troubleshooting.md`、中英 README、Issue 模板 | 端到端可运行 |
 
@@ -342,6 +344,7 @@ NFR-02 Token 倍数子项 **S7 评估后废弃**（见 §1 说明）。
 | **分级安装 / 按需获取（不打包第三方）** | `docs/PROVISIONING.md`、`requirements-optional.txt` |
 | **MCP 客户端配置（可直接粘贴）** | `docs/mcp-clients.md` |
 | **Java / Android 反 REA 选项目录（J0–J8）** | `docs/java-anti-rea.md`、`docs/java-anti-rea-options.yaml` |
+| **.NET / Unity 反 REA 选项目录（D0–D8）** | `docs/dotnet-anti-rea.md`、`docs/dotnet-anti-rea-options.yaml` |
 | **常见问题 / 排障** | `docs/FAQ.md`、`docs/troubleshooting.md` |
 | **端到端示例** | `examples/quickstart/` |
 | **发布说明 / 上传清单** | `docs/release/RELEASE-1.0.0.md`、`upload-checklist.md` |

@@ -46,6 +46,17 @@ class TestScanner(unittest.TestCase):
             syms = {a.get("symbol") for a in m["assets"]}
             self.assertIn("secret_mix", syms)
 
+    def test_detects_dotnet_build_and_language(self):
+        """`.csproj`/`.sln` 与 `.cs` 应识别为 dotnet 语言 + dotnet 构建（P0 画像）。"""
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "App.csproj"), "w") as fh:
+                fh.write("<Project Sdk=\"Microsoft.NET.Sdk\"></Project>\n")
+            with open(os.path.join(d, "Program.cs"), "w") as fh:
+                fh.write("class Program { static void Main() {} }\n")
+            m = scan(d, {"allow_unknown_owner": True})
+            self.assertEqual(m["project"]["language"], "dotnet")
+            self.assertEqual(m["project"]["build_system"], "msbuild")
+
     def test_refuse_unknown_owner(self):
         with tempfile.TemporaryDirectory() as d:
             with open(os.path.join(d, "x.c"), "w") as fh:

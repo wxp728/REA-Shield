@@ -12,7 +12,8 @@ description: >-
   a selectable anti-REA option menu (server-side logic, bytecode obfuscation,
   packing, bytecode virtualization, native offload via JNI/JNA/FFM, GraalVM
   native-image, runtime hardening, key management) with principles, trade-offs,
-  impacts and tool sources; the user chooses the combination.
+  impacts and tool sources; the user chooses the combination. For .NET / Unity
+  (no IL transforms) it provides a D0-D8 menu including NativeAOT and IL2CPP.
 license: MIT
 version: 1.0.0
 ---
@@ -60,6 +61,13 @@ anti-REA **option menu** (J0–J8) — see `docs/java-anti-rea.md` (machine-read
 `docs/java-anti-rea-options.yaml`). Present the candidate combinations with
 principles / trade-offs / impacts to the user and let them choose; third-party
 tools are not bundled, only their sources and usage are recorded.
+
+**.NET / Unity** (no IL transforms): same approach with the **D0–D8** menu —
+see `docs/dotnet-anti-rea.md` (machine-readable
+`docs/dotnet-anti-rea-options.yaml`). NativeAOT / IL2CPP / native-offload
+outputs can be hardened with the regular native pipeline. Note that
+ReadyToRun is NOT protection, and public deobfuscators (e.g. de4dot) can undo
+some commercial obfuscation — combine layers.
 
 Scope: only harden code you own. v1.0 fully tested on Linux x86_64 with
 LLVM/clang 18. See `docs/INSTALL.md` for details, Docker, and environment

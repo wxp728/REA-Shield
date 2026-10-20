@@ -87,12 +87,39 @@
       "tools": ["jadx", "CFR", "Vineflower", "Procyon", "javap", "apktool"]
     }
   },
+  "dotnet_anti_rea": {
+    "ir_transforms": false,
+    "note": ".NET (C#/F#/VB; including Unity, MAUI, Blazor, desktop/CLI/services) has no IL-level transforms; the skill provides a selectable option menu (D0-D8) with principles, pros/cons/impacts, sources and usage. Third-party tools and commercial hardening products are NOT bundled or downloaded by this skill -- only their sources and usage are recorded. NativeAOT / IL2CPP / native-offload outputs can be hardened with this skill's regular native pipeline.",
+    "guide": "docs/dotnet-anti-rea.md",
+    "catalog": "docs/dotnet-anti-rea-options.yaml",
+    "options": [
+      {"id": "D0", "name": "server-side logic (core algorithms/keys stay off the client)"},
+      {"id": "D1", "name": "trim + name obfuscation (Obfuscar / ConfuserEx / Dotfuscator; baseline)"},
+      {"id": "D2", "name": "string/constant encryption + control-flow obfuscation"},
+      {"id": "D3", "name": "assembly encryption/packing + AssemblyResolve (packer)"},
+      {"id": "D4", "name": "IL virtualization (VMP-style; highest single-point cost on the IL layer)"},
+      {"id": "D5", "name": "offload sensitive core to native (P/Invoke / C++-CLI / function pointers) then harden with this skill"},
+      {"id": "D6", "name": "NativeAOT / Mono AOT (whole-app AOT; closed-world + per-RID)"},
+      {"id": "D7", "name": "runtime hardening (anti-debug / anti-tamper / integrity)"},
+      {"id": "D8", "name": "key management off-client (DPAPI/Keychain/Keystore/HSM) + watermarking"}
+    ],
+    "unity": {
+      "experimental": true,
+      "note": "Mono builds are decompiled directly; IL2CPP removes IL but global-metadata.dat can be recovered (Il2CppDumper). IL2CPP generates readable C++ -- this skill's build injection (clang + plugin) can harden it selectively; validate on your Unity version first."
+    },
+    "verification": {
+      "note": "verify/attack_sim target LLVM native artifacts and do NOT apply to CIL managed assemblies; decompile/cross-check with ILSpy/ilspycmd + dnSpyEx + dotPeek and run de4dot to test real strength. Native parts (D5/D6/IL2CPP) use the regular native pipeline.",
+      "tools": ["ILSpy/ilspycmd", "dnSpyEx", "dotPeek", "de4dot", "ildasm/monodis", "Il2CppDumper"]
+    }
+  },
   "guides": {
     "install": "docs/INSTALL.md",
     "provisioning": "docs/PROVISIONING.md",
     "build_injection": "docs/build-injection.md",
     "java_anti_rea": "docs/java-anti-rea.md",
     "java_anti_rea_catalog": "docs/java-anti-rea-options.yaml",
+    "dotnet_anti_rea": "docs/dotnet-anti-rea.md",
+    "dotnet_anti_rea_catalog": "docs/dotnet-anti-rea-options.yaml",
     "threat_analysis": "docs/analysis/rea-threat-analysis.md",
     "faq": "docs/FAQ.md"
   },
@@ -286,7 +313,8 @@
     "languages": {
       "ir_transforms": ["c", "cpp", "rust (C/FFI sources only)", "python (C extensions only)"],
       "scan_only": ["rust", "java", "csharp", "javascript", "typescript", "python"],
-      "java_note": "No IR transforms for Java bytecode; see the top-level `java_anti_rea` option menu (docs/java-anti-rea.md), and let the user choose the combination."
+      "java_note": "No IR transforms for Java bytecode; see the top-level `java_anti_rea` option menu (docs/java-anti-rea.md), and let the user choose the combination. Kotlin/Scala compile to JVM bytecode and follow the same menu.",
+      "dotnet_note": "No IL transforms for .NET (C#/F#/VB) or Unity; see the top-level `dotnet_anti_rea` option menu (docs/dotnet-anti-rea.md). NativeAOT/IL2CPP/native-offload outputs go through the regular native pipeline."
     }
   },
   "quickstart": [

@@ -117,3 +117,35 @@ make -j"$(nproc)"
 - **优化档会影响常量形态**：`-O2` 下 clang 会把连续常量存储 SLP 向量化成 `<N x i32>` 常量；
   常数编码（`ANTI_REA_CONST_ENCODE`）已覆盖整型常量与常量向量两种操作数，但**不要**只在
   `-O1` 上验指纹——高优化档能看到额外的常量形态。
+
+## 复用场景：Android NDK 与 Unity IL2CPP
+
+这两类工程的产物**在到达本技能之前就已经是 C/C++**，因此不需要额外的"语言支持"，
+按本文的模式 B 注入即可。属于**零成本复用**，但需要你的工程配合。
+
+### Android NDK（JNI `.so`）
+
+- **入口**：`CMakeLists.txt`（`externalNativeBuild`）或 `ndk-build` 的 `Android.mk`；
+  NDK 自带的 clang 在 `$ANDROID_NDK/toolchains/llvm/prebuilt/<host>/bin/`。
+- **做法**：让 Gradle 的 `-DCMAKE_C_COMPILER` / `-DCMAKE_CXX_COMPILER`（或
+  `ndk-build` 的 `CC`/`CXX`）指向 `anti-rea-cc` 包装器；**ABI 逐个注入**（`arm64-v8a`、
+  `armeabi-v7a`、`x86_64` 各一份产物）。
+- **范围**：只保护你自己的 JNI 源文件（`--include`），跳过 NDK 头/第三方 `.so`。
+- **验证**：`apk` 内的 `lib*.so` 用 `nm`/`strings`/`objdump` 对比；功能回归必须在
+  **真机或模拟器**上跑（`verify` 的差分验证不覆盖 JNI 边界）。
+- **注意**：NDK 的 clang 版本与插件 ABI 必须匹配（插件按 LLVM 大版本构建）；
+  不一致时用 `ANTI_REA_LLVM` 指向与 NDK 同版本的 LLVM，或改用 NDK 的 clang 重新构建插件
+  （见 `docs/INSTALL.md`）。
+
+### Unity IL2CPP（生成的 C++）
+
+- **入口**：Unity 生成的 IL2CPP 工程（`Library/Il2cppBuildCache` 或导出的 C++ 工程），
+  最终由 IL2CPP 的构建脚本调用 clang 编译 `*.cpp`。
+- **做法**：把该构建脚本里的 clang 换成包装器（或在 `CC`/`CXX` 层注入），**按源文件/符号
+  收窄**到你的核心逻辑（生成的 C++ 体量巨大，全量变换会让构建时间/体积失控）。
+- **前提**：先用 `--include` 锁定对应生成文件（如 `*Assembly-CSharp*` 相关 TU）；
+  具体文件名随 Unity 版本变化，需在试点里确认。
+- **验证**：功能回归（真机）+ `nm`/`strings`/`objdump` 对比 + 构建时间/包体记录；
+  IL2CPP 的 `global-metadata.dat` 不在本技能范围内（见 `docs/dotnet-anti-rea.md` §3）。
+- **定位**：**实验性**——Unity 版本升级会改变生成器行为，升级后必须重跑试点；不建议作为
+  唯一防线（配合元数据/名称处理与运行期检测）。

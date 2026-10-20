@@ -20,6 +20,7 @@ _EXT_LANG = {
     ".c": "c", ".h": "c", ".cc": "cpp", ".cpp": "cpp", ".cxx": "cpp",
     ".hpp": "cpp", ".hh": "cpp", ".rs": "rust", ".py": "python",
     ".js": "javascript", ".ts": "typescript", ".java": "java", ".cs": "dotnet",
+    ".fs": "dotnet", ".vb": "dotnet",
 }
 _BUILD_MARKERS = [
     ("CMakeLists.txt", "cmake"), ("Cargo.toml", "cargo"),
@@ -89,6 +90,10 @@ def _detect_project(root: str, options: dict | None = None) -> dict:
         for marker, bs in _BUILD_MARKERS:
             if marker in filenames and build == "unknown":
                 build = bs
+        if build == "unknown" and any(
+                fn.endswith((".csproj", ".sln", ".fsproj", ".vbproj"))
+                for fn in filenames):
+            build = "msbuild"
     if total_ext == 0:
         language = "unknown"
     else:

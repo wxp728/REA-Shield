@@ -5,6 +5,30 @@
 
 ## [Unreleased]
 
+### 新增（技能改进 · .NET / Unity 反 REA 选项目录）
+
+- **新增 [`docs/dotnet-anti-rea.md`](docs/dotnet-anti-rea.md)**：C# / F# / VB.NET（含 Unity、MAUI、Blazor、
+  桌面/CLI/服务）的**反 REA 选项目录 D0–D8**——核心逻辑上服务端 / 裁剪+名称混淆 / 字符串与常数加密+
+  控制流混淆 / 程序集加密+`AssemblyResolve` 加壳 / IL 虚拟化 / 下沉 native（P/Invoke、C++/CLI、函数指针）/
+  NativeAOT 与 Mono AOT / 运行期对抗 / 密钥与水印。每种附**原理 / 效果 / 优点 / 缺点 / 影响 / 获取源与用法**，
+  另附**组合阶梯**、**验证方法论**（ILSpy/ilspycmd、dnSpyEx、dotPeek、de4dot、ildasm、Il2CppDumper）、
+  与 P0–P4 工作流的接线、许可与合规边界。明确两条易被误解的口径：**ReadyToRun 不算防护**（IL 仍在）、
+  **单层混淆易被 de4dot 类工具还原**。
+- **Unity / IL2CPP 特别路径**：说明 Mono 构建与普通 .NET 同风险；IL2CPP 虽去掉 IL，但
+  `global-metadata.dat` 可被 Il2CppDumper 恢复；**IL2CPP 生成的 C++ 可经本技能构建注入按源文件/符号收窄加固**
+  （实验性，需先在你的 Unity 版本上试点）。
+- **机器可读清单**：新增 [`docs/dotnet-anti-rea-options.yaml`](docs/dotnet-anti-rea-options.yaml)
+  （`options` / `combinations` / `unity` / `verification`），供 Agent 在 P1 方案里直接筛候选。
+- **接线**：`skill.json` 新增 `dotnet_anti_rea`（`ir_transforms: false`、选项、Unity 说明、验证工具）与
+  `guides`/`supported.languages.dotnet_note`；`SKILL.md` 新增「.NET / Unity 项目」一节并同步 P1/P4、
+  T4、See also；`README(.zh-CN)`、`docs/STATUS.md`、`.agents/skills/anti-rea/SKILL.md` 同步；
+  `tools/release.py` 的最小技能包与必查文件纳入两份新文档；**新增 `tests/test_dotnet_options.py`**
+  （选项目录自洽性 + Unity 路径 + 文档口径 + 接线）。
+- **勘查增强**：扫描器识别 `.fs`/`.vb`（`dotnet`）与 `.csproj`/`.sln`/`.fsproj`/`.vbproj` 构建标记
+  （`core/scanner/scanner.py`，`build_system` 归入既有 `msbuild`），.NET 项目在 P0 即可得到正确语言/构建画像。
+- **零成本复用说明**：`SKILL.md` 与 `docs/build-injection.md` 补充 **Android NDK 的 `.so` 直接走模式 B**、
+  **Unity IL2CPP 生成的 C++ 回流本引擎**；`docs/java-anti-rea.md` 注明 **Kotlin / Scala 同属 JVM 菜单**。
+
 ### 变更（文档 / PoC 去本地化）
 
 - 清掉入库文件中残留的本机绝对路径（`/opt/<toolchain>`、`/home/<user>` 等），**不改变任何验证结论**：
