@@ -61,6 +61,22 @@
   P1/P4、T4、See also；`README(.zh-CN)`、`docs/STATUS.md`、`.agents/skills/anti-rea/SKILL.md` 同步；
   `tools/release.py` 的最小技能包与必查文件纳入两份新文档；**新增 `tests/test_js_options.py`**。
 
+### 新增（技能改进 · Go 反 REA 选项目录）
+
+- **新增 [`docs/go-anti-rea.md`](docs/go-anti-rea.md)**：**G0–G8**——服务端化 / 构建基线
+  （`-trimpath -s -w`、去 buildinfo）/ 符号与路径混淆（garble）/ 字符串与控制流 /
+  下沉 native（cgo、C 核心、`-buildmode=c-shared`）/ TinyGo 与 WASM（实验性）/ 分发形态
+  （UPX、容器）/ 运行期对抗 / 密钥与水印。每种附原理/优缺点/影响/获取源，另附组合阶梯、
+  验证方法论（`go tool nm`、`go version -m`、**GoReSym**、redress、Ghidra）、P0–P4 接线、许可边界。
+- **口径固定**：**`-s -w` 不是保护**（`pclntab` 仍在，GoReSym 可恢复函数名/路径）；
+  cgo 下沉 native 是 Go 最推荐的换赛道方式；UPX 可 `upx -d` 还原。
+- **机器可读清单**：新增 [`docs/go-anti-rea-options.yaml`](docs/go-anti-rea-options.yaml)。
+- **勘察增强**：扫描器识别 `.go`（`go`）与 `go.mod`（`build_system=go`）；schema 语言/构建枚举同步
+  增加 `go`（并为后续 Dart 预留 `dart`/`pub`）。
+- **接线**：`skill.json.go_anti_rea` / `guides` / `supported.languages.go_note`；`SKILL.md` 新增
+  「Go 项目」一节并同步 P1/P4、T4、See also；`README(.zh-CN)`、`STATUS`、`.agents`、`release.py` 同步；
+  **新增 `tests/test_go_options.py`** 与扫描器回归。
+
 ### 变更（文档 / PoC 去本地化）
 
 - 清掉入库文件中残留的本机绝对路径（`/opt/<toolchain>`、`/home/<user>` 等），**不改变任何验证结论**：

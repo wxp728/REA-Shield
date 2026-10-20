@@ -104,6 +104,7 @@
 | S6 | **Java / Android 反 REA 选项目录**（J0–J8：原理/优缺点/影响/获取源/验证方法论） | `docs/java-anti-rea.md`、`docs/java-anti-rea-options.yaml`、`tests/test_java_options.py` | — |
 | S6 | **.NET / Unity 反 REA 选项目录**（D0–D8 + Unity/IL2CPP 特别路径） | `docs/dotnet-anti-rea.md`、`docs/dotnet-anti-rea-options.yaml`、`tests/test_dotnet_options.py` | — |
 | S6 | **JS / TS 反 REA 选项目录**（JS0–JS8 + 运行时/分发形态） | `docs/js-anti-rea.md`、`docs/js-anti-rea-options.yaml`、`tests/test_js_options.py` | — |
+| S6 | **Go 反 REA 选项目录**（G0–G8 + GoReSym/garble/cgo） | `docs/go-anti-rea.md`、`docs/go-anti-rea-options.yaml`、`tests/test_go_options.py` | — |
 | S6 | **分级安装 / 按需获取**（T0–T4、最小部署集、不打包第三方） | `docs/PROVISIONING.md`、`requirements-optional.txt`、`skill.json.provisioning`/`deploy`、`tools/release.py --skill`、`tests/test_provisioning.py` | v1.0 |
 | S6 | 端到端示例 | `examples/quickstart/`（`victim.c` / `run.sh` / `README.md`） | v1.0 |
 | S6 | 使用者文档（FAQ/排障/中英 README/许可证/变更记录） | `docs/{FAQ,troubleshooting}.md`、`README.md`、`README.zh-CN.md`、`LICENSE`、`CHANGELOG.md` | v1.0 |
@@ -279,6 +280,7 @@ python -m core.mcp            # 或 anti-rea-mcp（stdio MCP Server）
 | **可用性：Java / Android 选项菜单** | `docs/java-anti-rea.md`（J0–J8 原理/优缺点/影响/获取源）+ `skill.json.java_anti_rea` / `guides`；工具不由本技能分发 | `tests/test_java_options.py` |
 | **可用性：.NET / Unity 选项菜单** | `docs/dotnet-anti-rea.md`（D0–D8 + NativeAOT/IL2CPP 路径）+ `skill.json.dotnet_anti_rea` / `guides`；工具不由本技能分发 | `tests/test_dotnet_options.py` |
 | **可用性：JS / TS 选项菜单** | `docs/js-anti-rea.md`（JS0–JS8 + WASM/native/分发形态）+ `skill.json.js_anti_rea` / `guides`；工具不由本技能分发 | `tests/test_js_options.py` |
+| **可用性：Go 选项菜单** | `docs/go-anti-rea.md`（G0–G8 + GoReSym/garble/cgo）+ `skill.json.go_anti_rea` / `guides`；工具不由本技能分发 | `tests/test_go_options.py` |
 | **可用性：分级安装 / 按需获取** | `docs/PROVISIONING.md`（T0–T4：装什么/何时装/不装什么）；`anti-rea doctor --tier T0/T1`；`requirements.txt`（核心）+ `requirements-optional.txt`（deap）；`python tools/release.py --skill dist`（最小技能包） | `tests/test_provisioning.py` |
 | **可用性：示例与支持** | `examples/quickstart/`、`docs/FAQ.md`、`docs/troubleshooting.md`、中英 README、Issue 模板 | 端到端可运行 |
 
@@ -348,6 +350,7 @@ NFR-02 Token 倍数子项 **S7 评估后废弃**（见 §1 说明）。
 | **Java / Android 反 REA 选项目录（J0–J8）** | `docs/java-anti-rea.md`、`docs/java-anti-rea-options.yaml` |
 | **.NET / Unity 反 REA 选项目录（D0–D8）** | `docs/dotnet-anti-rea.md`、`docs/dotnet-anti-rea-options.yaml` |
 | **JS / TS 反 REA 选项目录（JS0–JS8）** | `docs/js-anti-rea.md`、`docs/js-anti-rea-options.yaml` |
+| **Go 反 REA 选项目录（G0–G8）** | `docs/go-anti-rea.md`、`docs/go-anti-rea-options.yaml` |
 | **Rust IR 级可行性 spike（结论：不纳入）** | `docs/analysis/rust-ir-spike.md` |
 | **常见问题 / 排障** | `docs/FAQ.md`、`docs/troubleshooting.md` |
 | **端到端示例** | `examples/quickstart/` |

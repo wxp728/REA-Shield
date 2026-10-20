@@ -1,0 +1,293 @@
+# Go 反 REA 选项的机器可读清单（供 Agent 在 P1 方案里组装"菜单"）
+#
+# 用法：Agent 读取本文件 → 按项目画像（是否联网 / 是否 cgo / 能否改构建 / 价值等级）
+#       筛出 1–3 个候选 → 把 principle / pros / cons / impacts 摘要写进 out/PROPOSAL.md
+#       → 由用户选择（SKILL.md 工作流 P1→P2）。
+#
+# 边界：本技能不分发这里的任何第三方工具；source 字段只是"获取途径"记录。
+# 人类可读版（含说明与场景匹配）：docs/go-anti-rea.md
+
+version: 1
+kind: go-anti-rea-options
+status: guide-only  # 非需求基线，不改变 SRS
+note: >-
+  Go 编译器不走 LLVM（ADR-006），本技能不做 Go IR 变换。本清单按"攻击方要多付出什么"
+  从高到低排列；效果量级是经验排序，不是承诺指标。-s -w 只去掉符号表/DWARF，
+  pclntab 仍可被 GoReSym 一类工具恢复。
+
+# 组合建议（按场景）
+combinations:
+  - scenario: 内部 CLI / 低价值
+    options: [G1]
+  - scenario: 商用离线 CLI
+    options: [G1, G2]
+  - scenario: 高价值离线工具
+    options: [G1, G2, G4, G7, G8]
+  - scenario: 服务化产品
+    options: [G0, G1]
+  - scenario: 边缘 / Web 试点
+    options: [G1, G5]
+
+options:
+  - id: G0
+    name: 核心逻辑上服务端
+    principle: 授权/密钥运算/核心算法放服务端 API，客户端只保留调用与展示。
+    effect: 攻击方逆到底只能拿到协议调用，无法获得核心资产。
+    effectiveness: highest
+    pros:
+      - 唯一能让"逆到底也没有产出"的路径
+      - 密钥不进客户端
+    cons:
+      - 需联网；有延迟与服务端成本
+      - 离线 CLI/内网隔离环境不可用
+    impacts:
+      architecture: 最大（常需重写模块边界）
+      runtime: 网络往返延迟
+      ops: 可用性/SLA 成为新的失败点
+      portability: 不变（客户端变薄）
+    tools: []
+    best_for: 产品本就要联网、核心价值可服务化
+    verify: 攻击方视角确认"逆到底得到什么"
+
+  - id: G1
+    name: 构建基线（-trimpath -s -w、去 buildinfo）
+    principle: go build -trimpath 去路径；-ldflags "-s -w" 去符号表与 DWARF；必要时清 buildid。
+    effect: 失去路径/DWARF/部分元数据；但 pclntab 的函数名仍可恢复。
+    effectiveness: low
+    pros:
+      - 零成本、顺带减小体积
+      - 所有 Go 项目的发布基线
+    cons:
+      - 单层对 REA 基本无效（GoReSym 分钟级恢复）
+      - 排障能力下降
+    impacts:
+      build: 增加 ldflags/trimpath
+      runtime: 无额外开销
+      ops: 需保留私有符号化产物
+      portability: 不变
+    tools:
+      - name: Go 工具链（go build / go tool nm / go version -m）
+        source: https://go.dev/cmd/go/
+        license: BSD-3-Clause
+    best_for: 所有 Go 项目的第一步
+    verify: go version -m / go tool nm / strings；再用 GoReSym 看恢复率
+
+  - id: G2
+    name: 符号/包名/路径混淆（garble）
+    principle: 编译前重写包/函数/类型名、去文件路径；-literals 拆字符串字面量。
+    effect: 名字变成无意义符号；攻击方需靠调用图/数据流重建语义。
+    effectiveness: medium
+    pros:
+      - 开源、与 Go 构建链集成
+      - Go 侧性价比最高的静态防护
+    cons:
+      - 反射/linkname/plugin/cgo 边界/按名序列化可能被破坏
+      - garble 必须与 Go 版本匹配
+      - 崩溃栈失真
+    impacts:
+      build: 用 garble 替换 go build
+      runtime: -literals 有轻微开销
+      ops: 需保留未混淆构建排障
+      portability: 不变
+    tools:
+      - name: garble
+        source: https://github.com/burrowers/garble
+        license: BSD-3-Clause
+        note: garble -literals -tiny build ./...
+    best_for: 可接受构建改造的 Go 项目（先 G1 再 G2）
+    verify: GoReSym 符号恢复率；反射/JSON/模板回归
+
+  - id: G3
+    name: 字符串/常量 + 控制流
+    principle: Go AST/SSA 层做字符串拆分/加密、常量编码、分支改写；或手写等价复杂实现。
+    effect: strings 与常量锚点失效；调用图更难读。
+    effectiveness: medium
+    pros:
+      - 无需引入运行时；可按包/函数粒度
+    cons:
+      - 缺少成熟开源控制流混淆器
+      - 自研需维护 AST/SSA 工具链
+      - 易被专门工具还原
+    impacts:
+      build: 增加代码生成步骤
+      runtime: 取决于变换强度
+      ops: panic 栈可读性下降
+      portability: 不变
+    tools:
+      - name: garble -literals
+        source: https://github.com/burrowers/garble
+        license: BSD-3-Clause
+      - name: go/ast + go/ssa（自研）
+        source: https://pkg.go.dev/golang.org/x/tools/go/ssa
+        license: BSD-3-Clause
+    best_for: 只对 P0/P1 资产品启用的自研路径
+    verify: strings 明文比例 + 反编译工时 + 性能 A/B
+
+  - id: G4
+    name: 下沉 native（cgo / C 核心 / -buildmode=c-shared）
+    principle: 敏感核心用 C/C++ 实现，Go 通过 cgo 调用；C 侧用本技能做 IR 变换。
+    effect: 核心不再以 Go 形式存在，回到 native 战场。
+    effectiveness: high
+    pros:
+      - 防护强度最高
+      - C 侧可 CFF/MBA/字符串加密/虚拟化
+      - 批量化后性能可控
+    cons:
+      - cgo 调用固定开销
+      - 每平台/架构各编一份
+      - 跨语言调试困难；native 崩溃杀进程
+      - 失去 CGO_ENABLED=0 静态构建
+    impacts:
+      architecture: 需要批量化边界设计
+      build: 构建矩阵与 CI 变重
+      runtime: cgo 开销（批量化后可忽略）
+      portability: 产物层丧失
+    tools:
+      - name: cgo
+        source: https://pkg.go.dev/cmd/cgo
+        license: BSD-3-Clause
+      - name: -buildmode=c-shared / c-archive
+        source: https://pkg.go.dev/cmd/go#hdr-Build_modes
+        license: BSD-3-Clause
+    best_for: 加密/授权/协议等核心热路径（Go 最推荐的换赛道方式）
+    verify: 用本技能 verify/attack_sim 验证 native 侧；Go 侧检查是否残留算法
+
+  - id: G5
+    name: 换运行时/目标（TinyGo / WASM，实验性）
+    principle: 用 TinyGo（LLVM）或 GOOS=js/wasip1 GOARCH=wasm 改变产物形态。
+    effect: 攻击方需要换一套分析工具（WASM/TinyGo 运行时）。
+    effectiveness: medium-high
+    pros:
+      - 可能减小体积（TinyGo）
+      - WASM 可跨平台运行
+    cons:
+      - 生态/标准库/反射/cgo 受限
+      - 本技能未验证 TinyGo IR 注入
+      - WASM 仍可 wasm2wat/反编译
+    impacts:
+      build: 需要裁剪/重写与目标平台验证
+      runtime: WASM/TinyGo 性能与体积差异
+      ops: 试点成本高
+      portability: 部分
+    tools:
+      - name: TinyGo
+        source: https://tinygo.org/
+        license: BSD-3-Clause
+      - name: Go WebAssembly
+        source: https://go.dev/wiki/WebAssembly
+        license: BSD-3-Clause
+    best_for: 边缘/嵌入式/Web 场景的试点
+    verify: wasm2wat/反编译 + 运行回归；不承诺 TinyGo 注入
+
+  - id: G6
+    name: 分发形态（UPX / 容器 / 自解压）
+    principle: 压缩壳、容器/AppImage、自解压包装。
+    effect: 多一步解包；对随手改字符串有轻微阻碍。
+    effectiveness: low
+    pros:
+      - 便宜、成熟
+    cons:
+      - 不是保护（upx -d 可还原）
+      - 触发杀软误报
+      - 容器不隐藏代码
+    impacts:
+      build: 增加打包步骤
+      runtime: 启动开销
+      ops: AV 兼容性
+      portability: 不变
+    tools:
+      - name: UPX
+        source: https://upx.github.io/
+        license: GPL-2.0+
+    best_for: 分发便利，不纳入防护强度评估
+    verify: upx -d 还原；AV 误报测试
+
+  - id: G7
+    name: 运行期对抗（反调试 / 完整性 / 环境）
+    principle: 检测 ptrace/调试器、校验自身哈希、检测注入/篡改；异常时降级或退出。
+    effect: 抬高动态调试与自动化解包成本（与 G2/G4 协同）。
+    effectiveness: supporting
+    pros:
+      - 与静态混淆正交、可叠加
+    cons:
+      - 不阻止静态分析
+      - 误报伤合法用户/CI
+      - 检测逻辑可被 patch
+    impacts:
+      build: 需要哈希基线
+      runtime: 启动/运行检测开销
+      ops: 误杀救济与 CI 白名单
+      portability: 需逐平台适配
+    tools:
+      - name: 自研（ptrace/status/哈希）
+        source: n/a
+        license: n/a
+    best_for: 与 G2/G4 叠加
+    verify: 挂调试器/内存 dump 的成功率与耗时
+
+  - id: G8
+    name: 密钥与信任根 + 水印
+    principle: 密钥不进客户端（服务端/KMS/HSM/平台安全存储）；水印用于溯源。
+    effect: 代码被逆也拿不到可用密钥；泄露可追踪。
+    effectiveness: supporting
+    pros:
+      - 让攻击产出不可直接用
+      - 水印为维权留证
+    cons:
+      - 需服务端/硬件；离线受限
+      - Go 侧没有天然可信存储
+    impacts:
+      architecture: 密钥生命周期与轮换
+      ops: 托管/合规成本
+      portability: 依赖平台能力
+    tools:
+      - name: 平台安全存储（Keychain/DPAPI/Secret Service）
+        source: 平台文档
+        license: n/a
+      - name: 云 KMS / HSM
+        source: 各云厂商或硬件厂商
+        license: commercial
+    best_for: 只要还发密钥到客户端，就应优先处理
+    verify: 客户端是否残留可用密钥/明文许可证
+
+# 验证方法论（Go 侧）
+verification:
+  note: >-
+    本技能 verify/attack_sim 面向 LLVM 原生产物，不适用于 Go 二进制本身；
+    Go 侧用 GoReSym/redress/Ghidra 按本文方法论执行，G4 的 native 部分回到本技能链路。
+  tools:
+    - name: go tool nm / go tool objdump
+      source: https://go.dev/cmd/go/
+      license: BSD-3-Clause
+      use: 符号/反汇编（未 strip 时）
+    - name: go version -m
+      source: https://go.dev/cmd/go/
+      license: BSD-3-Clause
+      use: 读取 buildinfo（模块/依赖/版本）
+    - name: GoReSym
+      source: https://github.com/mandiant/GoReSym
+      license: Apache-2.0
+      use: 从 stripped 二进制恢复函数名/行号（判断 G1/G2 的关键）
+    - name: redress
+      source: https://github.com/goretk/redress
+      license: 见仓库
+      use: Go 元数据/类型/依赖分析
+    - name: Ghidra
+      source: https://ghidra-sre.org/
+      license: Apache-2.0
+      use: 反编译（配合 Go 脚本）
+    - name: strings / objdump
+      source: 系统 binutils
+      license: GPL
+      use: 静态线索
+  metrics:
+    - 函数名可读率（GoReSym 恢复后）
+    - 文件路径命中数
+    - 字符串明文比例
+    - 重建语义所需工时
+    - "逆到底得到了什么（可用算法/密钥 = 防护不够）"
+  steps:
+    - go version -m / go tool nm / strings
+    - 跑 GoReSym 统计符号恢复率
+    - redress/Ghidra 检查类型信息、依赖版本、路径泄漏
+    - G4 的 native 部分改用 strings/nm/objdump + 本技能 verify/attack_sim

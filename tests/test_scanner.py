@@ -57,6 +57,17 @@ class TestScanner(unittest.TestCase):
             self.assertEqual(m["project"]["language"], "dotnet")
             self.assertEqual(m["project"]["build_system"], "msbuild")
 
+    def test_detects_go_build_and_language(self):
+        """`go.mod` 与 `.go` 应识别为 go 语言 + go 构建（P0 画像）。"""
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "go.mod"), "w") as fh:
+                fh.write("module example.com/demo\n\ngo 1.22\n")
+            with open(os.path.join(d, "main.go"), "w") as fh:
+                fh.write("package main\n\nfunc main() {}\n")
+            m = scan(d, {"allow_unknown_owner": True})
+            self.assertEqual(m["project"]["language"], "go")
+            self.assertEqual(m["project"]["build_system"], "go")
+
     def test_refuse_unknown_owner(self):
         with tempfile.TemporaryDirectory() as d:
             with open(os.path.join(d, "x.c"), "w") as fh:

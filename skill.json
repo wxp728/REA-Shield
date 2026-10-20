@@ -134,6 +134,27 @@
       "tools": ["js-beautify/prettier", "webcrack", "de4js", "REstringer", "wasm2wat/wasm-decompile", "asar", "hbctool/hermes-dec"]
     }
   },
+  "go_anti_rea": {
+    "ir_transforms": false,
+    "note": "Go does not go through LLVM; the skill provides a selectable option menu (G0-G8). Note that -s -w only removes the symbol table and DWARF -- function names remain in pclntab and can be recovered by GoReSym. Native offload via cgo is the strongest route and can be hardened with the regular native pipeline. Third-party tools are not bundled.",
+    "guide": "docs/go-anti-rea.md",
+    "catalog": "docs/go-anti-rea-options.yaml",
+    "options": [
+      {"id": "G0", "name": "server-side logic (core algorithms/keys stay off the client)"},
+      {"id": "G1", "name": "build baseline (-trimpath -s -w, clear buildinfo)"},
+      {"id": "G2", "name": "symbol/package/path obfuscation (garble)"},
+      {"id": "G3", "name": "string/constant obfuscation + control-flow rewriting"},
+      {"id": "G4", "name": "offload the core to native (cgo / C core / -buildmode=c-shared)"},
+      {"id": "G5", "name": "switch runtime/target (TinyGo / WASM; experimental)"},
+      {"id": "G6", "name": "distribution form (UPX / container / self-extract)"},
+      {"id": "G7", "name": "runtime hardening (anti-debug / integrity / environment)"},
+      {"id": "G8", "name": "key management off-client + watermarking"}
+    ],
+    "verification": {
+      "note": "verify/attack_sim target LLVM native artifacts and do NOT apply to Go binaries; use go tool nm / go version -m / GoReSym / redress / Ghidra. G4 native parts use the regular native pipeline.",
+      "tools": ["go tool nm/objdump", "go version -m", "GoReSym", "redress", "Ghidra", "strings/objdump"]
+    }
+  },
   "guides": {
     "install": "docs/INSTALL.md",
     "provisioning": "docs/PROVISIONING.md",
@@ -144,6 +165,8 @@
     "dotnet_anti_rea_catalog": "docs/dotnet-anti-rea-options.yaml",
     "js_anti_rea": "docs/js-anti-rea.md",
     "js_anti_rea_catalog": "docs/js-anti-rea-options.yaml",
+    "go_anti_rea": "docs/go-anti-rea.md",
+    "go_anti_rea_catalog": "docs/go-anti-rea-options.yaml",
     "threat_analysis": "docs/analysis/rea-threat-analysis.md",
     "faq": "docs/FAQ.md"
   },
@@ -339,7 +362,8 @@
       "scan_only": ["rust", "java", "csharp", "javascript", "typescript", "python"],
       "java_note": "No IR transforms for Java bytecode; see the top-level `java_anti_rea` option menu (docs/java-anti-rea.md), and let the user choose the combination. Kotlin/Scala compile to JVM bytecode and follow the same menu.",
       "dotnet_note": "No IL transforms for .NET (C#/F#/VB) or Unity; see the top-level `dotnet_anti_rea` option menu (docs/dotnet-anti-rea.md). NativeAOT/IL2CPP/native-offload outputs go through the regular native pipeline.",
-      "js_note": "No source-level transforms for JS/TS; see the top-level `js_anti_rea` option menu (docs/js-anti-rea.md). Never ship source maps; WASM/native-offload outputs (JS4/JS5) go through the regular native pipeline."
+      "js_note": "No source-level transforms for JS/TS; see the top-level `js_anti_rea` option menu (docs/js-anti-rea.md). Never ship source maps; WASM/native-offload outputs (JS4/JS5) go through the regular native pipeline.",
+      "go_note": "No IR transforms for Go; see the top-level `go_anti_rea` option menu (docs/go-anti-rea.md). -s -w is not protection (pclntab remains); cgo/native-offload outputs go through the regular native pipeline."
     }
   },
   "quickstart": [

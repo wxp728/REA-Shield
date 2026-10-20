@@ -18,11 +18,11 @@
         "root": { "type": "string" },
         "language": {
           "type": "string",
-          "enum": ["c", "cpp", "rust", "python", "javascript", "typescript", "java", "dotnet", "mixed", "unknown"]
+          "enum": ["c", "cpp", "rust", "python", "javascript", "typescript", "java", "dotnet", "go", "dart", "mixed", "unknown"]
         },
         "build_system": {
           "type": "string",
-          "enum": ["cmake", "cargo", "pip", "npm", "gradle", "maven", "make", "msbuild", "unknown"]
+          "enum": ["cmake", "cargo", "pip", "npm", "gradle", "maven", "make", "msbuild", "go", "pub", "unknown"]
         },
         "target_platform": {
           "type": "string",

@@ -15,7 +15,8 @@ description: >-
   impacts and tool sources; the user chooses the combination. For .NET / Unity
   (no IL transforms) it provides a D0-D8 menu including NativeAOT and IL2CPP.
   For JavaScript / TypeScript (no source-level transforms) it provides a
-  JS0-JS8 menu including WebAssembly and native offload.
+  JS0-JS8 menu including WebAssembly and native offload. For Go it provides a
+  G0-G8 menu (build baseline, garble, cgo native offload, TinyGo/WASM).
 license: MIT
 version: 1.0.0
 ---
@@ -76,6 +77,11 @@ see `docs/js-anti-rea.md` (machine-readable `docs/js-anti-rea-options.yaml`).
 Never ship source maps; bundling/minification is not encryption; ASAR and
 Hermes/V8 bytecode are not protection by themselves. WASM / native addon
 outputs (JS4/JS5) can be hardened with the regular native pipeline.
+
+**Go** (no IR transforms): the **G0–G8** menu — see `docs/go-anti-rea.md`
+(machine-readable `docs/go-anti-rea-options.yaml`). `-s -w` is NOT protection:
+function names remain in pclntab and GoReSym can recover them. cgo/native
+offload (G4) can be hardened with the regular native pipeline.
 
 Scope: only harden code you own. v1.0 fully tested on Linux x86_64 with
 LLVM/clang 18. See `docs/INSTALL.md` for details, Docker, and environment

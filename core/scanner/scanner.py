@@ -21,12 +21,13 @@ _EXT_LANG = {
     ".hpp": "cpp", ".hh": "cpp", ".rs": "rust", ".py": "python",
     ".js": "javascript", ".ts": "typescript", ".java": "java", ".cs": "dotnet",
     ".fs": "dotnet", ".vb": "dotnet",
+    ".go": "go", ".dart": "dart",
 }
 _BUILD_MARKERS = [
     ("CMakeLists.txt", "cmake"), ("Cargo.toml", "cargo"),
     ("build.gradle", "gradle"), ("pom.xml", "maven"),
     ("package.json", "npm"), ("pyproject.toml", "pip"), ("setup.py", "pip"),
-    ("Makefile", "make"),
+    ("Makefile", "make"), ("go.mod", "go"), ("pubspec.yaml", "pub"),
 ]
 _DEFAULT_EXCLUDE = {"test", "tests", "examples", "vendor", "node_modules",
                     "build", ".git", "dist", "target"}

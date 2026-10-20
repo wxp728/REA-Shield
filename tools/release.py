@@ -63,6 +63,7 @@ SKILL_DOC_FILES = [
     "docs/java-anti-rea.md", "docs/java-anti-rea-options.yaml",
     "docs/dotnet-anti-rea.md", "docs/dotnet-anti-rea-options.yaml",
     "docs/js-anti-rea.md", "docs/js-anti-rea-options.yaml",
+    "docs/go-anti-rea.md", "docs/go-anti-rea-options.yaml",
 ]
 # 不进技能部署集（开发 / 审计 / 复现用；需要时再从仓库取）
 SKILL_EXCLUDE = [
@@ -158,6 +159,7 @@ def check() -> list[str]:
         "docs/java-anti-rea.md", "docs/java-anti-rea-options.yaml",
         "docs/dotnet-anti-rea.md", "docs/dotnet-anti-rea-options.yaml",
         "docs/js-anti-rea.md", "docs/js-anti-rea-options.yaml",
+        "docs/go-anti-rea.md", "docs/go-anti-rea-options.yaml",
         "engine/CMakeLists.txt", "core/common.py", "core/toolchain.py",
     ]
     for rel in required:
