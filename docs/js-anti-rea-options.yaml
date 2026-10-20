@@ -1,0 +1,381 @@
+# JavaScript / TypeScript 反 REA 选项的机器可读清单（供 Agent 在 P1 方案里组装"菜单"）
+#
+# 用法：Agent 读取本文件 → 按项目画像（运行时 / 分发形态 / 是否联网 / 能否改构建 / 价值等级）
+#       筛出 1–3 个候选 → 把 principle / pros / cons / impacts 摘要写进 out/PROPOSAL.md
+#       → 由用户选择（SKILL.md 工作流 P1→P2）。
+#
+# 边界：本技能不分发这里的任何第三方工具；source 字段只是"获取途径"记录。
+# 人类可读版（含说明与场景匹配）：docs/js-anti-rea.md
+
+version: 1
+kind: js-anti-rea-options
+status: guide-only  # 非需求基线，不改变 SRS
+note: >-
+  JS/TS 没有 LLVM IR 层（ADR-006）；交付物本身就是可执行源码。本清单按"攻击方要多付出什么"
+  从高到低排列；效果量级是经验排序，不是承诺指标。压缩/混淆≠加密，ASAR≠加密，
+  Hermes/V8 字节码≠不可逆。
+
+# 组合建议（按场景）
+combinations:
+  - scenario: 内部工具 / 低价值 Web
+    options: [JS1]
+  - scenario: 商用 Web 前端、核心在服务端
+    options: [JS0, JS1]
+  - scenario: 商用 Web、必须离线算一部分
+    options: [JS1, JS2, JS4]
+  - scenario: Node CLI / 服务端工具
+    options: [JS1, JS2, JS6]
+  - scenario: Electron 桌面
+    options: [JS1, JS2, JS6, JS7, JS8]
+  - scenario: React Native / 移动
+    options: [JS1, JS2, JS6, JS5, JS8]
+  - scenario: 预算充足、需最强
+    options: [JS0, JS5, JS3, JS7, JS8]
+
+# 运行时/分发形态提示（Agent 在 P0/P1 用于收窄）
+runtimes:
+  browser:
+    notes: 代码必然可下载；CSP 限制 eval/new Function；WASM 是主要"换赛道"手段。
+    recommended: [JS0, JS1, JS4]
+  node:
+    notes: 可下沉 N-API 原生插件；SEA/pkg 只是打包；source map 常被误发。
+    recommended: [JS1, JS5, JS6]
+  electron:
+    notes: ASAR 不是加密；优先 ASAR 完整性 + fuses + 签名，再叠加混淆；渲染进程不落密钥。
+    recommended: [JS1, JS2, JS6, JS7, JS8]
+  react_native:
+    notes: Hermes 字节码可反编译且绑定版本；核心下沉 TurboModule/JSI 原生模块。
+    recommended: [JS1, JS2, JS5, JS6, JS8]
+  tauri:
+    notes: 核心可用 Rust（C/FFI）承载；前端仍是 Web 资产，按 browser 处理。
+    recommended: [JS1, JS5, JS7]
+
+options:
+  - id: JS0
+    name: 核心逻辑上服务端
+    principle: 授权/密钥运算/核心算法/风控放服务端 API，客户端只保留调用与展示。
+    effect: 攻击方逆到底只能拿到协议调用，无法获得核心资产。
+    effectiveness: highest
+    pros:
+      - 唯一能让"逆到底也没有产出"的路径
+      - 密钥不进客户端
+      - 不受 JS 可读性约束
+    cons:
+      - 需联网；有延迟与服务端容量成本
+      - 离线 Web/桌面、内网隔离环境不可用
+    impacts:
+      architecture: 最大（常需重写模块边界）
+      runtime: 网络往返延迟
+      ops: 可用性/SLA 成为新的失败点；协议仍可被观察与重放
+      portability: 不变（客户端变薄）
+    tools: []
+    best_for: 产品本就要联网、核心价值可服务化（订阅/在线激活/云端推理/风控）
+    verify: 攻击方视角确认"逆到底得到什么"
+
+  - id: JS1
+    name: 打包 + 压缩 + 名称混淆 + 不发 source map（基线）
+    principle: bundler 打包 + terser/esbuild 压缩与 mangle；生产环境不发布 .map，移除 sourceMappingURL。
+    effect: 失去原始文件名/目录/语义变量名/注释；控制流与字符串仍完整，美化后可读。
+    effectiveness: low
+    pros:
+      - 零/低成本，顺带减小体积
+      - 所有 JS/TS 项目的第一步
+      - 与其它层完全兼容
+    cons:
+      - 单层对 REA 通常只是多花几分钟
+      - mangle 对导出名/字符串引用/反射式访问无效
+      - 私有 source map 的保管成为新要求
+    impacts:
+      build: bundler 配置与保留规则
+      runtime: 基本无额外开销
+      ops: 线上排障依赖私有 map；发布检查需扫 map 泄漏
+      portability: 不变
+    tools:
+      - name: esbuild
+        source: https://esbuild.github.io/
+        license: MIT
+        note: --minify；sourcemap 仅内部留存
+      - name: terser
+        source: https://github.com/terser/terser
+        license: BSD-2-Clause
+        note: mangle + compress；保留导出名
+      - name: webpack / Rollup / Vite
+        source: 各自官网
+        license: MIT
+        note: 生产配置关闭 devtool；检查插件是否发 map
+    best_for: 所有 JS/TS 项目的第一步
+    verify: 产物中无 sourceMappingURL/.map；美化后统计命名可读率
+
+  - id: JS2
+    name: 字符串/常量加密 + 控制流混淆
+    principle: 字符串移入加密数组运行期解密；常量编码；控制流平坦化、不透明谓词、死代码、自防护。
+    effect: strings/关键字检索失效；美化后出现调度器与间接调用；需动态跟踪或写反混淆脚本。
+    effectiveness: medium
+    pros:
+      - 不动架构，可按文件/模块/函数粒度启用
+      - 对"LLM 读美化后代码"这条最省力路径打击明显
+    cons:
+      - webcrack/de4js/REstringer 等能还原部分模式，单层脆弱
+      - 反混淆失败不等于不可解
+      - 与 CSP、SSR、动态 import、框架反射可能冲突
+    impacts:
+      build: 混淆器配置与回归成本
+      runtime: 体积/启动上升；热路径需 A/B
+      ops: 错误栈可读性下降；测试工具可能受影响
+      portability: 不变（浏览器/Node 需分别验证）
+    tools:
+      - name: javascript-obfuscator
+        source: https://github.com/javascript-obfuscator/javascript-obfuscator
+        license: BSD-2-Clause
+        note: 字符串数组/RC4、控制流平坦化、死代码、self-defending、debug protection、domain lock
+      - name: Jscrambler
+        source: https://jscrambler.com/
+        license: commercial
+        note: 字符串/控制流/自防护/虚拟化（商用策略由用户确认）
+    best_for: 只对 P0/P1 资产（授权/算法/协议/密钥派生）启用
+    verify: 美化 + webcrack/de4js/REstringer 三连；统计字符串明文比例与恢复率
+
+  - id: JS3
+    name: JS 字节码虚拟化（自定义 VM / 字节码）
+    principle: 敏感函数编译为自定义指令集 + 内嵌解释器；原函数不再以标准 JS 存在。
+    effect: 攻击方必须逆解释器、重建 ISA 才能恢复语义——把"读源码"变成"写反编译器"。
+    effectiveness: highest-on-js
+    pros:
+      - JS 层单点成本最高
+      - 与 JS2/JS6 叠加形成纵深
+    cons:
+      - 工具稀缺（商用/自研）
+      - 与 async/生成器、闭包、this 绑定兼容性复杂
+      - 性能开销大；调试与错误栈失真
+    impacts:
+      build: 工具/版本适配成本
+      runtime: 解释执行可慢数十倍
+      ops: 只适合极少数关键函数；需降级开关
+      portability: 需逐运行时验证
+    tools:
+      - name: Jscrambler（代码虚拟化）
+        source: https://jscrambler.com/
+        license: commercial
+      - name: 自研 VM + 字节码
+        source: n/a
+        license: n/a
+        note: 需自定义 ISA、opcode 随机化与解释器
+    best_for: 2–5 个最敏感函数
+    verify: 反编译失败率 + 动态恢复工时 + 性能 A/B
+
+  - id: JS4
+    name: 核心编译为 WebAssembly
+    principle: 用 C/C++/Rust（C/FFI）/AssemblyScript 重写核心并编译为 .wasm，JS 只做加载与调用。
+    effect: REA 从"读 JS"变为"读 WASM 字节码/反编译"；C/C++/Rust 源可再经本引擎做 IR 变换。
+    effectiveness: high
+    pros:
+      - 真正的换赛道；无 JS 源码结构
+      - 计算密集场景性能好；无 CSP/eval 冲突
+      - 源可走本引擎（LLVM wasm 后端）
+    cons:
+      - 核心需重写或维护双实现
+      - WASM 不是不可反编译（wasm2wat/Ghidra 等）
+      - JS/WASM 边界胶水（字符串/对象/异常/GC）复杂
+    impacts:
+      build: 增加 clang/rustc wasm 目标与构建链
+      runtime: 加载/编译策略；包体变化
+      ops: 调试体验差；平台对动态 WASM 编译可能有限制
+      portability: 部分（需 WASM 运行时；端到端实测目前仅 Linux x86_64）
+    tools:
+      - name: LLVM/clang（wasm32）
+        source: https://llvm.org/
+        license: Apache-2.0 WITH LLVM-exception
+        note: 可挂本引擎插件；端到端目标支持需自行验证
+      - name: Rust wasm32-unknown-unknown
+        source: https://doc.rust-lang.org/rustc/platform-support.html
+        license: MIT/Apache-2.0
+        note: 仅 C/FFI 源可走本引擎
+      - name: Emscripten
+        source: https://emscripten.org/
+        license: MIT
+      - name: AssemblyScript
+        source: https://www.assemblyscript.org/
+        license: Apache-2.0
+      - name: Binaryen（wasm-opt）
+        source: https://github.com/WebAssembly/binaryen
+        license: Apache-2.0
+    best_for: 计算/算法/协议核心，且能接受重写与胶水成本
+    verify: wasm2wat/wasm-decompile + strings/nm 对比；native 部分用本技能 verify/attack_sim
+
+  - id: JS5
+    name: 下沉 native（N-API 插件 / 原生模块 / 原生外壳）
+    principle: 核心用 C/C++（或 Rust C/FFI）实现为原生库，JS 经 N-API、Electron 原生模块、TurboModule/JSI、Tauri command 调用。
+    effect: JS 里只剩调用桩；核心不再以 JS/WASM 形式存在；可结合 native 加固。
+    effectiveness: high
+    pros:
+      - 防护强度最高（无可反编译的 JS/WASM 字节码）
+      - 性能好；可用平台安全存储
+    cons:
+      - 逐平台/架构各编一份
+      - 跨语言调试困难；native 崩溃杀进程
+      - 签名/公证/ABI 匹配复杂
+    impacts:
+      architecture: 需要模块边界设计（批量化调用）
+      build: 构建矩阵与 CI 显著变重
+      runtime: 封送开销（批量化后可忽略）
+      portability: 产物层丧失（Web 不可用）
+    tools:
+      - name: Node-API / node-addon-api
+        source: https://nodejs.org/api/n-api.html
+        license: MIT
+        note: Electron 原生模块同源；注意 ABI/版本
+      - name: React Native TurboModule / JSI
+        source: https://reactnative.dev/docs/native-modules-intro
+        license: MIT
+      - name: Tauri
+        source: https://tauri.app/
+        license: MIT/Apache-2.0
+        note: 核心用 Rust（C/FFI）承载
+    best_for: 桌面/移动/服务端 Node，且能接受多平台构建
+    verify: 用本技能 verify/attack_sim 验证 native 侧；JS 侧只检查是否残留算法
+
+  - id: JS6
+    name: 分发形态加固（ASAR 完整性 / Electron fuses / SEA / pkg / Hermes）
+    principle: 在打包/分发层加约束：ASAR 完整性 + fuses；Node SEA/pkg；RN Hermes 字节码；配合签名/公证。
+    effect: 抬高解包、改包、注入、带调试器启动的成本；不隐藏代码本身。
+    effectiveness: medium
+    pros:
+      - 平台原生，与现有发布流程兼容
+      - 对"改一改再分发"的盗版/外挂有明显作用
+      - 与 JS2/JS7 协同好
+    cons:
+      - 不是保密手段（ASAR 可解包、SEA/pkg 可提取）
+      - Hermes 字节码可反编译且绑定版本
+      - fuses 影响合法调试与部分工具
+    impacts:
+      build: 签名/公证覆盖所有原生产物
+      runtime: 自动更新/差分升级需重设计
+      ops: 需保留开发构建，避免 fuses 与 CI 冲突
+      portability: 平台耦合
+    tools:
+      - name: Electron fuses
+        source: https://github.com/electron/fuses
+        license: MIT
+        note: 禁用 RUN_AS_NODE/inspect/NODE_OPTIONS，强制仅从 ASAR 加载
+      - name: Electron ASAR integrity
+        source: https://www.electronjs.org/docs/latest/tutorial/asar-integrity
+        license: MIT
+      - name: Node SEA
+        source: https://nodejs.org/api/single-executable-applications.html
+        license: MIT
+      - name: pkg
+        source: https://github.com/vercel/pkg
+        license: MIT
+        note: 只是打包，可提取
+      - name: Hermes
+        source: https://hermesengine.dev/
+        license: MIT
+        note: React Native 字节码；可用 hbctool 反汇编
+    best_for: Electron/Node/RN 桌面与移动分发
+    verify: asar 解包、hbctool、SEA 提取；确认完整性与 fuses 生效
+
+  - id: JS7
+    name: 运行期对抗（反调试 / 反篡改 / 完整性 / 环境）
+    principle: 检测 DevTools/调试器、代码/资源被修改、注入与自动化环境；异常时降级或拒绝继续。
+    effect: 抬高动态调试、内存/网络抓取、脚本化批量分析的成本（与 JS2/JS3/JS6 协同最关键）。
+    effectiveness: supporting
+    pros:
+      - 与静态混淆正交、可叠加
+      - 把便宜分析变成要花人力的分析
+    cons:
+      - 不阻止静态阅读
+      - 误报伤合法用户/无障碍/测试
+      - 检测逻辑可被 patch；可能与 CSP/商店审核冲突
+    impacts:
+      build: 需要完整性基线
+      runtime: 启动/运行检测开销
+      ops: 误杀救济通道与遥测成本
+      portability: 需逐平台/浏览器适配
+    tools:
+      - name: 商用保护产品（自防护/调试保护）
+        source: 见 JS2/JS3（Jscrambler 等）
+        license: commercial
+      - name: 自研检测
+        source: n/a
+        license: n/a
+        note: debugger 计时、toString 校验、环境指纹
+    best_for: 与 JS2/JS3/JS6 叠加
+    verify: 动态分析成本（挂调试器/抓包/自动化的成功率与耗时）
+
+  - id: JS8
+    name: 密钥与信任根 + 水印
+    principle: 密钥不进客户端（服务端签发/KMS/HSM/平台安全存储）；水印用于溯源。
+    effect: 代码被读也拿不到可用密钥；泄露可追踪。
+    effectiveness: supporting
+    pros:
+      - 让攻击产出不可直接用
+      - 水印为维权留证
+    cons:
+      - 需服务端/硬件能力；离线受限
+      - Web 端没有可信存储
+      - 白盒密码不是银弹
+    impacts:
+      architecture: 密钥生命周期与轮换
+      ops: 托管/合规成本
+      portability: 依赖平台能力
+    tools:
+      - name: Electron safeStorage
+        source: https://www.electronjs.org/docs/latest/api/safe-storage
+        license: MIT
+        note: Windows DPAPI / macOS Keychain / Linux secret service
+      - name: iOS Keychain / Android Keystore
+        source: 平台文档
+        license: n/a
+      - name: 云 KMS / HSM
+        source: 各云厂商或硬件厂商
+        license: commercial
+    best_for: 只要还发密钥到客户端，就应优先处理
+    verify: 客户端是否残留可用密钥/明文许可证
+
+# 验证方法论（JS 侧）
+verification:
+  note: >-
+    本技能 verify/attack_sim 面向 LLVM 原生产物，不适用于 JS/TS 源码与 Hermes/V8 字节码；
+    JS 侧用美化器 + 反混淆器按本文方法论执行，JS4/JS5 的 WASM/native 部分回到本技能链路。
+  tools:
+    - name: js-beautify / prettier
+      source: https://github.com/beautifier/js-beautify
+      license: MIT
+      use: 美化后评估可读性
+    - name: webcrack
+      source: https://github.com/j4k0xb/webcrack
+      license: MIT
+      use: 反混淆（webpack/obfuscator.io 常见模式）
+    - name: de4js
+      source: https://github.com/lelinhtinh/de4js
+      license: MIT
+      use: 反混淆（字符串数组/eval 包装）
+    - name: REstringer
+      source: https://github.com/HumanSecurity/REstringer
+      license: MIT
+      use: 反混淆与静态还原
+    - name: wasm2wat / wasm-decompile
+      source: https://github.com/WebAssembly/wabt
+      license: Apache-2.0
+      use: WASM 反汇编/反编译
+    - name: asar
+      source: https://github.com/electron/asar
+      license: MIT
+      use: Electron 应用解包
+    - name: hbctool / hermes-dec
+      source: https://github.com/bongtrop/hbctool
+      license: MIT
+      use: Hermes 字节码反汇编/反编译
+  metrics:
+    - 命名可读率（变量/函数/类）
+    - 字符串明文比例
+    - 反混淆恢复率
+    - 反编译/断点闭合时间
+    - 重建可运行工程的成功率与工时
+    - "逆到底得到了什么（可用算法/密钥 = 防护不够）"
+  steps:
+    - 按分发形态取产物（bundle/ASAR/SEA/.node/.wasm/.hbc）
+    - 先查 source map 是否泄漏（sourceMappingURL/.map/base64）
+    - 美化 + 至少一个反混淆器交叉验证
+    - 统计指标并尝试重建工程计时
+    - WASM/native 部分改用 strings/nm/objdump + 本技能 verify/attack_sim

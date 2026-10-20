@@ -52,7 +52,9 @@ MCP Server (`anti-rea-mcp`)，让上层 Agent 用工具调用而不是手工拼�
   （见「限制」）；但 **Java / Android 与 .NET / Unity 都有专门的替代方案菜单**：
   - **Java / Android** —— J0–J8（服务端化、字节码混淆、加壳、字节码虚拟化、下沉 native、
     GraalVM native-image、运行期对抗、密钥管理）：[`docs/java-anti-rea.md`](docs/java-anti-rea.md)；
-  - **.NET / Unity** —— D0–D8（同类手段 + NativeAOT / IL2CPP）：[`docs/dotnet-anti-rea.md`](docs/dotnet-anti-rea.md)。
+  - **.NET / Unity** —— D0–D8（同类手段 + NativeAOT / IL2CPP）：[`docs/dotnet-anti-rea.md`](docs/dotnet-anti-rea.md)；
+  - **JavaScript / TypeScript** —— JS0–JS8（服务端化、打包/混淆、JS 虚拟化、WASM、native 插件、
+    分发形态加固、运行期对抗、密钥）：[`docs/js-anti-rea.md`](docs/js-anti-rea.md)。
 
 ## 工作流：先方案、后改造 / Phased workflow
 
@@ -105,20 +107,23 @@ MCP Server (`anti-rea-mcp`)，让上层 Agent 用工具调用而不是手工拼�
    目标工程侧（工程自己的依赖怎么装）另列；**未选到的组件标注"延后安装"**，不要在 P1 就预装。
 4. **推荐模式与理由**：模式 A / B / C（见 P2），预估代价（体积、构建时间、运行开销）。
 5. **分步骤执行计划**：每步一条命令或一处脚本改动点，标注改哪个文件。
-6. **语言特定的可选手段**（目标为 Java / Android 或 .NET / Unity 时**必填**）：
+6. **语言特定的可选手段**（目标为 Java / Android、.NET / Unity 或 JS/TS 时**必填**）：
    - Java / Android：从 [`docs/java-anti-rea.md`](docs/java-anti-rea.md)（机器可读：
      [`docs/java-anti-rea-options.yaml`](docs/java-anti-rea-options.yaml)）的 J0–J8 里挑 1–3 个候选；
    - .NET / Unity：从 [`docs/dotnet-anti-rea.md`](docs/dotnet-anti-rea.md)（机器可读：
-     [`docs/dotnet-anti-rea-options.yaml`](docs/dotnet-anti-rea-options.yaml)）的 D0–D8 里挑 1–3 个候选。
+     [`docs/dotnet-anti-rea-options.yaml`](docs/dotnet-anti-rea-options.yaml)）的 D0–D8 里挑 1–3 个候选；
+   - JS / TS：从 [`docs/js-anti-rea.md`](docs/js-anti-rea.md)（机器可读：
+     [`docs/js-anti-rea-options.yaml`](docs/js-anti-rea-options.yaml)）的 JS0–JS8 里挑 1–3 个候选。
 
    逐一摘要**原理 / 优点 / 缺点 / 影响（性能、体积、构建、可移植性、兼容性）与获取源**，
-   并给"按场景推荐"的取舍——**由用户勾选**；其中 J5/J6、D5/D6 以及 IL2CPP 的 native 部分
+   并给"按场景推荐"的取舍——**由用户勾选**；其中 J5/J6、D5/D6、JS4/JS5 以及 IL2CPP 的 native 部分
    可回归本技能的常规加固链路。
 7. **验证与回退**：baseline 对照怎么留、`verify`/`attack_sim` 怎么跑、如何还原
    （构建注入不改源码；确需改构建文件的，保留原文件副本或 VCS 分支）；Java 字节码侧
-   按 `docs/java-anti-rea.md` §4、.NET/CIL 侧按 `docs/dotnet-anti-rea.md` §5 的
-   反编译/去混淆方法论执行（本技能 `verify`/`attack_sim` **不适用于** Java 字节码与
-   CIL 托管程序集；下沉 native / NativeAOT / IL2CPP 产出的原生部分照常使用）。
+   按 `docs/java-anti-rea.md` §4、.NET/CIL 侧按 `docs/dotnet-anti-rea.md` §5、JS/TS 侧按
+   `docs/js-anti-rea.md` §4 的反编译/反混淆方法论执行（本技能 `verify`/`attack_sim`
+   **不适用于** Java 字节码、CIL 托管程序集与 JS/TS 产物；下沉 native / NativeAOT / IL2CPP /
+   WASM 的原生部分照常使用）。
 
 > 方案必须**停下等用户批准**；用户可能改范围、换模式、加要求——按其修订后再进入 P3。
 
@@ -180,7 +185,7 @@ LLM 红队会话）→ `anti-rea report`；附回退说明与后续再构建的�
 | **T1 原生变换** | 选定模式 A/B 且要 `protect` / `verify` / `attack_sim` | LLVM/clang >= 18、CMake >= 3.16、binutils、`make build` |
 | **T2 语言与平台** | 按目标语言 / 构建体系 / 宿主平台 | rustc+cargo（Rust C/FFI）、node+npm（JS/TS 仅扫描）、JDK（Java 勘察用工程自带）、容器运行时 |
 | **T3 可选增强** | 只在用到该功能时 | Ghidra+PyGhidra（独立验证）、`deap`（`evolve`，`requirements-optional.txt`）、LLM 端点（红队会话） |
-| **T4 永不下发** | — | Java/Android 与 .NET/Unity 第三方加固工具/产品（只记录获取源，见 `docs/java-anti-rea.md`、`docs/dotnet-anti-rea.md`） |
+| **T4 永不下发** | — | Java/Android、.NET/Unity 与 JS/TS 第三方加固工具/产品（只记录获取源，见各语言选项目录） |
 
 > **本技能不打包、不预装、不代下载任何第三方工具**；第三方组件一律只记录**获取源与用法**。
 > 完整策略、体量量级与最小部署集见 [`docs/PROVISIONING.md`](docs/PROVISIONING.md)。
@@ -204,7 +209,7 @@ LLVM 位置无需写死：通过 `ANTI_REA_LLVM=<前缀>` 或把工具放进 `PA
 
 1. **先最小、后按需**：P0 只装 T0 + 跑 `scan`；**在用户选定模式之前**不装 LLVM、不拉镜像、不下载 Ghidra。
 2. **只读需要的那一篇文档**：`SKILL.md` + 与当前语言/模式相关的**一篇**（`docs/build-injection.md`、
-   `docs/java-anti-rea.md` 或 `docs/dotnet-anti-rea.md`）；不要把 `docs/` 全量读进上下文（省 token 也是省部署代价）。
+   `docs/java-anti-rea.md`、`docs/dotnet-anti-rea.md` 或 `docs/js-anti-rea.md`）；不要把 `docs/` 全量读进上下文（省 token 也是省部署代价）。
 3. **把"要装什么"写进 P1 方案**：按「现在就装（T0）/ 选定模式后再装（T1）/ 用到才装（T2/T3）」
    三档列出，附触发条件；T4 只给获取源。
 4. **安装动作先经用户确认**：装系统包、拉镜像、下载第三方工具前说明体量与影响；工具许可与
@@ -376,13 +381,42 @@ CIL 带完整元数据，反编译器能近乎还原源码（比 C/C++ 更"一�
 构建注入（`clang` + 变换插件）**按源文件/符号收窄范围**加固生成的 C++（详见该文档 §3）。
 需先在你的 Unity 版本上做小范围试点。
 
+## JavaScript / TypeScript 项目——无 IR 变换，提供**选项菜单**
+
+本技能对 JS/TS **不做源码级变换**（不是 LLVM IR 语言；ADR-006）。JS 的特殊性在于
+**交付物本身就是可执行源码**：压缩/改名只是"多花几分钟"，source map 一旦外发等于直接交源码。
+REA 的 provider 已含 **ASAR / JS 树**与浏览器（Playwright/CDP）。完整说明见
+[`docs/js-anti-rea.md`](docs/js-anti-rea.md)，机器可读清单见
+[`docs/js-anti-rea-options.yaml`](docs/js-anti-rea-options.yaml)。九个选项：
+
+| ID | 手段 | 一句话 |
+| :--- | :--- | :--- |
+| JS0 | 核心逻辑上服务端 | 唯一"逆到底也无产出"的路径；需联网 |
+| JS1 | 打包 + 压缩 + 改名 + **不发 source map** | 必做基线；单层约分钟级可读通 |
+| JS2 | 字符串/常量加密 + 控制流混淆 | 打掉 strings 锚点；**webcrack/de4js 能还原部分模式** |
+| JS3 | JS 字节码虚拟化（自定义 VM） | JS 层单点成本最高；性能代价数十倍 |
+| JS4 | 核心编译为 **WebAssembly** | 换赛道；WASM 仍可反编译，但不再有 JS 语义 |
+| JS5 | 下沉 native（N-API / Electron 原生模块 / TurboModule / Tauri） | 回到本技能主战场；产物可移植性丧失 |
+| JS6 | 分发形态加固（ASAR 完整性 / fuses / SEA / pkg / Hermes） | 抬高改包/注入成本；**不是保密手段** |
+| JS7 | 运行期对抗（反调试/反篡改/完整性/环境） | 与 JS2/JS3/JS6 协同 |
+| JS8 | 密钥与信任根 + 水印 | 密钥不落客户端；Web 端无可信存储 |
+
+**用法**：同样**由用户选择**（P1 呈现 → 用户勾选 → P3 按模式 B 纪律落地）；工具与商用产品
+**不由本技能分发**。JS 侧验证用美化器 + 反混淆器（js-beautify/prettier + webcrack/de4js/REstringer）
+按该文档 §4 方法论执行；JS4/JS5 的 WASM/native 部分回流本技能 `verify` / `attack_sim`。
+
+**零成本复用**：Node 原生插件（`.node`）、Electron 原生模块、Tauri 的 Rust 核心、
+以及 C/C++/Rust（C/FFI）编译出的 WASM，**都已在或可回到本引擎的能力面**——把最值钱的核心
+下沉到这些位置，比在 JS 里堆混淆更划算。
+
 ## 安全边界 / Safety & Limits (v1.0)
 
 - **只加固你拥有的代码**。开放源码组件默认跳过（`allow_unknown_owner` 可覆盖）。
 - 目标是**抬高成本**，不是「不可破解」。任何加固都可被有决心的分析者攻破。
 - 变换引擎基于 LLVM Pass：支持 C/C++；Rust 仅 C/FFI 源、Python 仅 C 扩展。
-  纯 Rust / Java / .NET / JS/TS 无 IR 层防护（ADR-006）；Java / Android 与 .NET / Unity
-  改用「选项菜单 + 方法论」（见上两节与 `docs/java-anti-rea.md`、`docs/dotnet-anti-rea.md`）。
+  纯 Rust / Java / .NET / JS/TS 无 IR 层防护（ADR-006）；Java / Android、.NET / Unity 与
+  JS/TS 改用「选项菜单 + 方法论」（见上三节与 `docs/java-anti-rea.md`、
+  `docs/dotnet-anti-rea.md`、`docs/js-anti-rea.md`）。
   Rust 的 IR 级支持已做过可行性验证：受 rustc 自带 LLVM 版本与 cargo 注入点限制，
   **不纳入 v1.x**；Rust 项目的敏感核心请放在 **C/FFI** 侧。
 - 默认平台 Linux x86_64；其他平台可运行 scan/plan，protect 需自行验证。
@@ -396,6 +430,7 @@ CIL 带完整元数据，反编译器能近乎还原源码（比 C/C++ 更"一�
 - `docs/PROVISIONING.md` — **分级安装与按需获取**（装什么/何时装/不装什么、最小部署集、卸载）。
 - `docs/java-anti-rea.md` — **Java / Android 反 REA 选项目录**（J0–J8 原理/优缺点/影响/获取源/验证方法论）。
 - `docs/dotnet-anti-rea.md` — **.NET / Unity 反 REA 选项目录**（D0–D8 + Unity/IL2CPP 特别路径/验证方法论）。
+- `docs/js-anti-rea.md` — **JS / TS 反 REA 选项目录**（JS0–JS8 + 运行时/分发形态/验证方法论）。
 - `docs/mcp-clients.md` — MCP 客户端配置（Claude Desktop / Cursor / 通用 stdio）。
 - `examples/quickstart/` — 端到端可运行示例。
 - `docs/FAQ.md`、`docs/troubleshooting.md` — 常见问题与故障排查。

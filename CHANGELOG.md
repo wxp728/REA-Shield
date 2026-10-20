@@ -43,6 +43,24 @@
 - **零成本复用说明**：`SKILL.md` 与 `docs/build-injection.md` 补充 **Android NDK 的 `.so` 直接走模式 B**、
   **Unity IL2CPP 生成的 C++ 回流本引擎**；`docs/java-anti-rea.md` 注明 **Kotlin / Scala 同属 JVM 菜单**。
 
+### 新增（技能改进 · JS / TS 反 REA 选项目录）
+
+- **新增 [`docs/js-anti-rea.md`](docs/js-anti-rea.md)**：浏览器 / Node / Electron / React Native / Tauri 的
+  **反 REA 选项目录 JS0–JS8**——服务端化 / 打包+压缩+改名+不发 source map / 字符串与控制流混淆 /
+  JS 字节码虚拟化 / 核心编译为 WebAssembly / 下沉 native（N-API、Electron 原生模块、TurboModule/JSI、
+  Tauri）/ 分发形态加固（ASAR 完整性、Electron fuses、SEA、pkg、Hermes）/ 运行期对抗 / 密钥与水印。
+  每种附**原理 / 效果 / 优点 / 缺点 / 影响 / 获取源与用法**，另附运行时画像、组合阶梯、
+  验证方法论（js-beautify、webcrack、de4js、REstringer、wasm2wat、asar、hbctool）、
+  与 P0–P4 的接线、许可与合规边界。
+- **口径固定**：**压缩/混淆 ≠ 加密**；**ASAR 不是加密**；**Hermes / V8 字节码不是不可逆**；
+  **生产环境绝不外发 source map**；单层 JS 混淆可被 webcrack/de4js 类工具还原。
+- **机器可读清单**：新增 [`docs/js-anti-rea-options.yaml`](docs/js-anti-rea-options.yaml)
+  （`options` / `combinations` / `runtimes` / `verification`）。
+- **接线**：`skill.json` 新增 `js_anti_rea`（`ir_transforms: false`、选项、运行时、验证工具）与
+  `guides`/`supported.languages.js_note`；`SKILL.md` 新增「JavaScript / TypeScript 项目」一节并同步
+  P1/P4、T4、See also；`README(.zh-CN)`、`docs/STATUS.md`、`.agents/skills/anti-rea/SKILL.md` 同步；
+  `tools/release.py` 的最小技能包与必查文件纳入两份新文档；**新增 `tests/test_js_options.py`**。
+
 ### 变更（文档 / PoC 去本地化）
 
 - 清掉入库文件中残留的本机绝对路径（`/opt/<toolchain>`、`/home/<user>` 等），**不改变任何验证结论**：

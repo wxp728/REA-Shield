@@ -14,6 +14,8 @@ description: >-
   native-image, runtime hardening, key management) with principles, trade-offs,
   impacts and tool sources; the user chooses the combination. For .NET / Unity
   (no IL transforms) it provides a D0-D8 menu including NativeAOT and IL2CPP.
+  For JavaScript / TypeScript (no source-level transforms) it provides a
+  JS0-JS8 menu including WebAssembly and native offload.
 license: MIT
 version: 1.0.0
 ---
@@ -68,6 +70,12 @@ see `docs/dotnet-anti-rea.md` (machine-readable
 outputs can be hardened with the regular native pipeline. Note that
 ReadyToRun is NOT protection, and public deobfuscators (e.g. de4dot) can undo
 some commercial obfuscation — combine layers.
+
+**JavaScript / TypeScript** (no source-level transforms): the **JS0–JS8** menu —
+see `docs/js-anti-rea.md` (machine-readable `docs/js-anti-rea-options.yaml`).
+Never ship source maps; bundling/minification is not encryption; ASAR and
+Hermes/V8 bytecode are not protection by themselves. WASM / native addon
+outputs (JS4/JS5) can be hardened with the regular native pipeline.
 
 Scope: only harden code you own. v1.0 fully tested on Linux x86_64 with
 LLVM/clang 18. See `docs/INSTALL.md` for details, Docker, and environment

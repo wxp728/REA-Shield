@@ -112,6 +112,28 @@
       "tools": ["ILSpy/ilspycmd", "dnSpyEx", "dotPeek", "de4dot", "ildasm/monodis", "Il2CppDumper"]
     }
   },
+  "js_anti_rea": {
+    "ir_transforms": false,
+    "note": "JavaScript / TypeScript have no LLVM IR layer; the shipped artifact is the executable source itself. The skill provides a selectable option menu (JS0-JS8) with principles, pros/cons/impacts, sources and usage. It does NOT bundle or download third-party obfuscators/packagers. Source maps must never ship in production. WASM/native outputs (JS4/JS5) can be hardened with the regular native pipeline.",
+    "guide": "docs/js-anti-rea.md",
+    "catalog": "docs/js-anti-rea-options.yaml",
+    "options": [
+      {"id": "JS0", "name": "server-side logic (core algorithms/keys stay off the client)"},
+      {"id": "JS1", "name": "bundle + minify + name mangling + no source maps (baseline)"},
+      {"id": "JS2", "name": "string/constant encryption + control-flow obfuscation"},
+      {"id": "JS3", "name": "JS bytecode virtualization (custom VM; highest single-point cost on the JS layer)"},
+      {"id": "JS4", "name": "compile the core to WebAssembly (then harden the native source with this skill)"},
+      {"id": "JS5", "name": "offload to native (N-API addon / Electron native module / TurboModule / Tauri)"},
+      {"id": "JS6", "name": "distribution hardening (ASAR integrity / Electron fuses / SEA / pkg / Hermes)"},
+      {"id": "JS7", "name": "runtime hardening (anti-debug / anti-tamper / integrity / environment)"},
+      {"id": "JS8", "name": "key management off-client (safeStorage/Keychain/Keystore/KMS) + watermarking"}
+    ],
+    "runtimes": ["browser", "node", "electron", "react_native", "tauri"],
+    "verification": {
+      "note": "verify/attack_sim target LLVM native artifacts and do NOT apply to JS/TS source or Hermes/V8 bytecode; beautify and deobfuscate (webcrack/de4js/REstringer) to test real strength. WASM/native parts (JS4/JS5) use the regular native pipeline.",
+      "tools": ["js-beautify/prettier", "webcrack", "de4js", "REstringer", "wasm2wat/wasm-decompile", "asar", "hbctool/hermes-dec"]
+    }
+  },
   "guides": {
     "install": "docs/INSTALL.md",
     "provisioning": "docs/PROVISIONING.md",
@@ -120,6 +142,8 @@
     "java_anti_rea_catalog": "docs/java-anti-rea-options.yaml",
     "dotnet_anti_rea": "docs/dotnet-anti-rea.md",
     "dotnet_anti_rea_catalog": "docs/dotnet-anti-rea-options.yaml",
+    "js_anti_rea": "docs/js-anti-rea.md",
+    "js_anti_rea_catalog": "docs/js-anti-rea-options.yaml",
     "threat_analysis": "docs/analysis/rea-threat-analysis.md",
     "faq": "docs/FAQ.md"
   },
@@ -314,7 +338,8 @@
       "ir_transforms": ["c", "cpp", "rust (C/FFI sources only)", "python (C extensions only)"],
       "scan_only": ["rust", "java", "csharp", "javascript", "typescript", "python"],
       "java_note": "No IR transforms for Java bytecode; see the top-level `java_anti_rea` option menu (docs/java-anti-rea.md), and let the user choose the combination. Kotlin/Scala compile to JVM bytecode and follow the same menu.",
-      "dotnet_note": "No IL transforms for .NET (C#/F#/VB) or Unity; see the top-level `dotnet_anti_rea` option menu (docs/dotnet-anti-rea.md). NativeAOT/IL2CPP/native-offload outputs go through the regular native pipeline."
+      "dotnet_note": "No IL transforms for .NET (C#/F#/VB) or Unity; see the top-level `dotnet_anti_rea` option menu (docs/dotnet-anti-rea.md). NativeAOT/IL2CPP/native-offload outputs go through the regular native pipeline.",
+      "js_note": "No source-level transforms for JS/TS; see the top-level `js_anti_rea` option menu (docs/js-anti-rea.md). Never ship source maps; WASM/native-offload outputs (JS4/JS5) go through the regular native pipeline."
     }
   },
   "quickstart": [
