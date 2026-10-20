@@ -197,6 +197,27 @@
       "tools": ["blutter", "reFlutter", "unzip/apktool", "strings/nm/objdump", "Ghidra/IDA", "jadx"]
     }
   },
+  "wasm_anti_rea": {
+    "ir_transforms": "experimental (wasm32 only)",
+    "note": "WebAssembly is a compilation target, not a source language. The skill provides a selectable option menu (W0-W8) for .wasm artifacts. WASM cannot keep secrets from its host: linear memory and imports are readable/replaceable, and AOT caches are still machine code. Source-side LLVM transforms can target wasm32 in principle, but end-to-end is only verified on Linux x86_64 -- treat W2/W4 as experimental and require a spike. Host-side native offload (W5) uses the regular native pipeline. Third-party tools are not bundled.",
+    "guide": "docs/wasm-anti-rea.md",
+    "catalog": "docs/wasm-anti-rea-options.yaml",
+    "options": [
+      {"id": "W0", "name": "core logic on the server/host (WASM only as glue)"},
+      {"id": "W1", "name": "build baseline (-O3 + strip custom sections/DWARF, no source maps)"},
+      {"id": "W2", "name": "IR transforms to wasm32 with this engine (experimental)"},
+      {"id": "W3", "name": "string/data-segment handling (IR encryption + runtime decryption)"},
+      {"id": "W4", "name": "control-flow/VM transforms to wasm32 (experimental)"},
+      {"id": "W5", "name": "host-side native offload (WASI host / Node addon / Electron), then harden"},
+      {"id": "W6", "name": "distribution integrity (SRI/CSP/signature/encryption at rest)"},
+      {"id": "W7", "name": "runtime hardening in the host (weak inside WASM; auxiliary)"},
+      {"id": "W8", "name": "key management off-module + watermarking"}
+    ],
+    "verification": {
+      "note": "verify/attack_sim target LLVM native artifacts; W2/W4 source-side IR can be used but wasm32 is not verified end-to-end; W5 native parts use the regular native pipeline.",
+      "tools": ["wasm2wat/wasm-objdump", "wasm-decompile", "wasm2c", "wasm-opt", "wasm-strip", "wasm-tools print", "Ghidra/Binary Ninja/IDA", "strings"]
+    }
+  },
   "guides": {
     "install": "docs/INSTALL.md",
     "provisioning": "docs/PROVISIONING.md",
@@ -213,6 +234,8 @@
     "python_anti_rea_catalog": "docs/python-anti-rea-options.yaml",
     "dart_anti_rea": "docs/dart-anti-rea.md",
     "dart_anti_rea_catalog": "docs/dart-anti-rea-options.yaml",
+    "wasm_anti_rea": "docs/wasm-anti-rea.md",
+    "wasm_anti_rea_catalog": "docs/wasm-anti-rea-options.yaml",
     "threat_analysis": "docs/analysis/rea-threat-analysis.md",
     "faq": "docs/FAQ.md"
   },
@@ -411,7 +434,8 @@
       "js_note": "No source-level transforms for JS/TS; see the top-level `js_anti_rea` option menu (docs/js-anti-rea.md). Never ship source maps; WASM/native-offload outputs (JS4/JS5) go through the regular native pipeline.",
       "go_note": "No IR transforms for Go; see the top-level `go_anti_rea` option menu (docs/go-anti-rea.md). -s -w is not protection (pclntab remains); cgo/native-offload outputs go through the regular native pipeline.",
       "python_note": "Python C-extensions are supported by the regular native pipeline; pure Python has no IR transforms and gets the `python_anti_rea` option menu (docs/python-anti-rea.md). .pyc is decompilable; prefer server-side or native offload.",
-      "dart_note": "No IR transforms for Dart/Flutter; see the top-level `dart_anti_rea` option menu (docs/dart-anti-rea.md). Never ship debug builds (kernel_blob.bin) or --split-debug-info symbols; --obfuscate is not string encryption. dart:ffi/native-plugin outputs go through the regular native pipeline."
+      "dart_note": "No IR transforms for Dart/Flutter; see the top-level `dart_anti_rea` option menu (docs/dart-anti-rea.md). Never ship debug builds (kernel_blob.bin) or --split-debug-info symbols; --obfuscate is not string encryption. dart:ffi/native-plugin outputs go through the regular native pipeline.",
+      "wasm_note": "WASM is a compilation target, not a source language; see the top-level `wasm_anti_rea` option menu (docs/wasm-anti-rea.md). WASM cannot keep secrets from its host; source-side IR transforms for wasm32 are experimental and not verified end-to-end."
     }
   },
   "quickstart": [

@@ -12,7 +12,7 @@
 >
 > **目前**本技能**仅在 Linux x86_64** 上提供端到端防护；其变换引擎基于 **LLVM IR**，可面向 ARM64 / Windows x64 / WASM 等目标构建（IR 级支持，端到端实测目前仅 Linux x86_64）；其它平台 / OS 会在后续版本持续增加。
 >
-> **支持的语言**：变换引擎是经 `clang -fpass-plugin` 加载的 LLVM pass，因此防护覆盖 **C / C++**（一等支持）以及 **Rust 的 C/FFI 部分**和 **Python C 扩展**。**Java / Android 不做 IR 变换**——改为提供**可选的反 REA 选项菜单**（J0–J8：核心逻辑上服务端、字节码混淆、加壳、字节码虚拟化、下沉 native（JNI/JNA/FFM）、GraalVM native-image、运行期对抗、密钥管理），每种附原理/优缺点/影响与获取源，**由用户选择**；见 [`docs/java-anti-rea.md`](docs/java-anti-rea.md)。**.NET / Unity 不做 IL 变换**——同样提供 **D0–D8** 菜单（含 NativeAOT 与 IL2CPP）；见 [`docs/dotnet-anti-rea.md`](docs/dotnet-anti-rea.md)。**JavaScript / TypeScript 不做源码级变换**——提供 **JS0–JS8** 菜单（打包/混淆、JS 虚拟化、WebAssembly、native 插件、分发形态加固、运行期对抗、密钥）；见 [`docs/js-anti-rea.md`](docs/js-anti-rea.md)。**Go 不做 IR 变换**——提供 **G0–G8** 菜单（构建基线、garble、cgo 下沉 native、TinyGo/WASM、运行期对抗、密钥）；见 [`docs/go-anti-rea.md`](docs/go-anti-rea.md)。**纯 Python**（逻辑在 `.py` 里）不做 IR 变换——提供 **PY0–PY8** 菜单（分发基线、字节码壳、C 扩展、native 下沉、打包、密钥）；见 [`docs/python-anti-rea.md`](docs/python-anti-rea.md)。Python **C 扩展**仍完整走 native 链路。**Dart / Flutter** 不做 IR 变换——提供 **DA0–DA8** 菜单（release 构建基线、`--obfuscate`、`dart:ffi` 下沉 native、Web 目标、平台完整性、密钥）；见 [`docs/dart-anti-rea.md`](docs/dart-anti-rea.md)。
+> **支持的语言**：变换引擎是经 `clang -fpass-plugin` 加载的 LLVM pass，因此防护覆盖 **C / C++**（一等支持）以及 **Rust 的 C/FFI 部分**和 **Python C 扩展**。**Java / Android 不做 IR 变换**——改为提供**可选的反 REA 选项菜单**（J0–J8：核心逻辑上服务端、字节码混淆、加壳、字节码虚拟化、下沉 native（JNI/JNA/FFM）、GraalVM native-image、运行期对抗、密钥管理），每种附原理/优缺点/影响与获取源，**由用户选择**；见 [`docs/java-anti-rea.md`](docs/java-anti-rea.md)。**.NET / Unity 不做 IL 变换**——同样提供 **D0–D8** 菜单（含 NativeAOT 与 IL2CPP）；见 [`docs/dotnet-anti-rea.md`](docs/dotnet-anti-rea.md)。**JavaScript / TypeScript 不做源码级变换**——提供 **JS0–JS8** 菜单（打包/混淆、JS 虚拟化、WebAssembly、native 插件、分发形态加固、运行期对抗、密钥）；见 [`docs/js-anti-rea.md`](docs/js-anti-rea.md)。**Go 不做 IR 变换**——提供 **G0–G8** 菜单（构建基线、garble、cgo 下沉 native、TinyGo/WASM、运行期对抗、密钥）；见 [`docs/go-anti-rea.md`](docs/go-anti-rea.md)。**纯 Python**（逻辑在 `.py` 里）不做 IR 变换——提供 **PY0–PY8** 菜单（分发基线、字节码壳、C 扩展、native 下沉、打包、密钥）；见 [`docs/python-anti-rea.md`](docs/python-anti-rea.md)。Python **C 扩展**仍完整走 native 链路。**Dart / Flutter** 不做 IR 变换——提供 **DA0–DA8** 菜单（release 构建基线、`--obfuscate`、`dart:ffi` 下沉 native、Web 目标、平台完整性、密钥）；见 [`docs/dart-anti-rea.md`](docs/dart-anti-rea.md)。**WebAssembly** 产物不做字节码级变换——提供 **W0–W8** 菜单（strip/优化基线、源侧 IR → wasm32 实验路径、数据段、宿主 native 下沉、分发完整性、密钥）；见 [`docs/wasm-anti-rea.md`](docs/wasm-anti-rea.md)。WASM 不能对宿主保密。
 >
 > **反逆向技术**：控制流平坦化（CFF）、非线性 MBA、不透明谓词、函数边界扰动、数据流噪声、标识符重命名、字符串加密、代码虚拟化、白盒密码、对抗性诱导、MTD 多变体；**代价**：运行时开销（P2 ≤ 5% / P1 ≤ 15% / P0 ≤ 40%，可配置）、体积与构建时间增长、依赖较重的 LLVM 18 工具链、部分平台 / 语言尚未端到端覆盖。
 >
@@ -61,6 +61,7 @@
 | 加固 **Go** 项目（选项目录 G0–G8） | [`docs/go-anti-rea.md`](docs/go-anti-rea.md) |
 | 加固 **纯 Python** 项目（选项目录 PY0–PY8） | [`docs/python-anti-rea.md`](docs/python-anti-rea.md) |
 | 加固 **Dart / Flutter** 项目（选项目录 DA0–DA8） | [`docs/dart-anti-rea.md`](docs/dart-anti-rea.md) |
+| 加固 **WebAssembly** 产物（选项目录 W0–W8） | [`docs/wasm-anti-rea.md`](docs/wasm-anti-rea.md) |
 | 出问题了 | [`docs/FAQ.md`](docs/FAQ.md)、[`docs/troubleshooting.md`](docs/troubleshooting.md) |
 
 ```bash

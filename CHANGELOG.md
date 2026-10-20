@@ -107,6 +107,21 @@
   「Dart / Flutter 项目」一节并同步 P1/P4、T4、See also；`README(.zh-CN)`、`STATUS`、`.agents`、
   `release.py` 同步；**新增 `tests/test_dart_options.py`**。
 
+### 新增（技能改进 · WASM 反 REA 选项目录）
+
+- **新增 [`docs/wasm-anti-rea.md`](docs/wasm-anti-rea.md)**：**W0–W8**——核心放服务端/宿主 /
+  构建基线（`-O3` + `wasm-strip` 去自定义段与 DWARF + 不发映射）/ 源侧 IR 变换到 wasm32（实验性）/
+  字符串与数据段 / 控制流与 VM（实验性）/ 宿主侧 native 下沉（WASI、Node addon、Electron）/
+  分发完整性（SRI、CSP、签名、加密 at rest）/ 运行期对抗 / 密钥与水印。
+- **口径固定**：**WASM 不能对宿主保密**（线性内存/导入函数可读可替换）；AOT 缓存仍是机器码；
+  未 strip 的 `name` 段/DWARF 可直接读出名字；`wasm2c` 可转 C 进入 native 分析链；
+  **wasm32 端到端未验证**，W2/W4 必须标注实验性并先做试点。
+- **机器可读清单**：新增 [`docs/wasm-anti-rea-options.yaml`](docs/wasm-anti-rea-options.yaml)
+  （含 wabt/Binaryen/wasm-tools 验证方法论）。
+- **接线**：`skill.json.wasm_anti_rea` / `guides` / `supported.languages.wasm_note`；`SKILL.md` 新增
+  「WASM 产物」一节并同步 P1/P4、T4、安全边界、See also；`README(.zh-CN)`、`STATUS`、`.agents`、
+  `release.py` 同步；**新增 `tests/test_wasm_options.py`**。
+
 ### 变更（文档 / PoC 去本地化）
 
 - 清掉入库文件中残留的本机绝对路径（`/opt/<toolchain>`、`/home/<user>` 等），**不改变任何验证结论**：

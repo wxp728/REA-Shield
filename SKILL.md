@@ -61,6 +61,9 @@ MCP Server (`anti-rea-mcp`)，让上层 Agent 用工具调用而不是手工拼�
     打包、运行期对抗、密钥）：[`docs/python-anti-rea.md`](docs/python-anti-rea.md)；
   - **Dart / Flutter** —— DA0–DA8（服务端化、构建基线、字符串/控制流、`dart:ffi` 下沉 native、
     Web 目标、平台完整性、运行期对抗、密钥）：[`docs/dart-anti-rea.md`](docs/dart-anti-rea.md)。
+- 目标产物是 **WebAssembly（`.wasm`）** 时，v1.0 不做 WASM 字节码级变换；提供 **W0–W8**
+  选项菜单（构建基线、源侧 IR 变换的 wasm32 实验路径、数据段、宿主 native 下沉、分发完整性、
+  运行期对抗、密钥）：[`docs/wasm-anti-rea.md`](docs/wasm-anti-rea.md)。
 
 ## 工作流：先方案、后改造 / Phased workflow
 
@@ -113,7 +116,8 @@ MCP Server (`anti-rea-mcp`)，让上层 Agent 用工具调用而不是手工拼�
    目标工程侧（工程自己的依赖怎么装）另列；**未选到的组件标注"延后安装"**，不要在 P1 就预装。
 4. **推荐模式与理由**：模式 A / B / C（见 P2），预估代价（体积、构建时间、运行开销）。
 5. **分步骤执行计划**：每步一条命令或一处脚本改动点，标注改哪个文件。
-6. **语言特定的可选手段**（目标为 Java / Android、.NET / Unity、JS/TS、Go、纯 Python 或 Dart/Flutter 时**必填**）：
+6. **语言特定的可选手段**（目标为 Java / Android、.NET / Unity、JS/TS、Go、纯 Python、Dart/Flutter
+   或 WASM 产物时**必填**）：
    - Java / Android：从 [`docs/java-anti-rea.md`](docs/java-anti-rea.md)（机器可读：
      [`docs/java-anti-rea-options.yaml`](docs/java-anti-rea-options.yaml)）的 J0–J8 里挑 1–3 个候选；
    - .NET / Unity：从 [`docs/dotnet-anti-rea.md`](docs/dotnet-anti-rea.md)（机器可读：
@@ -125,18 +129,22 @@ MCP Server (`anti-rea-mcp`)，让上层 Agent 用工具调用而不是手工拼�
    - 纯 Python：从 [`docs/python-anti-rea.md`](docs/python-anti-rea.md)（机器可读：
      [`docs/python-anti-rea-options.yaml`](docs/python-anti-rea-options.yaml)）的 PY0–PY8 里挑 1–3 个候选；
    - Dart / Flutter：从 [`docs/dart-anti-rea.md`](docs/dart-anti-rea.md)（机器可读：
-     [`docs/dart-anti-rea-options.yaml`](docs/dart-anti-rea-options.yaml)）的 DA0–DA8 里挑 1–3 个候选。
+     [`docs/dart-anti-rea-options.yaml`](docs/dart-anti-rea-options.yaml)）的 DA0–DA8 里挑 1–3 个候选；
+   - WASM 产物：从 [`docs/wasm-anti-rea.md`](docs/wasm-anti-rea.md)（机器可读：
+     [`docs/wasm-anti-rea-options.yaml`](docs/wasm-anti-rea-options.yaml)）的 W0–W8 里挑 1–3 个候选；
+     **W2/W4 必须标注“实验性、需试点”**，不得承诺已验证。
 
    逐一摘要**原理 / 优点 / 缺点 / 影响（性能、体积、构建、可移植性、兼容性）与获取源**，
-   并给"按场景推荐"的取舍——**由用户勾选**；其中 J5/J6、D5/D6、JS4/JS5、G4/G5、PY4/PY5、DA4/DA5
-   以及 IL2CPP 的 native 部分可回归本技能的常规加固链路。
+   并给"按场景推荐"的取舍——**由用户勾选**；其中 J5/J6、D5/D6、JS4/JS5、G4/G5、PY4/PY5、DA4/DA5、
+   W2/W4/W5 以及 IL2CPP 的 native 部分可回归本技能的常规加固链路。
 7. **验证与回退**：baseline 对照怎么留、`verify`/`attack_sim` 怎么跑、如何还原
    （构建注入不改源码；确需改构建文件的，保留原文件副本或 VCS 分支）；Java 字节码侧
    按 `docs/java-anti-rea.md` §4、.NET/CIL 侧按 `docs/dotnet-anti-rea.md` §5、JS/TS 侧按
    `docs/js-anti-rea.md` §4、Go 侧按 `docs/go-anti-rea.md` §4、纯 Python 侧按
-   `docs/python-anti-rea.md` §4、Dart/Flutter 侧按 `docs/dart-anti-rea.md` §4 的反编译/反混淆方法论执行
-   （本技能 `verify`/`attack_sim` **不适用于** Java 字节码、CIL 托管程序集、JS/TS 产物、Go 二进制、
-   `.py`/`.pyc` 与 Dart AOT 快照；下沉 native / NativeAOT / IL2CPP / WASM 的原生部分照常使用）。
+   `docs/python-anti-rea.md` §4、Dart/Flutter 侧按 `docs/dart-anti-rea.md` §4、WASM 侧按
+   `docs/wasm-anti-rea.md` §4 的反编译/反混淆方法论执行（本技能 `verify`/`attack_sim`
+   **不适用于** Java 字节码、CIL 托管程序集、JS/TS 产物、Go 二进制、`.py`/`.pyc`、Dart AOT 快照
+   与 `.wasm` 字节码；下沉 native / NativeAOT / IL2CPP / WASM 的**宿主 native 部分**照常使用）。
 
 > 方案必须**停下等用户批准**；用户可能改范围、换模式、加要求——按其修订后再进入 P3。
 
@@ -198,7 +206,7 @@ LLM 红队会话）→ `anti-rea report`；附回退说明与后续再构建的�
 | **T1 原生变换** | 选定模式 A/B 且要 `protect` / `verify` / `attack_sim` | LLVM/clang >= 18、CMake >= 3.16、binutils、`make build` |
 | **T2 语言与平台** | 按目标语言 / 构建体系 / 宿主平台 | rustc+cargo（Rust C/FFI）、node+npm（JS/TS 仅扫描）、JDK（Java 勘察用工程自带）、容器运行时 |
 | **T3 可选增强** | 只在用到该功能时 | Ghidra+PyGhidra（独立验证）、`deap`（`evolve`，`requirements-optional.txt`）、LLM 端点（红队会话） |
-| **T4 永不下发** | — | Java/Android、.NET/Unity、JS/TS、Go、纯 Python 与 Dart/Flutter 的第三方加固工具/产品（只记录获取源，见各语言选项目录） |
+| **T4 永不下发** | — | Java/Android、.NET/Unity、JS/TS、Go、纯 Python、Dart/Flutter 与 WASM 的第三方加固工具/产品（只记录获取源，见各语言选项目录） |
 
 > **本技能不打包、不预装、不代下载任何第三方工具**；第三方组件一律只记录**获取源与用法**。
 > 完整策略、体量量级与最小部署集见 [`docs/PROVISIONING.md`](docs/PROVISIONING.md)。
@@ -223,8 +231,8 @@ LLVM 位置无需写死：通过 `ANTI_REA_LLVM=<前缀>` 或把工具放进 `PA
 1. **先最小、后按需**：P0 只装 T0 + 跑 `scan`；**在用户选定模式之前**不装 LLVM、不拉镜像、不下载 Ghidra。
 2. **只读需要的那一篇文档**：`SKILL.md` + 与当前语言/模式相关的**一篇**（`docs/build-injection.md`、
    `docs/java-anti-rea.md`、`docs/dotnet-anti-rea.md`、`docs/js-anti-rea.md`、`docs/go-anti-rea.md`、
-   `docs/python-anti-rea.md` 或 `docs/dart-anti-rea.md`）；不要把 `docs/` 全量读进上下文
-   （省 token 也是省部署代价）。
+   `docs/python-anti-rea.md`、`docs/dart-anti-rea.md` 或 `docs/wasm-anti-rea.md`）；
+   不要把 `docs/` 全量读进上下文（省 token 也是省部署代价）。
 3. **把"要装什么"写进 P1 方案**：按「现在就装（T0）/ 选定模式后再装（T1）/ 用到才装（T2/T3）」
    三档列出，附触发条件；T4 只给获取源。
 4. **安装动作先经用户确认**：装系统包、拉镜像、下载第三方工具前说明体量与影响；工具许可与
@@ -494,6 +502,30 @@ REA 的 provider 已含 **ASAR / JS 树**与浏览器（Playwright/CDP）。完�
 **不由本技能分发**。Dart 侧验证用 blutter、reFlutter、解包工具与 `strings` 按该文档 §4 方法论执行；
 DA4 的 native 部分回流本技能 `verify` / `attack_sim`。
 
+## WASM 产物——无字节码级变换，提供**选项菜单**
+
+WASM 是**编译目标**，不是源语言。关键事实：**WASM 不能对宿主保密**（线性内存/导入函数都在对方手里）、
+AOT 缓存仍是机器码、未 strip 的 `name` 段与 DWARF 可直接读出名字。完整说明见
+[`docs/wasm-anti-rea.md`](docs/wasm-anti-rea.md)，机器可读清单见
+[`docs/wasm-anti-rea-options.yaml`](docs/wasm-anti-rea-options.yaml)。九个选项：
+
+| ID | 手段 | 一句话 |
+| :--- | :--- | :--- |
+| W0 | 核心逻辑放服务端/宿主 | 唯一"逆 WASM 也无产出"的路径 |
+| W1 | 构建基线（`-O3` + strip + 不发映射） | **必做**；`name`/DWARF 必须先去掉 |
+| W2 | IR 变换 → wasm32（本引擎） | **实验性**；端到端仅在 Linux x86_64 验证过 |
+| W3 | 字符串/数据段（IR 加密 + 运行期解密） | 宿主可读内存，运行期仍可 dump |
+| W4 | 控制流/VM → wasm32 | **实验性**；性能/体积需实测 |
+| W5 | 宿主侧 native 下沉（WASI/Node/Electron） | **最推荐的换赛道方式** |
+| W6 | 分发完整性（SRI/CSP/签名/加密 at rest） | 不防逆向，只防替换/篡改 |
+| W7 | 运行期对抗（宿主校验/心跳） | WASM 内几乎没有可靠反调试 |
+| W8 | 密钥与信任根 + 水印 | 长期密钥不要进模块 |
+
+**用法**：同样**由用户选择**（P1 呈现 → 用户勾选 → P3 按模式 B 纪律落地）；工具与商用产品
+**不由本技能分发**。**W2/W4 必须在方案里标注“实验性、需试点”**，先选小模块做功能/性能对照；
+WASM 侧验证用 `wasm2wat`/`wasm-objdump`/`wasm-decompile`/`wasm2c` 按该文档 §4 方法论执行，
+W5 的 native 部分回流本技能 `verify` / `attack_sim`。
+
 ## 安全边界 / Safety & Limits (v1.0)
 
 - **只加固你拥有的代码**。开放源码组件默认跳过（`allow_unknown_owner` 可覆盖）。
@@ -503,6 +535,8 @@ DA4 的 native 部分回流本技能 `verify` / `attack_sim`。
   .NET / Unity、JS/TS、Go、纯 Python 与 Dart/Flutter 改用「选项菜单 + 方法论」（见上六节与
   `docs/java-anti-rea.md`、`docs/dotnet-anti-rea.md`、`docs/js-anti-rea.md`、
   `docs/go-anti-rea.md`、`docs/python-anti-rea.md`、`docs/dart-anti-rea.md`）。
+  **WASM 产物**无字节码级变换，改用 `docs/wasm-anti-rea.md` 的 W0–W8；其中 **wasm32 的 IR 变换
+  属实验性**，端到端仅在 Linux x86_64 验证过，不得当作已验证能力。
   Rust 的 IR 级支持已做过可行性验证：受 rustc 自带 LLVM 版本与 cargo 注入点限制，
   **不纳入 v1.x**；Rust 项目的敏感核心请放在 **C/FFI** 侧。
 - 默认平台 Linux x86_64；其他平台可运行 scan/plan，protect 需自行验证。
@@ -520,6 +554,7 @@ DA4 的 native 部分回流本技能 `verify` / `attack_sim`。
 - `docs/go-anti-rea.md` — **Go 反 REA 选项目录**（G0–G8 + GoReSym/garble/cgo/验证方法论）。
 - `docs/python-anti-rea.md` — **纯 Python 反 REA 选项目录**（PY0–PY8 + 字节码/打包/验证方法论）。
 - `docs/dart-anti-rea.md` — **Dart / Flutter 反 REA 选项目录**（DA0–DA8 + AOT/FFI/验证方法论）。
+- `docs/wasm-anti-rea.md` — **WASM 产物反 REA 选项目录**（W0–W8 + wasm32 实验路径/验证方法论）。
 - `docs/mcp-clients.md` — MCP 客户端配置（Claude Desktop / Cursor / 通用 stdio）。
 - `examples/quickstart/` — 端到端可运行示例。
 - `docs/FAQ.md`、`docs/troubleshooting.md` — 常见问题与故障排查。

@@ -107,6 +107,7 @@
 | S6 | **Go 反 REA 选项目录**（G0–G8 + GoReSym/garble/cgo） | `docs/go-anti-rea.md`、`docs/go-anti-rea-options.yaml`、`tests/test_go_options.py` | — |
 | S6 | **纯 Python 反 REA 选项目录**（PY0–PY8 + 字节码/打包） | `docs/python-anti-rea.md`、`docs/python-anti-rea-options.yaml`、`tests/test_python_options.py` | — |
 | S6 | **Dart / Flutter 反 REA 选项目录**（DA0–DA8 + AOT/FFI） | `docs/dart-anti-rea.md`、`docs/dart-anti-rea-options.yaml`、`tests/test_dart_options.py` | — |
+| S6 | **WASM 反 REA 选项目录**（W0–W8 + wasm32 实验路径） | `docs/wasm-anti-rea.md`、`docs/wasm-anti-rea-options.yaml`、`tests/test_wasm_options.py` | — |
 | S6 | **分级安装 / 按需获取**（T0–T4、最小部署集、不打包第三方） | `docs/PROVISIONING.md`、`requirements-optional.txt`、`skill.json.provisioning`/`deploy`、`tools/release.py --skill`、`tests/test_provisioning.py` | v1.0 |
 | S6 | 端到端示例 | `examples/quickstart/`（`victim.c` / `run.sh` / `README.md`） | v1.0 |
 | S6 | 使用者文档（FAQ/排障/中英 README/许可证/变更记录） | `docs/{FAQ,troubleshooting}.md`、`README.md`、`README.zh-CN.md`、`LICENSE`、`CHANGELOG.md` | v1.0 |
@@ -285,6 +286,7 @@ python -m core.mcp            # 或 anti-rea-mcp（stdio MCP Server）
 | **可用性：Go 选项菜单** | `docs/go-anti-rea.md`（G0–G8 + GoReSym/garble/cgo）+ `skill.json.go_anti_rea` / `guides`；工具不由本技能分发 | `tests/test_go_options.py` |
 | **可用性：纯 Python 选项菜单** | `docs/python-anti-rea.md`（PY0–PY8 + 字节码/打包/C 扩展）+ `skill.json.python_anti_rea` / `guides`；工具不由本技能分发 | `tests/test_python_options.py` |
 | **可用性：Dart / Flutter 选项菜单** | `docs/dart-anti-rea.md`（DA0–DA8 + AOT/FFI/平台完整性）+ `skill.json.dart_anti_rea` / `guides`；工具不由本技能分发 | `tests/test_dart_options.py` |
+| **可用性：WASM 选项菜单** | `docs/wasm-anti-rea.md`（W0–W8 + wasm32 实验路径/宿主 native）+ `skill.json.wasm_anti_rea` / `guides`；工具不由本技能分发 | `tests/test_wasm_options.py` |
 | **可用性：分级安装 / 按需获取** | `docs/PROVISIONING.md`（T0–T4：装什么/何时装/不装什么）；`anti-rea doctor --tier T0/T1`；`requirements.txt`（核心）+ `requirements-optional.txt`（deap）；`python tools/release.py --skill dist`（最小技能包） | `tests/test_provisioning.py` |
 | **可用性：示例与支持** | `examples/quickstart/`、`docs/FAQ.md`、`docs/troubleshooting.md`、中英 README、Issue 模板 | 端到端可运行 |
 
@@ -357,6 +359,7 @@ NFR-02 Token 倍数子项 **S7 评估后废弃**（见 §1 说明）。
 | **Go 反 REA 选项目录（G0–G8）** | `docs/go-anti-rea.md`、`docs/go-anti-rea-options.yaml` |
 | **纯 Python 反 REA 选项目录（PY0–PY8）** | `docs/python-anti-rea.md`、`docs/python-anti-rea-options.yaml` |
 | **Dart / Flutter 反 REA 选项目录（DA0–DA8）** | `docs/dart-anti-rea.md`、`docs/dart-anti-rea-options.yaml` |
+| **WASM 反 REA 选项目录（W0–W8）** | `docs/wasm-anti-rea.md`、`docs/wasm-anti-rea-options.yaml` |
 | **Rust IR 级可行性 spike（结论：不纳入）** | `docs/analysis/rust-ir-spike.md` |
 | **常见问题 / 排障** | `docs/FAQ.md`、`docs/troubleshooting.md` |
 | **端到端示例** | `examples/quickstart/` |

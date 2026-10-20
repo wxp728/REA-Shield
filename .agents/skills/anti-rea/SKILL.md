@@ -20,7 +20,9 @@ description: >-
   Python it provides a PY0-PY8 menu (bytecode packing, C extensions, native
   offload); Python C-extensions remain on the native pipeline. For Dart/Flutter
   it provides a DA0-DA8 menu (release build baseline, --obfuscate, dart:ffi
-  native offload, web targets, platform integrity).
+  native offload, web targets, platform integrity). For WebAssembly artifacts it
+  provides a W0-W8 menu (strip/optimize baseline, experimental source-side IR to
+  wasm32, host-side native offload); WASM cannot keep secrets from its host.
 license: MIT
 version: 1.0.0
 ---
@@ -98,6 +100,12 @@ or native offload. Python C-extensions stay on the regular native pipeline.
 Never ship debug/profile builds (`kernel_blob.bin`) or `--split-debug-info`
 symbols; `--obfuscate` only renames identifiers and is not string encryption.
 `dart:ffi`/native-plugin outputs can be hardened with the native pipeline.
+
+**WebAssembly** artifacts (no bytecode-level transforms): the **W0–W8** menu — see
+`docs/wasm-anti-rea.md` (machine-readable `docs/wasm-anti-rea-options.yaml`).
+WASM cannot keep secrets from its host; strip the `name` section/DWARF and never
+ship source maps. Source-side IR transforms to wasm32 are experimental and not
+verified end-to-end; host-side native offload uses the regular native pipeline.
 
 Scope: only harden code you own. v1.0 fully tested on Linux x86_64 with
 LLVM/clang 18. See `docs/INSTALL.md` for details, Docker, and environment
