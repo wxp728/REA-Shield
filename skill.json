@@ -155,6 +155,27 @@
       "tools": ["go tool nm/objdump", "go version -m", "GoReSym", "redress", "Ghidra", "strings/objdump"]
     }
   },
+  "python_anti_rea": {
+    "ir_transforms": false,
+    "note": "Pure Python does not go through LLVM; the skill provides a selectable option menu (PY0-PY8) for logic written in .py. Python C-extensions remain supported through the regular native pipeline. .pyc is decompilable, packers are extractable, and commercial bytecode shells have unpackers -- the honest ceiling is low; prefer server-side logic (PY0) or native offload (PY5). Third-party tools are not bundled.",
+    "guide": "docs/python-anti-rea.md",
+    "catalog": "docs/python-anti-rea-options.yaml",
+    "options": [
+      {"id": "PY0", "name": "server-side logic (core algorithms/keys stay off the client)"},
+      {"id": "PY1", "name": "distribution baseline (no .py, -OO, no debug info)"},
+      {"id": "PY2", "name": "bytecode encryption/packing (PyArmor et al.)"},
+      {"id": "PY3", "name": "source-level string/control-flow obfuscation"},
+      {"id": "PY4", "name": "compile to a C extension (Cython / mypyc / Nuitka)"},
+      {"id": "PY5", "name": "offload to native (ctypes/cffi/pybind11/C core), then harden with this skill"},
+      {"id": "PY6", "name": "package as an executable (PyInstaller/onefile/PEX; not protection)"},
+      {"id": "PY7", "name": "runtime hardening (anti-debug / integrity)"},
+      {"id": "PY8", "name": "key management off-client (keyring/KMS) + watermarking"}
+    ],
+    "verification": {
+      "note": "verify/attack_sim target LLVM native artifacts and do NOT apply to .py/.pyc; use pycdc/decompyle3/pylingual and unpacking tools. PY4/PY5 native parts use the regular native pipeline.",
+      "tools": ["pycdc/pycdas", "decompyle3/uncompyle6", "pylingual", "pyinstxtractor-ng", "strings/nm/objdump"]
+    }
+  },
   "guides": {
     "install": "docs/INSTALL.md",
     "provisioning": "docs/PROVISIONING.md",
@@ -167,6 +188,8 @@
     "js_anti_rea_catalog": "docs/js-anti-rea-options.yaml",
     "go_anti_rea": "docs/go-anti-rea.md",
     "go_anti_rea_catalog": "docs/go-anti-rea-options.yaml",
+    "python_anti_rea": "docs/python-anti-rea.md",
+    "python_anti_rea_catalog": "docs/python-anti-rea-options.yaml",
     "threat_analysis": "docs/analysis/rea-threat-analysis.md",
     "faq": "docs/FAQ.md"
   },
@@ -363,7 +386,8 @@
       "java_note": "No IR transforms for Java bytecode; see the top-level `java_anti_rea` option menu (docs/java-anti-rea.md), and let the user choose the combination. Kotlin/Scala compile to JVM bytecode and follow the same menu.",
       "dotnet_note": "No IL transforms for .NET (C#/F#/VB) or Unity; see the top-level `dotnet_anti_rea` option menu (docs/dotnet-anti-rea.md). NativeAOT/IL2CPP/native-offload outputs go through the regular native pipeline.",
       "js_note": "No source-level transforms for JS/TS; see the top-level `js_anti_rea` option menu (docs/js-anti-rea.md). Never ship source maps; WASM/native-offload outputs (JS4/JS5) go through the regular native pipeline.",
-      "go_note": "No IR transforms for Go; see the top-level `go_anti_rea` option menu (docs/go-anti-rea.md). -s -w is not protection (pclntab remains); cgo/native-offload outputs go through the regular native pipeline."
+      "go_note": "No IR transforms for Go; see the top-level `go_anti_rea` option menu (docs/go-anti-rea.md). -s -w is not protection (pclntab remains); cgo/native-offload outputs go through the regular native pipeline.",
+      "python_note": "Python C-extensions are supported by the regular native pipeline; pure Python has no IR transforms and gets the `python_anti_rea` option menu (docs/python-anti-rea.md). .pyc is decompilable; prefer server-side or native offload."
     }
   },
   "quickstart": [

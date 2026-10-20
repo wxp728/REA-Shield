@@ -77,6 +77,21 @@
   「Go 项目」一节并同步 P1/P4、T4、See also；`README(.zh-CN)`、`STATUS`、`.agents`、`release.py` 同步；
   **新增 `tests/test_go_options.py`** 与扫描器回归。
 
+### 新增（技能改进 · 纯 Python 反 REA 选项目录）
+
+- **新增 [`docs/python-anti-rea.md`](docs/python-anti-rea.md)**：**PY0–PY8**——服务端化 /
+  分发基线（不带源码、`-OO`）/ 字节码加密与加壳（PyArmor 等）/ 源码级字符串与控制流 /
+  编译为 C 扩展（Cython、mypyc、Nuitka）/ 下沉 native（ctypes/cffi/pybind11）/ 打包可执行
+  （PyInstaller/PEX）/ 运行期对抗 / 密钥与水印。
+- **口径固定**：`.pyc` **可反编译**、打包工具**可解包**、商用壳**有 unpacker**；
+  纯 Python 静态防护**天花板很低**，优先 PY0（服务端）或 PY5（native 下沉）。
+  Python **C 扩展**仍走既有 native 链路，能力不变。
+- **机器可读清单**：新增 [`docs/python-anti-rea-options.yaml`](docs/python-anti-rea-options.yaml)
+  （含 pycdc/decompyle3/pylingual/pyinstxtractor-ng 验证方法论）。
+- **接线**：`skill.json.python_anti_rea` / `guides` / `supported.languages.python_note`；
+  `SKILL.md` 新增「纯 Python 项目」一节并同步 P1/P4、T4、See also；`README(.zh-CN)`、`STATUS`、
+  `.agents`、`release.py` 同步；**新增 `tests/test_python_options.py`**。
+
 ### 变更（文档 / PoC 去本地化）
 
 - 清掉入库文件中残留的本机绝对路径（`/opt/<toolchain>`、`/home/<user>` 等），**不改变任何验证结论**：

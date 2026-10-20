@@ -1,0 +1,304 @@
+# Python（纯代码）反 REA 选项的机器可读清单（供 Agent 在 P1 方案里组装"菜单"）
+#
+# 用法：Agent 读取本文件 → 按项目画像（是否联网 / 能否改构建 / 是否允许商用壳 / 价值等级）
+#       筛出 1–3 个候选 → 把 principle / pros / cons / impacts 摘要写进 out/PROPOSAL.md
+#       → 由用户选择（SKILL.md 工作流 P1→P2）。
+#
+# 边界：本技能不分发这里的任何第三方工具；source 字段只是"获取途径"记录。
+# 人类可读版（含说明与场景匹配）：docs/python-anti-rea.md
+
+version: 1
+kind: python-anti-rea-options
+status: guide-only  # 非需求基线，不改变 SRS
+note: >-
+  纯 Python 不经过 LLVM（ADR-006）；.pyc 可被反编译，打包工具可被解开，商用壳有 unpacker。
+  本清单按"攻击方要多付出什么"从高到低排列；纯 Python 的静态防护天花板很低，
+  真正的出口是服务端化（PY0）或 native 下沉（PY5）。
+
+# 组合建议（按场景）
+combinations:
+  - scenario: 内部脚本 / 低价值
+    options: [PY1]
+  - scenario: 商用离线工具
+    options: [PY1, PY2, PY7]
+  - scenario: 高价值离线产品
+    options: [PY5, PY7, PY8]
+  - scenario: 已有 Python 代码、想少改
+    options: [PY4, PY5]
+  - scenario: SaaS / 在线服务
+    options: [PY0, PY1]
+
+options:
+  - id: PY0
+    name: 核心逻辑上服务端
+    principle: 授权/密钥运算/核心算法放服务端 API，客户端只保留调用与展示。
+    effect: 攻击方逆到底只能拿到协议调用。
+    effectiveness: highest
+    pros:
+      - 唯一能让"逆到底也没有产出"的路径
+      - 密钥不进客户端
+    cons:
+      - 需联网；有延迟与服务端成本
+      - 离线工具/内网隔离环境不可用
+    impacts:
+      architecture: 最大
+      runtime: 网络往返延迟
+      ops: 可用性/SLA 成为新的失败点
+      portability: 不变（客户端变薄）
+    tools: []
+    best_for: 产品本就要联网、核心价值可服务化
+    verify: 攻击方视角确认"逆到底得到什么"
+
+  - id: PY1
+    name: 分发基线（不带源码、-OO、去调试信息）
+    principle: 发布物不含 .py，只用 .pyc/打包产物；python -OO 去 docstring；不带测试/调试脚本。
+    effect: 失去注释与格式；字节码仍可反编译。
+    effectiveness: low
+    pros:
+      - 零成本、减小体积
+      - 所有 Python 项目的发布基线
+    cons:
+      - 单层基本不构成防护
+      - .pyc 魔数与 Python 版本绑定
+      - 反编译工具仍可用
+    impacts:
+      build: compileall / -OO
+      runtime: 无额外开销
+      ops: traceback 可读性下降
+      portability: 需按 Python 版本分发
+    tools:
+      - name: CPython（compileall / -OO）
+        source: https://docs.python.org/3/library/compileall.html
+        license: PSF-2.0
+    best_for: 所有 Python 项目的第一步
+    verify: pycdc/decompyle3 反编译后统计可读率
+
+  - id: PY2
+    name: 字节码加密/加壳（PyArmor 等）
+    principle: 字节码加密 + 运行期解密/解释，或自定义 loader；可带授权/过期/机器绑定。
+    effect: 静态拿到密文/壳，需要运行期 dump 或 unpacker。
+    effectiveness: medium
+    pros:
+      - 对"直接反编译"有明显阻碍
+      - 商用产品带授权/运维能力
+    cons:
+      - 存在公开/半公开 unpacker
+      - 与 Python 版本/平台绑定
+      - 与打包/多进程/子解释器可能冲突
+      - 商用许可成本
+    impacts:
+      build: 需要加密/打包步骤
+      runtime: 启动解密开销
+      ops: 升级 Python 需重适配；需无壳排障构建
+      portability: 不变（但平台/版本绑定）
+    tools:
+      - name: PyArmor
+        source: https://pyarmor.readthedocs.io/
+        license: commercial (trial available)
+      - name: 自研 importlib loader
+        source: https://docs.python.org/3/library/importlib.html
+        license: PSF-2.0
+    best_for: 能接受商用许可/兼容性约束的离线工具
+    verify: 公开 unpacker + 动态 dump 的工时
+
+  - id: PY3
+    name: 源码级字符串/控制流
+    principle: AST/源码层拆分加密字符串、编码常量、改写分支。
+    effect: strings/关键字检索失效；静态阅读变难。
+    effectiveness: low-medium
+    pros:
+      - 无需引入运行时
+      - 可按模块/函数粒度
+    cons:
+      - ast 可被反变换
+      - 动态特性（eval/getattr/装饰器）让混淆易碎
+      - 没有成熟的开源 Python 控制流混淆器
+    impacts:
+      build: 构建期代码生成
+      runtime: 取决于变换强度
+      ops: 调试/traceback/测试受影响
+      portability: 不变
+    tools:
+      - name: ast / libcst（自研）
+        source: https://docs.python.org/3/library/ast.html
+        license: PSF-2.0
+    best_for: 只对少量关键常量/函数
+    verify: strings 明文比例 + 反混淆工时 + 性能 A/B
+
+  - id: PY4
+    name: 编译为 C 扩展（Cython / mypyc / Nuitka）
+    principle: 把 Python/.pyx 编译成 C，再编译为扩展或可执行；Nuitka 直接生成 C 并调用系统编译器。
+    effect: 核心变成 native 代码，攻击方需反编译/反汇编。
+    effectiveness: medium-high
+    pros:
+      - 性能通常提升
+      - 不依赖商用壳
+      - 产物是普通扩展/可执行文件
+    cons:
+      - 生成代码可读性差、符号多
+      - Cython 只覆盖可静态类型化子集；mypyc 要求类型注解
+      - Nuitka 构建慢、产物大
+      - 本技能对"生成 C"的注入尚未验证
+    impacts:
+      build: 构建链显著变重（C 编译器、平台 wheel）
+      runtime: 性能/启动变化
+      ops: 调试与异常栈复杂；CI 时间增加
+      portability: 部分（逐平台 wheel）
+    tools:
+      - name: Cython
+        source: https://cython.org/
+        license: Apache-2.0
+      - name: mypyc
+        source: https://mypyc.readthedocs.io/
+        license: MIT
+      - name: Nuitka
+        source: https://nuitka.net/
+        license: Apache-2.0
+    best_for: 已有 Python 代码、想把热模块编译/下沉
+    verify: 对生成 C 尝试本技能注入（实验）；native 产物用 verify/attack_sim
+
+  - id: PY5
+    name: 下沉 native（ctypes/cffi/pybind11/C 核心）
+    principle: 核心用 C/C++ 实现为共享库或扩展，Python 只做调用；C 侧用本技能做 IR 变换。
+    effect: 核心不再以 Python 形式存在，回到 native 战场。
+    effectiveness: high
+    pros:
+      - 防护强度最高
+      - 性能好
+      - 产物是标准 .so/.pyd
+    cons:
+      - 逐平台/架构各编一份
+      - 跨语言调试困难；native 崩溃杀解释器
+      - 封送/异常映射成本
+    impacts:
+      build: 构建矩阵与 CI 变重
+      runtime: 封送开销（批量化后可忽略）
+      ops: wheel 需 manylinux/macosx/Windows 多份
+      portability: 产物层丧失
+    tools:
+      - name: ctypes / cffi
+        source: https://docs.python.org/3/library/ctypes.html
+        license: PSF-2.0 / MIT
+      - name: pybind11
+        source: https://pybind11.readthedocs.io/
+        license: BSD-3-Clause
+      - name: CPython C API
+        source: https://docs.python.org/3/c-api/
+        license: PSF-2.0
+    best_for: 加密/授权/协议/算法核心（纯 Python 最推荐的换赛道方式）
+    verify: 用本技能 verify/attack_sim 验证 native 侧；Python 侧检查是否残留算法
+
+  - id: PY6
+    name: 打包为可执行（PyInstaller / onefile / PEX）
+    principle: 把解释器、依赖与代码打成一个可执行文件或归档。
+    effect: 分发方便；不是保护，可被解包。
+    effectiveness: low
+    pros:
+      - 用户无需装 Python
+      - 部署简单
+    cons:
+      - 可提取、可反编译
+      - 体积大、启动慢
+      - AV 误报；跨平台需分别构建
+    impacts:
+      build: 增加打包步骤
+      runtime: 启动开销与体积
+      ops: 升级/补丁需重打包；与壳可能冲突
+      portability: 不变
+    tools:
+      - name: PyInstaller
+        source: https://pyinstaller.org/
+        license: GPL-2.0-with-exception
+      - name: shiv / PEX
+        source: https://github.com/linkedin/shiv
+        license: Apache-2.0 / MIT
+    best_for: 分发便利，不纳入防护强度评估
+    verify: pyinstxtractor-ng 解包 + 反编译
+
+  - id: PY7
+    name: 运行期对抗（反调试 / 完整性）
+    principle: 检测 sys.gettrace/pydevd/调试器附加、校验自身哈希、检测注入；异常时降级。
+    effect: 抬高动态调试与自动化解包成本（与 PY2/PY5 协同）。
+    effectiveness: supporting
+    pros:
+      - 与静态手段正交
+      - 实现成本低
+    cons:
+      - 纯 Python 检测很容易被 patch
+      - 干扰合法调试/测试/性能分析
+      - 对静态阅读无效
+    impacts:
+      build: 需要哈希基线
+      runtime: 启动/运行检测开销
+      ops: 误杀与 CI 白名单
+      portability: 需逐平台适配
+    tools:
+      - name: 自研（sys.gettrace / sys.monitoring / 哈希）
+        source: https://docs.python.org/3/library/sys.html
+        license: PSF-2.0
+    best_for: 只作为辅助层
+    verify: 挂调试器/自动化解包的成功率与耗时
+
+  - id: PY8
+    name: 密钥与信任根 + 水印
+    principle: 密钥不进客户端（服务端/KMS/HSM/系统钥匙串）；水印用于溯源。
+    effect: 代码被读也拿不到可用密钥。
+    effectiveness: supporting
+    pros:
+      - 让攻击产出不可直接用
+      - 水印为维权留证
+    cons:
+      - 需服务端/硬件；离线受限
+      - 纯 Python 无可信执行环境
+    impacts:
+      architecture: 密钥生命周期与轮换
+      ops: 托管/合规成本
+      portability: 依赖平台能力
+    tools:
+      - name: keyring
+        source: https://github.com/jaraco/keyring
+        license: MIT
+      - name: 云 KMS / HSM
+        source: 各云厂商或硬件厂商
+        license: commercial
+    best_for: 只要还发密钥到客户端，就应优先处理
+    verify: 客户端是否残留可用密钥/明文许可证
+
+# 验证方法论（纯 Python 侧）
+verification:
+  note: >-
+    本技能 verify/attack_sim 面向 LLVM 原生产物，不适用于 .py/.pyc；
+    纯 Python 侧用 pycdc/decompyle3/pylingual 与解包工具按本文方法论执行，
+    PY4/PY5 的 native 部分回到本技能链路。
+  tools:
+    - name: pycdc / pycdas
+      source: https://github.com/zrax/pycdc
+      license: GPL-3.0
+      use: 新版 .pyc 反编译/反汇编
+    - name: decompyle3 / uncompyle6
+      source: https://github.com/rocky/python-decompyle3
+      license: GPL-3.0
+      use: 旧版字节码反编译（版本受限）
+    - name: pylingual
+      source: https://pylingual.io/
+      license: online service
+      use: 新版字节码反编译（上传前评估合规）
+    - name: pyinstxtractor-ng
+      source: https://github.com/pyinstxtractor/pyinstxtractor-ng
+      license: MIT
+      use: 解开 PyInstaller 产物
+    - name: strings / nm / objdump
+      source: 系统 binutils
+      license: GPL
+      use: 原生扩展/打包产物静态线索
+  metrics:
+    - 反编译可读率（名字/常量/控制流）
+    - 字符串明文比例
+    - 壳/unpacker 的闭合时间
+    - 重建可运行工程的成功率与工时
+    - "逆到底得到了什么（可用算法/密钥 = 防护不够）"
+  steps:
+    - 取产物（.pyc / wheel / PyInstaller 目录 / .so）
+    - 能拿到 .pyc 就反编译（pycdc/decompyle3/pylingual）
+    - PY2 尝试公开 unpacker + 动态 dump
+    - PY4/PY5 改用 strings/nm/objdump + 本技能 verify/attack_sim

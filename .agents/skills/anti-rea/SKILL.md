@@ -16,7 +16,9 @@ description: >-
   (no IL transforms) it provides a D0-D8 menu including NativeAOT and IL2CPP.
   For JavaScript / TypeScript (no source-level transforms) it provides a
   JS0-JS8 menu including WebAssembly and native offload. For Go it provides a
-  G0-G8 menu (build baseline, garble, cgo native offload, TinyGo/WASM).
+  G0-G8 menu (build baseline, garble, cgo native offload, TinyGo/WASM). For pure
+  Python it provides a PY0-PY8 menu (bytecode packing, C extensions, native
+  offload); Python C-extensions remain on the native pipeline.
 license: MIT
 version: 1.0.0
 ---
@@ -82,6 +84,12 @@ outputs (JS4/JS5) can be hardened with the regular native pipeline.
 (machine-readable `docs/go-anti-rea-options.yaml`). `-s -w` is NOT protection:
 function names remain in pclntab and GoReSym can recover them. cgo/native
 offload (G4) can be hardened with the regular native pipeline.
+
+**Pure Python** (no IR transforms): the **PY0–PY8** menu — see
+`docs/python-anti-rea.md` (machine-readable
+`docs/python-anti-rea-options.yaml`). `.pyc` is decompilable, packers are
+extractable, and commercial shells have unpackers; prefer server-side logic
+or native offload. Python C-extensions stay on the regular native pipeline.
 
 Scope: only harden code you own. v1.0 fully tested on Linux x86_64 with
 LLVM/clang 18. See `docs/INSTALL.md` for details, Docker, and environment
