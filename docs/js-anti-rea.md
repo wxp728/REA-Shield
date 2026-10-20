@@ -258,7 +258,7 @@
 ## 7. 参考
 
 - REA 威胁分析：`docs/analysis/rea-threat-analysis.md`（含 ASAR/JS 树 provider）
-- 语言/变换范围决策：`docs/design/ADR.md`（ADR-006）
+- IR 变换范围决策：`docs/design/ADR.md`（ADR-001）
 - native 侧构建注入与加固：`docs/build-injection.md`、`SKILL.md`（工作流模式 B）
 - Electron 安全清单：`https://www.electronjs.org/docs/latest/tutorial/security`
 - Electron fuses：`https://github.com/electron/fuses`

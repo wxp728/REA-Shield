@@ -1,7 +1,7 @@
 {
   "name": "anti-rea",
   "version": "1.0.0",
-  "description": "AI Agent-callable code-protection toolchain that raises the cost of automated reverse engineering (REA) for code you own. LLVM-based obfuscation transforms + CLI + MCP server. Phased workflow: read-only survey -> transformation proposal for user review -> user picks a mode (one-shot build / build-architecture transformation with an anti-REA build environment) -> flexible execution. Provides information and methodology; does not auto-modify the target project's build system.",
+  "description": "AI Agent-callable code-protection toolchain that raises the cost of automated reverse engineering (REA) for code you own. LLVM-based obfuscation transforms + CLI + MCP server. Phased workflow: read-only survey -> transformation proposal for user review -> user picks a mode (one-shot build / build-architecture transformation with an anti-REA build environment) -> flexible execution. Provides information and methodology; does not auto-modify the target project's build system. Also ships selectable anti-REA option menus for Java/Android (J0-J8), .NET/Unity (D0-D8), JavaScript/TypeScript (JS0-JS8), Go (G0-G8), pure Python (PY0-PY8), Dart/Flutter (DA0-DA8), and WebAssembly artifacts (W0-W8); third-party tools are never bundled.",
   "license": "MIT",
   "homepage": "https://gitee.com/wxp728/REA-Shield",
   "repository": "https://gitee.com/wxp728/REA-Shield",

@@ -54,7 +54,7 @@ Python C 扩展）代码施加多层级 LLVM 变换，把自动化逆向（REA �
    Linux x86_64 `.so`）全范围构建注入 + 独立 LLM 会话红队 + Ghidra 交叉验证，
    源码级泄漏被阻断（`docs/release/s7-field-report.md`）。
 3. 非 Linux 平台 `protect` 需容器/WSL。
-4. 纯 Rust/Java/.NET/JS 无 IR 层防护（ADR-006，架构决策，非缺陷）。
+4. 纯 Rust/Java/.NET/JS 无 IR 层防护（ADR-001，架构决策，非缺陷）。
 
 > 上述第 1、2 项的 S7 处置详情见 `docs/release/s7-field-report.md`；本版本其余范围以
 > **可复现的静态代理指标 + 独立核验**替代，并在 `docs/release/` 中如实标注。

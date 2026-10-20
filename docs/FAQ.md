@@ -21,10 +21,24 @@
 
 - **可施加 IR 层变换**：C、C++；Rust 仅 C/FFI 源（经 Cargo 集成）；
   Python 仅 C 扩展（经 setup.py 集成）。
-- **仅可扫描（无 IR 防护）**：纯 Rust、Java、.NET/C#、JS/TS、纯 Python。
+- **可扫描、但不做 IR 变换**：纯 Rust、Java、.NET/C#、JS/TS、纯 Python、Go、Dart。
+- **产物级菜单**：WASM（`.wasm` 是编译目标，不是源语言）。
 
-原因见 `docs/design/ADR.md` 的 ADR-006。SRS 中的语言清单是「扫描/识别范围」，
-不等于「变换范围」。
+不做 IR 变换的语言/产物，本技能提供**可选的选项目录**（由用户在 P1 方案里选组合）：
+
+| 语言 / 产物 | 菜单 | 人读指南 | 机器可读清单 |
+| :--- | :--- | :--- | :--- |
+| Java / Android | J0–J8 | [`java-anti-rea.md`](java-anti-rea.md) | [`java-anti-rea-options.yaml`](java-anti-rea-options.yaml) |
+| .NET / Unity | D0–D8 | [`dotnet-anti-rea.md`](dotnet-anti-rea.md) | [`dotnet-anti-rea-options.yaml`](dotnet-anti-rea-options.yaml) |
+| JavaScript / TypeScript | JS0–JS8 | [`js-anti-rea.md`](js-anti-rea.md) | [`js-anti-rea-options.yaml`](js-anti-rea-options.yaml) |
+| Go | G0–G8 | [`go-anti-rea.md`](go-anti-rea.md) | [`go-anti-rea-options.yaml`](go-anti-rea-options.yaml) |
+| 纯 Python | PY0–PY8 | [`python-anti-rea.md`](python-anti-rea.md) | [`python-anti-rea-options.yaml`](python-anti-rea-options.yaml) |
+| Dart / Flutter | DA0–DA8 | [`dart-anti-rea.md`](dart-anti-rea.md) | [`dart-anti-rea-options.yaml`](dart-anti-rea-options.yaml) |
+| WebAssembly 产物 | W0–W8 | [`wasm-anti-rea.md`](wasm-anti-rea.md) | [`wasm-anti-rea-options.yaml`](wasm-anti-rea-options.yaml) |
+
+原因：变换引擎是 LLVM Pass，只处理 **LLVM IR**；Java 字节码、.NET CIL、JS 源码、
+Go/Dart 的原生编译都不经过本插件的 LLVM IR（ADR-001）。SRS 中的语言清单是
+「扫描/识别范围」，不等于「变换范围」；引擎级新增语言属 SRS 范围外，须用户确认。
 
 ## Java / Android 项目怎么办？有防逆向手段吗？
 
@@ -40,6 +54,25 @@ ClassLoader 加壳、J4 字节码虚拟化（VMP 类）、J5 下沉 native（JNI
 验证提醒：本技能 `verify`/`attack_sim` 面向 **LLVM 原生产物**，**不适用于 Java 字节码**——
 Java 侧用反编译器（jadx / CFR / Vineflower）按该文档 §4 的方法论执行；下沉到 native 的部分
 回流本技能常规链路。
+
+## .NET / JS / Go / 纯 Python / Dart / WASM 怎么办？
+
+同样有菜单，工作流与 Java 一致：P0 勘察 → P1 把候选组合、代价与验证方法写进方案 →
+用户选定 → 再落地。对应文档见上表；几个最容易踩的坑先列在这里：
+
+- **.NET / Unity**：CIL 元数据近乎源码；`.NET` 的 NativeAOT、Unity 的 IL2CPP 会把 C++ 产物
+  回流本引擎（D0–D8，见 [`dotnet-anti-rea.md`](dotnet-anti-rea.md)）。
+- **JS / TS**：压缩/改名不是保护；**source map 不得随包发布**；核心可下沉 WASM/native
+  （JS0–JS8，见 [`js-anti-rea.md`](js-anti-rea.md)）。
+- **Go**：`-s -w` 后 `pclntab` 仍可恢复函数名/路径；优先 garble + cgo 下沉
+  （G0–G8，见 [`go-anti-rea.md`](go-anti-rea.md)）。
+- **纯 Python**：`.pyc` 可反编译，打包也可解包；优先上服务端或 C 扩展/native
+  （PY0–PY8，见 [`python-anti-rea.md`](python-anti-rea.md)）。
+- **Dart / Flutter**：不要发 debug/profile 包（`kernel_blob.bin` 就是 kernel），不要发
+  `--split-debug-info` 符号；`--obfuscate` 只改名（DA0–DA8，见
+  [`dart-anti-rea.md`](dart-anti-rea.md)）。
+- **WASM**：不能对宿主保密；`strip` 只是基线，W2/W4 的 wasm32 IR 变换仍是**实验性**，
+  W5 宿主 native 下沉通常更划算（W0–W8，见 [`wasm-anti-rea.md`](wasm-anti-rea.md)）。
 
 ## 支持哪些平台？
 
@@ -67,10 +100,12 @@ export ANTI_REA_LLVM=/usr/lib/llvm-18     # 指向你的 LLVM 前缀
   数 MB），够跑 `scan`/`plan`/`doctor`/`report`；
 - **T1 原生变换**：要 `protect`/`verify`/`attack_sim` 时，自行安装 LLVM/clang 18、CMake、
   binutils，再 `make build`（本技能不分发这些系统组件）；
-- **T2 语言与平台**：按目标语言/构建体系选装（rustc+cargo、node+npm、JDK 用工程自带、容器）；
+- **T2 语言与平台**：按目标语言/构建体系选装（rustc+cargo、node+npm、JDK/Android SDK 用工程自带、
+  Go 工具链、Dart/Flutter SDK、wasm32 目标与 wabt、容器）；
 - **T3 可选增强**：只在用到时（Ghidra+PyGhidra 独立验证、`deap`→`pip install -r
   requirements-optional.txt`、LLM 红队端点）；
-- **T4 永不下发**：Java/Android 第三方加固工具与商用产品。
+- **T4 永不下发**：Java/.NET/JS/Go/纯 Python/Dart/WASM 的第三方加固、混淆、反编译与验证工具/
+  商用产品（各菜单只记录获取源与用法）。
 
 只看最小集：`anti-rea doctor --tier T0`。**只把技能装到别的项目**（不带测试/开发材料）：
 `python tools/release.py --skill dist`。缺 T1/T2/T3 **不阻塞** `scan`/`plan`。

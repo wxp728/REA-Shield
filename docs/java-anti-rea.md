@@ -1,7 +1,7 @@
 # Java / Android 反 REA 选项目录（供用户选择）
 
 > **状态**：使用指南（**非**需求基线；不修改 `SRS.md`）。
-> **定位**：本技能对 Java **不做 IR 层变换**（ADR-006）。对 Java / Android 项目，本技能提供的是
+> **定位**：本技能对 Java **不做 IR 层变换**（ADR-001）。对 Java / Android 项目，本技能提供的是
 > **一张选项菜单 + 每种的原理 / 优点 / 缺点 / 影响 + 获取源与用法要点**，由 Agent 按
 > `SKILL.md` 的分阶段工作流在 **P1 方案**里呈现给用户，**用户选定后再落地**。
 > **边界**：第三方工具与商用加固产品**不由本技能分发**——这里只记录获取途径与使用要点；
@@ -208,7 +208,7 @@
 ## 7. 参考
 
 - REA 威胁分析：`docs/analysis/rea-threat-analysis.md`（REA 的 provider 与权威模型）
-- 语言/变换范围决策：`docs/design/ADR.md`（ADR-006）
+- IR 变换范围决策：`docs/design/ADR.md`（ADR-001）
 - native 侧构建注入与加固：`docs/build-injection.md`、`SKILL.md`（工作流模式 B）
 - GraalVM 下载与许可：`https://www.graalvm.org/downloads/`
 - Panama FFM：`https://openjdk.org/jeps/454`

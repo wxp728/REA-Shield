@@ -213,7 +213,7 @@
 ## 7. 参考
 
 - REA 威胁分析：`docs/analysis/rea-threat-analysis.md`
-- 语言/变换范围决策：`docs/design/ADR.md`（ADR-006）
+- IR 变换范围决策：`docs/design/ADR.md`（ADR-001）
 - native 侧构建注入：`docs/build-injection.md`、`SKILL.md`（模式 B）
 - JS/TS 菜单（WASM 加载与 Web 分发）：`docs/js-anti-rea.md`
 - wabt：`https://github.com/WebAssembly/wabt`；Binaryen：`https://github.com/WebAssembly/binaryen`

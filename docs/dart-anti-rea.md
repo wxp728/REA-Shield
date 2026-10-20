@@ -1,7 +1,7 @@
 # Dart / Flutter 反 REA 选项目录（供用户选择）
 
 > **状态**：使用指南（**非**需求基线；不修改 `SRS.md`）。
-> **定位**：本技能对 Dart **不做 IR 层变换**（Flutter 用 Dart AOT，不经过 LLVM；ADR-006）。
+> **定位**：本技能对 Dart **不做 IR 层变换**（Flutter 用 Dart AOT，不经过 LLVM；ADR-001）。
 > 对 Flutter 应用、Dart CLI/服务，本文提供**一张选项菜单 + 每种的原理 / 优点 / 缺点 / 影响 +
 > 获取源与用法要点**，由 Agent 按 `SKILL.md` 的分阶段工作流在 **P1 方案**里呈现给用户，
 > **用户选定后再落地**。
@@ -215,7 +215,7 @@
 ## 7. 参考
 
 - REA 威胁分析：`docs/analysis/rea-threat-analysis.md`
-- 语言/变换范围决策：`docs/design/ADR.md`（ADR-006）
+- IR 变换范围决策：`docs/design/ADR.md`（ADR-001）
 - native 侧构建注入：`docs/build-injection.md`、`SKILL.md`（模式 B）
 - Flutter 混淆官方文档：`https://docs.flutter.dev/deployment/obfuscate`
 - Dart FFI：`https://dart.dev/guides/libraries/c-interop`

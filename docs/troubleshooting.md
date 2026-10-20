@@ -87,7 +87,12 @@ cat build/run/verification_report.json      # 看 functional_pass / overhead
 
 `scan` 的 `project.target_platform` 现按**主机探测**（可被
 `options.target_platform` 覆盖），不再写死。语言支持范围见 FAQ——
-SRS 的「识别语言」≠「可变换语言」。
+SRS 的「识别语言」≠「可变换语言」：只有 C/C++、Rust C/FFI 源、Python C 扩展走 IR 变换；
+Java/.NET/JS/Go/纯 Python/Dart/WASM 见各选项目录
+（[`java-anti-rea.md`](java-anti-rea.md)、[`dotnet-anti-rea.md`](dotnet-anti-rea.md)、
+[`js-anti-rea.md`](js-anti-rea.md)、[`go-anti-rea.md`](go-anti-rea.md)、
+[`python-anti-rea.md`](python-anti-rea.md)、[`dart-anti-rea.md`](dart-anti-rea.md)、
+[`wasm-anti-rea.md`](wasm-anti-rea.md)）。
 
 ### 8. `libtinfo.so.5: no version information available`
 

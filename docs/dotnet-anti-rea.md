@@ -1,7 +1,7 @@
 # .NET / Unity 反 REA 选项目录（供用户选择）
 
 > **状态**：使用指南（**非**需求基线；不修改 `SRS.md`）。
-> **定位**：本技能对 .NET **不做 IL 层变换**（ADR-006）。对 C# / F# / VB.NET（含 Unity、MAUI、
+> **定位**：本技能对 .NET **不做 IL 层变换**（ADR-001）。对 C# / F# / VB.NET（含 Unity、MAUI、
 > Blazor、桌面/CLI/服务）项目，本技能提供的是**一张选项菜单 + 每种的原理 / 优点 / 缺点 / 影响
 > + 获取源与用法要点**，由 Agent 按 `SKILL.md` 的分阶段工作流在 **P1 方案**里呈现给用户，
 > **用户选定后再落地**。
@@ -269,7 +269,7 @@
 ## 8. 参考
 
 - REA 威胁分析：`docs/analysis/rea-threat-analysis.md`（REA 的 provider，含 MSIX/AppX）
-- 语言/变换范围决策：`docs/design/ADR.md`（ADR-006）
+- IR 变换范围决策：`docs/design/ADR.md`（ADR-001）
 - native 侧构建注入与加固：`docs/build-injection.md`、`SKILL.md`（工作流模式 B）
 - NativeAOT：`https://learn.microsoft.com/dotnet/core/deploying/native-aot/`
 - ReadyToRun：`https://learn.microsoft.com/dotnet/core/deploying/ready-to-run`

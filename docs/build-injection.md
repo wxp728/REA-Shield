@@ -118,10 +118,11 @@ make -j"$(nproc)"
   常数编码（`ANTI_REA_CONST_ENCODE`）已覆盖整型常量与常量向量两种操作数，但**不要**只在
   `-O1` 上验指纹——高优化档能看到额外的常量形态。
 
-## 复用场景：Android NDK 与 Unity IL2CPP
+## 复用场景：Android NDK、Unity IL2CPP 与其它零成本入口
 
-这两类工程的产物**在到达本技能之前就已经是 C/C++**，因此不需要额外的"语言支持"，
-按本文的模式 B 注入即可。属于**零成本复用**，但需要你的工程配合。
+这些工程的产物**在到达本技能之前就已经是 C/C++**，因此不需要额外的"语言支持"，
+按本文的模式 B 注入即可。属于**零成本复用**，但需要你的工程配合。Go / Python / Dart /
+WASM 项目也可以把核心下沉到 native 后回流，见本节末尾。
 
 ### Android NDK（JNI `.so`）
 
@@ -149,3 +150,22 @@ make -j"$(nproc)"
   IL2CPP 的 `global-metadata.dat` 不在本技能范围内（见 `docs/dotnet-anti-rea.md` §3）。
 - **定位**：**实验性**——Unity 版本升级会改变生成器行为，升级后必须重跑试点；不建议作为
   唯一防线（配合元数据/名称处理与运行期检测）。
+
+### Go cgo / Python C 扩展 / Dart FFI / WASM 宿主侧
+
+共同思路：**目标语言负责业务编排，把最值钱的核心下沉到 C/C++（或带 C ABI 的库），
+再用本技能加固 native 部分**。构建注入仍按本文模式 B；语言运行时/框架自身的产物
+（`.pyc`、Dart AOT 快照、`.wasm` 字节码、Go 二进制）不在 LLVM Pass 的变换范围内。
+
+- **Go**：`cgo` / `-buildmode=c-shared` 产出的 C ABI 库，或把核心改为 C/C++ 后由 cgo 调用；
+  见 [`go-anti-rea.md`](go-anti-rea.md) 的 G4。
+- **Python**：C 扩展（`setup.py build_ext` / `pybind11` / Cython 生成的 C/C++），或
+  `ctypes`/`cffi` 调用的 native 库；见 [`python-anti-rea.md`](python-anti-rea.md) 的 PY4/PY5。
+- **Dart / Flutter**：`dart:ffi`、platform channel 或原生插件调用的 native 库；
+  见 [`dart-anti-rea.md`](dart-anti-rea.md) 的 DA4。
+- **WASM**：WASI host、Node addon、Electron 原生模块、Tauri Rust 核心等宿主侧 native；
+  见 [`wasm-anti-rea.md`](wasm-anti-rea.md) 的 W5。WASM 不能对宿主保密，W5 通常比在
+  字节码层堆保护更划算。
+
+这些 native 部分可以直接用 `anti-rea-cc` 注入；编译/注入的版本匹配与验证要求与
+Android NDK、Unity IL2CPP 相同。

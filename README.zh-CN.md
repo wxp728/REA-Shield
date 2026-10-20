@@ -111,6 +111,7 @@ REA-Shield/
 │   ├── INSTALL.md            # 安装/构建/环境变量/Docker
 │   ├── mcp-clients.md        # MCP 客户端配置（可直接粘贴）
 │   ├── FAQ.md、troubleshooting.md    # 常见问题与排障
+│   ├── *-anti-rea.md         # 选项目录：J0–J8 / D0–D8 / JS0–JS8 / G0–G8 / PY0–PY8 / DA0–DA8 / W0–W8（另有 *-options.yaml）
 │   ├── requirements/         # S0 交付物
 │   │   ├── SRS.md                    # 需求规格（47 FR + 11 NFR + 5 CQ）
 │   │   ├── use-cases.md              # 用例文档

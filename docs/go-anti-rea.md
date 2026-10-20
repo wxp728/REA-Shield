@@ -1,7 +1,7 @@
 # Go 反 REA 选项目录（供用户选择）
 
 > **状态**：使用指南（**非**需求基线；不修改 `SRS.md`）。
-> **定位**：本技能对 Go **不做 IR 层变换**（Go 编译器不走 LLVM；ADR-006）。对 Go 服务、CLI、
+> **定位**：本技能对 Go **不做 IR 层变换**（Go 编译器不走 LLVM；ADR-001）。对 Go 服务、CLI、
 > 桌面工具，本技能提供的是**一张选项菜单 + 每种的原理 / 优点 / 缺点 / 影响 + 获取源与用法要点**，
 > 由 Agent 按 `SKILL.md` 的分阶段工作流在 **P1 方案**里呈现给用户，**用户选定后再落地**。
 > **边界**：第三方工具**不由本技能分发**，只记录获取途径与使用要点；目标仍是"**抬高成本**"。
@@ -200,7 +200,7 @@
 ## 7. 参考
 
 - REA 威胁分析：`docs/analysis/rea-threat-analysis.md`（Go/Rust 元数据 provider）
-- 语言/变换范围决策：`docs/design/ADR.md`（ADR-006）
+- IR 变换范围决策：`docs/design/ADR.md`（ADR-001）
 - native 侧构建注入：`docs/build-injection.md`、`SKILL.md`（模式 B）
 - garble：`https://github.com/burrowers/garble`
 - GoReSym：`https://github.com/mandiant/GoReSym`

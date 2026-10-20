@@ -15,7 +15,7 @@
    （std / panic / allocator）或改用 `no_std` 静态库，工程改造与维护成本高（§3）。
 4. **字符串加密对 Rust 字面量暂不生效**：rustc 把字面量发成 `{ [N x i8] }` 结构包装的全局，
    现有 pass 只处理 `ConstantDataArray` 初始化器；C 代码同样场景可正常清除（表 2）。
-   修复属于**引擎改动**（ADR-006 范围外），须用户确认后才能做。
+   修复属于**引擎改动**（SRS 范围外），须用户确认后才能做。
 5. **建议**：继续把 **C/FFI 边界**作为 Rust 项目的唯一“支持”路径；若需要更强的 Rust 侧保护，
    下一步做**菜单级** Rust 选项（类似 Java/.NET），而不是引擎级 IR 支持。
 
@@ -129,6 +129,6 @@ ANTI_REA_STRATEGIES='cff,mba,opaque' ANTI_REA_SEED=7 \
 
 - LLVM Bitcode 兼容性（不同版本不保证可读）：`https://llvm.org/docs/BitCodeFormat.html`
 - `rustc` 的 LLVM 版本：`rustc -vV`（每个 release 可能升级）
-- 语言/变换范围决策：`docs/design/ADR.md`（ADR-006）
+- IR 变换范围决策：`docs/design/ADR.md`（ADR-001）
 - 构建注入：`docs/build-injection.md`
 - Java / .NET 的菜单级先例：`docs/java-anti-rea.md`、`docs/dotnet-anti-rea.md`

@@ -113,6 +113,7 @@ REA-Shield/
 │   ├── INSTALL.md            # Install / build / env vars / Docker
 │   ├── mcp-clients.md        # MCP client config (paste-ready)
 │   ├── FAQ.md、troubleshooting.md    # FAQ & troubleshooting
+│   ├── *-anti-rea.md         # Option menus: J0–J8 / D0–D8 / JS0–JS8 / G0–G8 / PY0–PY8 / DA0–DA8 / W0–W8 (+ *-options.yaml)
 │   ├── requirements/         # S0 deliverables
 │   │   ├── SRS.md                    # Software Requirements Spec (47 FR + 11 NFR + 5 CQ)
 │   │   ├── use-cases.md              # Use cases

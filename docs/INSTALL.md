@@ -13,12 +13,19 @@
 | :--- | :--- | :--- | :--- |
 | **T0 核心（必装）** | 始终（`scan`/`plan`/`doctor`/`report`） | Python ≥ 3.11、`jsonschema`、`PyYAML` | `pip install -r requirements.txt` |
 | **T1 原生变换** | 选定模式 A/B 且要 `protect`/`verify`/`attack_sim` | LLVM/clang 18、CMake ≥ 3.16、binutils、`file` | 系统包 + `make build` |
-| **T2 语言与平台** | 按目标语言 / 构建体系 / 宿主平台 | rustc+cargo、node+npm（仅扫描）、JDK（用工程自带）、容器运行时 | 各自按需 |
+| **T2 语言与平台** | 按目标语言 / 构建体系 / 宿主平台 | rustc+cargo、node+npm（仅扫描）、JDK/Android SDK（用工程自带）、Go 工具链、Dart/Flutter SDK、wasm32 目标与 wabt、容器运行时 | 各自按需 |
 | **T3 可选增强** | 只在用到该功能时 | Ghidra+PyGhidra、`deap`（`evolve`）、LLM 端点（红队） | `pip install -r requirements-optional.txt` 等 |
-| **T4 永不下发** | — | Java/Android 第三方加固工具/产品 | 自行获取（见 [`java-anti-rea.md`](java-anti-rea.md)） |
+| **T4 永不下发** | — | Java/.NET/JS/Go/纯 Python/Dart/WASM 的第三方加固、混淆、反编译与验证工具/商用产品 | 自行获取（见各语言选项目录） |
 
 **默认只装 T0**；缺 T1/T2/T3 不阻塞 `scan`/`plan`——`anti-rea doctor` 会按分级分组，
 标出每项的「何时需要 / 怎么装」。
+
+> **语言菜单 ≠ 额外安装**：Java/.NET/JS/Go/纯 Python/Dart/WASM 的选项目录是**文档 + 机器可读
+> 清单**，随技能源码分发，不要求预先安装任何第三方工具；只有用户选定某个选项后，才按对应文档的
+> 「获取源」自行安装（T4）。各菜单见 [`java-anti-rea.md`](java-anti-rea.md)、
+> [`dotnet-anti-rea.md`](dotnet-anti-rea.md)、[`js-anti-rea.md`](js-anti-rea.md)、
+> [`go-anti-rea.md`](go-anti-rea.md)、[`python-anti-rea.md`](python-anti-rea.md)、
+> [`dart-anti-rea.md`](dart-anti-rea.md)、[`wasm-anti-rea.md`](wasm-anti-rea.md)。
 
 ### 0.1 最小安装（推荐起步，T0）
 

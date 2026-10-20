@@ -21,7 +21,12 @@ description: >-
   virtualization, offloading to native (JNI/JNA/FFM), GraalVM native-image,
   runtime hardening, key management — with principles, trade-offs, impacts and
   tool sources, plus a decompiler-based verification methodology; the user
-  chooses the combination.
+  chooses the combination. For other non-LLVM targets it provides the same
+  kind of selectable menus: .NET / Unity (D0-D8, including NativeAOT and
+  IL2CPP), JavaScript / TypeScript (JS0-JS8), Go (G0-G8), pure Python
+  (PY0-PY8), Dart / Flutter (DA0-DA8), and WebAssembly artifacts (W0-W8;
+  wasm32 source-side IR transforms are experimental). Third-party tools in
+  these menus are never bundled, only their sources and usage are recorded.
 license: MIT
 version: 1.0.0
 entrypoints:
@@ -346,7 +351,7 @@ export CC=$PWD/integrations/cc-wrapper/anti-rea-cc
 
 ## Java / Android 项目——无 IR 变换，提供**选项菜单**
 
-本技能对 Java **不做 IR 层变换**（字节码不经过 LLVM；ADR-006），但**不是没有手段**：
+本技能对 Java **不做 IR 层变换**（字节码不经过 LLVM；ADR-001），但**不是没有手段**：
 Java 侧的正确做法是按价值**分层选组合**。完整说明（原理 / 优点 / 缺点 / 影响 / 获取源 / 用法 /
 验证方法论）见 [`docs/java-anti-rea.md`](docs/java-anti-rea.md)，机器可读清单见
 [`docs/java-anti-rea-options.yaml`](docs/java-anti-rea-options.yaml)。九个选项（按"攻击方要多付出什么"排序）：
@@ -378,7 +383,7 @@ Java 字节码的验证用反编译器（jadx / CFR / Vineflower）按该文档 
 
 ## .NET / Unity 项目——无 IL 变换，提供**选项菜单**
 
-本技能对 .NET **不做 IL 层变换**（CIL 不经过 LLVM；ADR-006），但**不是没有手段**：
+本技能对 .NET **不做 IL 层变换**（CIL 不经过 LLVM；ADR-001），但**不是没有手段**：
 CIL 带完整元数据，反编译器能近乎还原源码（比 C/C++ 更"一眼见底"），且 REA 的 provider 已含
 **MSIX/AppX**。完整说明（原理 / 优点 / 缺点 / 影响 / 获取源 / 用法 / 验证方法论）见
 [`docs/dotnet-anti-rea.md`](docs/dotnet-anti-rea.md)，机器可读清单见
@@ -406,7 +411,7 @@ CIL 带完整元数据，反编译器能近乎还原源码（比 C/C++ 更"一�
 
 ## JavaScript / TypeScript 项目——无 IR 变换，提供**选项菜单**
 
-本技能对 JS/TS **不做源码级变换**（不是 LLVM IR 语言；ADR-006）。JS 的特殊性在于
+本技能对 JS/TS **不做源码级变换**（不是 LLVM IR 语言；ADR-001）。JS 的特殊性在于
 **交付物本身就是可执行源码**：压缩/改名只是"多花几分钟"，source map 一旦外发等于直接交源码。
 REA 的 provider 已含 **ASAR / JS 树**与浏览器（Playwright/CDP）。完整说明见
 [`docs/js-anti-rea.md`](docs/js-anti-rea.md)，机器可读清单见
@@ -434,7 +439,7 @@ REA 的 provider 已含 **ASAR / JS 树**与浏览器（Playwright/CDP）。完�
 
 ## Go 项目——无 IR 变换，提供**选项菜单**
 
-本技能对 Go **不做 IR 层变换**（Go 编译器不走 LLVM；ADR-006）。Go 的难点在于
+本技能对 Go **不做 IR 层变换**（Go 编译器不走 LLVM；ADR-001）。Go 的难点在于
 **`pclntab` 让函数名/路径在 `-s -w` 之后仍可恢复**（GoReSym 一类工具）。完整说明见
 [`docs/go-anti-rea.md`](docs/go-anti-rea.md)，机器可读清单见
 [`docs/go-anti-rea-options.yaml`](docs/go-anti-rea-options.yaml)。九个选项：
@@ -480,7 +485,7 @@ REA 的 provider 已含 **ASAR / JS 树**与浏览器（Playwright/CDP）。完�
 
 ## Dart / Flutter 项目——无 IR 变换，提供**选项菜单**
 
-本技能对 Dart **不做 IR 层变换**（Flutter 用 Dart AOT，不经过 LLVM；ADR-006）。最关键的两件事：
+本技能对 Dart **不做 IR 层变换**（Flutter 用 Dart AOT，不经过 LLVM；ADR-001）。最关键的两件事：
 **不要发 debug/profile 包**（`kernel_blob.bin` 就是 Dart kernel）与**不要发 `--split-debug-info` 符号**；
 `--obfuscate` 只重命名标识符，字符串/逻辑仍在。完整说明见
 [`docs/dart-anti-rea.md`](docs/dart-anti-rea.md)，机器可读清单见
@@ -531,7 +536,7 @@ W5 的 native 部分回流本技能 `verify` / `attack_sim`。
 - **只加固你拥有的代码**。开放源码组件默认跳过（`allow_unknown_owner` 可覆盖）。
 - 目标是**抬高成本**，不是「不可破解」。任何加固都可被有决心的分析者攻破。
 - 变换引擎基于 LLVM Pass：支持 C/C++；Rust 仅 C/FFI 源、Python 仅 C 扩展。
-  纯 Rust / Go / Dart / Java / .NET / JS/TS / 纯 Python 无 IR 层防护（ADR-006）；Java / Android、
+  纯 Rust / Go / Dart / Java / .NET / JS/TS / 纯 Python 无 IR 层防护（ADR-001）；Java / Android、
   .NET / Unity、JS/TS、Go、纯 Python 与 Dart/Flutter 改用「选项菜单 + 方法论」（见上六节与
   `docs/java-anti-rea.md`、`docs/dotnet-anti-rea.md`、`docs/js-anti-rea.md`、
   `docs/go-anti-rea.md`、`docs/python-anti-rea.md`、`docs/dart-anti-rea.md`）。

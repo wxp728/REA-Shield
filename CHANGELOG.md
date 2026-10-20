@@ -5,6 +5,15 @@
 
 ## [Unreleased]
 
+### 文档（语言菜单交叉引用补齐）
+
+- 在 `docs/FAQ.md`、`docs/INSTALL.md`、`docs/PROVISIONING.md`、`docs/troubleshooting.md`、
+  两份 README 与 `SKILL.md` 入口描述中补齐 Go / 纯 Python / Dart / WASM（以及既有
+  Java/.NET/JS）菜单的索引与安装口径；`docs/build-injection.md` 增加 Go cgo、Python C 扩展、
+  Dart FFI、WASM 宿主 native 的零成本回流路径。
+- 修正语言/变换范围引用：LLVM Pass 范围应引 ADR-001（ADR-006 是外部工具适配层）。
+- 新增 `tests/test_docs_coverage.py`，固定菜单指南在入口文档中的可见性。
+
 ### 分析（Rust IR 级加固可行性 spike）
 
 - **新增 [`docs/analysis/rust-ir-spike.md`](docs/analysis/rust-ir-spike.md)**：实测 rustc 与引擎的
@@ -254,7 +263,7 @@
 
 - **平台**：完整实测仅 Linux x86_64；其他平台 `protect` 需 Docker/WSL。
 - **语言**：IR 变换覆盖 C/C++（Rust 仅 C/FFI 源，Python 仅 C 扩展）；
-  纯 Rust / Java / .NET / JS/TS 仅可扫描（ADR-006）。
+  纯 Rust / Java / .NET / JS/TS 仅可扫描（ADR-001）。
 - **NFR-02 Token 倍数 ≥ 100×** 与 **外部第三方红队** 两项验收需真实 LLM 会话，
   v1.0 未在离线环境实测，**顺延至 S7**（见 `docs/release/RELEASE-1.0.0.md`）。
 - 威胁模型为「抬高成本」，非「不可逆向」。

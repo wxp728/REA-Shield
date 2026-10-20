@@ -16,7 +16,7 @@
 | **要 protect C/C++**（再加 T1） | LLVM/clang 18 + cmake + binutils（系统包），并**本地编译**本仓库插件 | LLVM 包几百 MB 级 |
 | **走容器**（不想在宿主装 LLVM） | 自建镜像时联网取 Debian 包（LLVM 18 等） | 镜像 1 GB 级 |
 | **可选增强**（T3） | Ghidra + PyGhidra / `deap`(+numpy) / LLM 端点 | 按需，最重的一项 |
-| **Java / Android 加固**（T4） | **不由本技能下载**：ProGuard / R8 / yGuard / DexGuard / DashO / Zelix / GraalVM / jadx … 自行获取 | — |
+| **语言级加固**（T4） | **不由本技能下载**：Java/.NET/JS/Go/纯 Python/Dart/WASM 的混淆、加固、反编译与验证工具（ProGuard / R8 / ConfuserEx / javascript-obfuscator / garble / PyArmor / jadx …）自行获取 | — |
 
 > 体量为量级参考、不承诺；以包管理器实际输出为准。**本技能仓库里没有第三方二进制、也没有第三方源码镜像。**
 
@@ -26,12 +26,19 @@
 | :--- | :--- | :--- | :--- |
 | **T0 核心（必装，最小）** | 始终 | Python ≥ 3.11；`jsonschema`、`PyYAML`；本仓库 `core/`、`schemas/`、`policies/` | 源码随包；依赖由 `pip` 装 |
 | **T1 原生变换** | **选定模式 A/B 且要对原生代码施加变换**（protect/verify/attack_sim）时 | LLVM/clang 18（`clang`、`opt`、`llvm-config`）、cmake ≥ 3.16、binutils（`nm`/`objdump`/`strings`）、`file`；本地 `make build` 编译插件 | **否**（用户自备系统包；插件由本仓库源码编译） |
-| **T2 语言与平台扩展** | 按**目标的语言 / 构建体系 / 宿主平台**选装 | rustc+cargo（Rust C/FFI 源）；node+npm（JS/TS **仅扫描**）；JDK/构建工具（Java/Android 勘察 —— 用你工程已有的）；容器运行时（宿主平台不匹配或不想装 LLVM 时） | **否**（用目标项目自己的工具链） |
+| **T2 语言与平台扩展** | 按**目标的语言 / 构建体系 / 宿主平台**选装 | rustc+cargo（Rust C/FFI 源）；node+npm（JS/TS **仅扫描**）；JDK/Android SDK 与构建工具（Java/Android 勘察 —— 用你工程已有的）；Go 工具链（Go 勘察/构建）；Dart/Flutter SDK（Dart/Flutter 勘察/构建）；wasm32 目标、`wasm-ld`、wabt（WASM 产物分析/验证）；容器运行时（宿主平台不匹配或不想装 LLVM 时） | **否**（用目标项目自己的工具链） |
 | **T3 可选增强** | 只在用到该功能时 | Ghidra + PyGhidra（独立第三方交叉验证）；`deap`（`anti-rea evolve`，会连带 numpy）；LLM 出站端点（`attack_sim --allow-llm` 的红队会话） | **否**（用户自备；凭据/配额自管） |
-| **T4 永不下发** | — | Java/Android 第三方加固工具与商用产品：ProGuard、R8、yGuard、Zelix KlassMaster、Allatori、DashO、DexGuard、GraalVM、jadx、CFR、Vineflower… | **否**（只记录获取源与用法，见 `docs/java-anti-rea.md`） |
+| **T4 永不下发** | — | 各语言第三方加固/混淆/反编译/验证工具与商用产品：Java（ProGuard、R8、yGuard、Zelix、Allatori、DashO、DexGuard、GraalVM、jadx、CFR、Vineflower）、.NET（ConfuserEx、Obfuscar、Dotfuscator、dnSpyEx、de4dot）、JS（javascript-obfuscator、Jscrambler、bytenode、webcrack）、Go（garble、GoReSym、redress）、Python（PyArmor、pycdc、decompyle3、pyinstxtractor-ng）、Dart（blutter、reFlutter）、WASM（wabt、Binaryen、Ghidra）… | **否**（只记录获取源与用法，见各 `docs/*-anti-rea.md`） |
 
 **延迟策略**：默认只装 T0；T1/T2/T3 各自独立、可后装；T4 永不代取。
 装与不装**互不阻塞**——缺 T1 时 `scan`/`plan` 照常可用（`doctor` 会明确告知"选到该功能时再装"）。
+
+> **语言菜单本身不增加安装量**：选项目录与对应 `*-options.yaml` 只是文档和机器可读清单，
+> 随技能源码分发；其中的第三方工具一律属于 T4，仅在用户选定某个选项后，由用户按文档记录的
+> 获取源自行安装。菜单见 [`java-anti-rea.md`](java-anti-rea.md)、
+> [`dotnet-anti-rea.md`](dotnet-anti-rea.md)、[`js-anti-rea.md`](js-anti-rea.md)、
+> [`go-anti-rea.md`](go-anti-rea.md)、[`python-anti-rea.md`](python-anti-rea.md)、
+> [`dart-anti-rea.md`](dart-anti-rea.md)、[`wasm-anti-rea.md`](wasm-anti-rea.md)。
 
 ## 2. 最小部署集（skill-only deploy）
 
@@ -103,7 +110,8 @@ python tools/release.py --skill dist        # 生成最小技能包
   `vm_interp.bc` 都是**由本仓库自己的源码编译**出来的，且**不随包分发**（打包排除 + `.gitignore`）。
 - 唯一在"安装期"联网获取第三方的是 **`Dockerfile` 构建镜像**（Debian 包：LLVM 18 等）——
   这是**可选的容器路径**，属于"按需获取"的一种形态，已在 Dockerfile 注释与本文说明。
-- 与 Java 侧完全一致：`docs/java-anti-rea.md` 的 T4 工具同样只记录**获取源与用法**。
+- 与所有语言菜单一致：`docs/{java,dotnet,js,go,python,dart,wasm}-anti-rea.md` 里的 T4 工具
+  同样只记录**获取源与用法**，不由本技能下载或打包。
 
 > 本轮同时修正了一处与"不提交本地环境信息"原则不一致的旧代码：工具链兜底搜索路径从
 > 写死的本机目录改为通用通配（`/opt/*/clang+llvm-*` 等），行为不变、换机更稳。
