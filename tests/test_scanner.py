@@ -68,6 +68,17 @@ class TestScanner(unittest.TestCase):
             self.assertEqual(m["project"]["language"], "go")
             self.assertEqual(m["project"]["build_system"], "go")
 
+    def test_detects_dart_build_and_language(self):
+        """`pubspec.yaml` 与 `.dart` 应识别为 dart 语言 + pub 构建（P0 画像）。"""
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "pubspec.yaml"), "w") as fh:
+                fh.write("name: demo\nenvironment:\n  sdk: '>=3.0.0 <4.0.0'\n")
+            with open(os.path.join(d, "main.dart"), "w") as fh:
+                fh.write("void main() {}\n")
+            m = scan(d, {"allow_unknown_owner": True})
+            self.assertEqual(m["project"]["language"], "dart")
+            self.assertEqual(m["project"]["build_system"], "pub")
+
     def test_refuse_unknown_owner(self):
         with tempfile.TemporaryDirectory() as d:
             with open(os.path.join(d, "x.c"), "w") as fh:

@@ -18,7 +18,9 @@ description: >-
   JS0-JS8 menu including WebAssembly and native offload. For Go it provides a
   G0-G8 menu (build baseline, garble, cgo native offload, TinyGo/WASM). For pure
   Python it provides a PY0-PY8 menu (bytecode packing, C extensions, native
-  offload); Python C-extensions remain on the native pipeline.
+  offload); Python C-extensions remain on the native pipeline. For Dart/Flutter
+  it provides a DA0-DA8 menu (release build baseline, --obfuscate, dart:ffi
+  native offload, web targets, platform integrity).
 license: MIT
 version: 1.0.0
 ---
@@ -90,6 +92,12 @@ offload (G4) can be hardened with the regular native pipeline.
 `docs/python-anti-rea-options.yaml`). `.pyc` is decompilable, packers are
 extractable, and commercial shells have unpackers; prefer server-side logic
 or native offload. Python C-extensions stay on the regular native pipeline.
+
+**Dart / Flutter** (no IR transforms): the **DA0–DA8** menu — see
+`docs/dart-anti-rea.md` (machine-readable `docs/dart-anti-rea-options.yaml`).
+Never ship debug/profile builds (`kernel_blob.bin`) or `--split-debug-info`
+symbols; `--obfuscate` only renames identifiers and is not string encryption.
+`dart:ffi`/native-plugin outputs can be hardened with the native pipeline.
 
 Scope: only harden code you own. v1.0 fully tested on Linux x86_64 with
 LLVM/clang 18. See `docs/INSTALL.md` for details, Docker, and environment

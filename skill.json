@@ -176,6 +176,27 @@
       "tools": ["pycdc/pycdas", "decompyle3/uncompyle6", "pylingual", "pyinstxtractor-ng", "strings/nm/objdump"]
     }
   },
+  "dart_anti_rea": {
+    "ir_transforms": false,
+    "note": "Dart AOT does not go through LLVM; the skill provides a selectable option menu (DA0-DA8) for Flutter/Dart projects. --obfuscate only renames identifiers and does not hide strings; debug/profile builds contain kernel_blob.bin (Dart kernel) and must never be shipped; --split-debug-info symbols must stay private. Native offload via dart:ffi (DA4) can be hardened with the regular native pipeline. Third-party tools are not bundled.",
+    "guide": "docs/dart-anti-rea.md",
+    "catalog": "docs/dart-anti-rea-options.yaml",
+    "options": [
+      {"id": "DA0", "name": "server-side logic (core algorithms/keys stay off the client)"},
+      {"id": "DA1", "name": "build baseline (release AOT + --obfuscate --split-debug-info; no kernel_blob)"},
+      {"id": "DA2", "name": "string/constant handling (Dart code generation)"},
+      {"id": "DA3", "name": "control-flow rewriting / custom VM in Dart (high risk)"},
+      {"id": "DA4", "name": "offload to native (dart:ffi / platform channels), then harden with this skill"},
+      {"id": "DA5", "name": "web target (dart2js / dart2wasm; use the JS/WASM menus)"},
+      {"id": "DA6", "name": "platform integrity (Play Integrity / App Attest / root-jailbreak checks)"},
+      {"id": "DA7", "name": "runtime hardening on the Dart side (weak; auxiliary)"},
+      {"id": "DA8", "name": "key management off-client (Keystore/Keychain/KMS) + watermarking"}
+    ],
+    "verification": {
+      "note": "verify/attack_sim target LLVM native artifacts and do NOT apply to Dart AOT snapshots; use blutter/reFlutter/unpacking/strings. DA4 native parts use the regular native pipeline.",
+      "tools": ["blutter", "reFlutter", "unzip/apktool", "strings/nm/objdump", "Ghidra/IDA", "jadx"]
+    }
+  },
   "guides": {
     "install": "docs/INSTALL.md",
     "provisioning": "docs/PROVISIONING.md",
@@ -190,6 +211,8 @@
     "go_anti_rea_catalog": "docs/go-anti-rea-options.yaml",
     "python_anti_rea": "docs/python-anti-rea.md",
     "python_anti_rea_catalog": "docs/python-anti-rea-options.yaml",
+    "dart_anti_rea": "docs/dart-anti-rea.md",
+    "dart_anti_rea_catalog": "docs/dart-anti-rea-options.yaml",
     "threat_analysis": "docs/analysis/rea-threat-analysis.md",
     "faq": "docs/FAQ.md"
   },
@@ -387,7 +410,8 @@
       "dotnet_note": "No IL transforms for .NET (C#/F#/VB) or Unity; see the top-level `dotnet_anti_rea` option menu (docs/dotnet-anti-rea.md). NativeAOT/IL2CPP/native-offload outputs go through the regular native pipeline.",
       "js_note": "No source-level transforms for JS/TS; see the top-level `js_anti_rea` option menu (docs/js-anti-rea.md). Never ship source maps; WASM/native-offload outputs (JS4/JS5) go through the regular native pipeline.",
       "go_note": "No IR transforms for Go; see the top-level `go_anti_rea` option menu (docs/go-anti-rea.md). -s -w is not protection (pclntab remains); cgo/native-offload outputs go through the regular native pipeline.",
-      "python_note": "Python C-extensions are supported by the regular native pipeline; pure Python has no IR transforms and gets the `python_anti_rea` option menu (docs/python-anti-rea.md). .pyc is decompilable; prefer server-side or native offload."
+      "python_note": "Python C-extensions are supported by the regular native pipeline; pure Python has no IR transforms and gets the `python_anti_rea` option menu (docs/python-anti-rea.md). .pyc is decompilable; prefer server-side or native offload.",
+      "dart_note": "No IR transforms for Dart/Flutter; see the top-level `dart_anti_rea` option menu (docs/dart-anti-rea.md). Never ship debug builds (kernel_blob.bin) or --split-debug-info symbols; --obfuscate is not string encryption. dart:ffi/native-plugin outputs go through the regular native pipeline."
     }
   },
   "quickstart": [

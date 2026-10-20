@@ -1,0 +1,296 @@
+# Dart / Flutter 反 REA 选项的机器可读清单（供 Agent 在 P1 方案里组装"菜单"）
+#
+# 用法：Agent 读取本文件 → 按项目画像（是否 Flutter / 目标平台 / 有否服务端 / 能否改构建）
+#       筛出 1–3 个候选 → 把 principle / pros / cons / impacts 摘要写进 out/PROPOSAL.md
+#       → 由用户选择（SKILL.md 工作流 P1→P2）。
+#
+# 边界：本技能不分发这里的任何第三方工具；source 字段只是"获取途径"记录。
+# 人类可读版（含说明与场景匹配）：docs/dart-anti-rea.md
+
+version: 1
+kind: dart-anti-rea-options
+status: guide-only  # 非需求基线，不改变 SRS
+note: >-
+  Dart AOT 不经过 LLVM（ADR-006），本技能不做 Dart IR 变换。--obfuscate 只重命名标识符，
+  不隐藏字符串/常量/逻辑；debug/profile 包里的 kernel_blob.bin 等于源码；--split-debug-info
+  的符号映射绝不能随包发布。纯客户端方案只能抬高成本。
+
+# 组合建议（按场景）
+combinations:
+  - scenario: 所有 Flutter 项目
+    options: [DA1]
+  - scenario: 商用 App（有服务端）
+    options: [DA1, DA6, DA8]
+  - scenario: 高价值离线 App
+    options: [DA1, DA4, DA7, DA8]
+  - scenario: 含关键字符串/协议
+    options: [DA1, DA2]
+  - scenario: Flutter Web / 多端
+    options: [DA1, DA5]
+
+options:
+  - id: DA0
+    name: 核心逻辑上服务端
+    principle: 授权/密钥运算/核心算法/风控放服务端 API，客户端只保留调用与展示。
+    effect: 攻击方逆到底只能拿到协议调用。
+    effectiveness: highest
+    pros:
+      - 唯一能让"逆到底也没有产出"的路径
+      - 密钥不进客户端
+    cons:
+      - 需联网；有延迟与服务端成本
+      - 离线 App/内网环境不可用
+    impacts:
+      architecture: 最大
+      runtime: 网络往返延迟
+      ops: 可用性/SLA 成为新的失败点
+      portability: 不变（客户端变薄）
+    tools: []
+    best_for: 产品本就要联网、核心价值可服务化
+    verify: 攻击方视角确认"逆到底得到什么"
+
+  - id: DA1
+    name: 构建基线（release AOT + --obfuscate --split-debug-info）
+    principle: 只发 release AOT；启用 --obfuscate --split-debug-info=<私有目录>；确保 kernel_blob.bin/snapshot data 不在发布包；Android R8；Web 不发 source map。
+    effect: Dart 标识符不可读、无调试信息；字符串常量仍在对象池，结构仍可被工具恢复。
+    effectiveness: low-medium
+    pros:
+      - 官方支持、成本低
+      - 所有 Flutter 项目的发布底线
+    cons:
+      - 单层不是保护
+      - --obfuscate 不做字符串加密
+      - 符号映射丢失会导致崩溃栈不可读
+      - 某些插件/序列化依赖名字
+    impacts:
+      build: CI 增加符号归档（私有）
+      runtime: 无额外开销；包体略变
+      ops: 崩溃分析需接入符号
+      portability: 不变
+    tools:
+      - name: Flutter 官方混淆文档
+        source: https://docs.flutter.dev/deployment/obfuscate
+        license: BSD-3-Clause
+    best_for: 所有 Flutter 项目；先做 DA1
+    verify: 解包确认无 kernel_blob/符号；blutter 看名字可读率
+
+  - id: DA2
+    name: 字符串/常量处理（Dart 层代码生成）
+    principle: 生成 Dart 代码时拆分/编码字符串、延迟拼接、常量转计算值；用 build_runner 生成器或 analyzer AST 工具。
+    effect: strings 与关键字检索失效；静态阅读变难。
+    effectiveness: low-medium
+    pros:
+      - 无需运行时；可按模块/资源粒度
+      - 与 DA1 叠加
+    cons:
+      - 缺少成熟开源 Dart 混淆器
+      - AOT 常量折叠可能把拼接重新折叠（需动态屏障）
+      - 自研需维护 analyzer/生成器
+    impacts:
+      build: 构建期代码生成
+      runtime: 取决于变换强度
+      ops: 调试/日志可读性下降
+      portability: 不变
+    tools:
+      - name: package:analyzer / build_runner（自研）
+        source: https://pub.dev/packages/analyzer
+        license: BSD-3-Clause
+    best_for: 少量关键字符串/接口路径/协议字段
+    verify: strings 明文比例 + 性能/功能回归
+
+  - id: DA3
+    name: 控制流/自定义虚拟机（Dart 层，高风险）
+    principle: 把关键函数改写为状态机/解释器循环，或把字节码放进 Dart 数据、运行期解释。
+    effect: 打掉调用图与可读控制流，静态/自动反编译成本上升。
+    effectiveness: medium
+    pros:
+      - 不依赖第三方壳；可按函数粒度
+      - 对自动反编译有明显干扰
+    cons:
+      - 性能损失大；Dart AOT 内联/优化可能干扰
+      - 实现与维护成本高
+      - 仍可被动态跟踪还原
+    impacts:
+      build: 需要专门代码生成/验证流程
+      runtime: 热路径可能不可用
+      ops: 调试困难；稳定性风险
+      portability: 不变
+    tools:
+      - name: 自研（无成熟 Dart 开源实现）
+        source: n/a
+        license: n/a
+    best_for: 极小范围的高价值函数
+    verify: 反编译/动态跟踪工时 + 性能回归
+
+  - id: DA4
+    name: 下沉 native（dart:ffi / platform channel / 原生插件）
+    principle: 核心用 C/C++/Rust 实现为共享库，Dart 通过 dart:ffi 调用；或经 platform channel/原生插件调用平台代码；C 侧用本技能做 IR 变换。
+    effect: 核心不再以 Dart 形式存在，回到 native 战场。
+    effectiveness: high
+    pros:
+      - 防护强度最高
+      - 性能好（FFI 批量调用）
+      - 可复用到 Android/iOS/desktop
+    cons:
+      - FFI 有固定开销；platform channel 更重
+      - 每平台/架构各编一份
+      - 跨语言调试困难；native 崩溃杀 App
+    impacts:
+      build: 构建矩阵与 CI 变重
+      runtime: FFI/channel 开销（批量化后可忽略）
+      ops: 签名/公证/上架审核覆盖原生库
+      portability: 产物层丧失
+    tools:
+      - name: dart:ffi
+        source: https://dart.dev/guides/libraries/c-interop
+        license: BSD-3-Clause
+      - name: Flutter platform channels / ffigen
+        source: https://docs.flutter.dev/platform-integration
+        license: BSD-3-Clause
+    best_for: 加密/授权/协议/算法核心（Flutter 最推荐的换赛道方式）
+    verify: 用本技能 verify/attack_sim 验证 native 侧；Dart 侧检查是否残留算法
+
+  - id: DA5
+    name: Web 目标（dart2js / dart2wasm）
+    principle: Flutter Web / Dart Web 编译为 JS（dart2js）或 WASM（dart2wasm/WasmGC）。
+    effect: 产物形态改变，按 JS 菜单（JS0–JS8）或 WASM 菜单（W0–W8）处理。
+    effectiveness: medium
+    pros:
+      - 可复用 Web 侧分发/完整性手段
+      - WASM 有一定结构隐藏效果
+    cons:
+      - JS/WASM 都可反编译
+      - Flutter Web 体积大、平台能力受限
+      - dart2wasm 兼容性需验证
+    impacts:
+      build: 需要维护 Web 构建链
+      runtime: Web 运行时/体积/性能差异
+      ops: source map/调试符号绝不能发布
+      portability: 部分
+    tools:
+      - name: dart compile js / dart compile wasm
+        source: https://dart.dev/tools/dart-compile
+        license: BSD-3-Clause
+      - name: flutter build web
+        source: https://docs.flutter.dev/platform-integration/web
+        license: BSD-3-Clause
+    best_for: 产品本就有 Web 形态
+    verify: JS/WASM 侧按对应菜单验证；确认无 source map
+
+  - id: DA6
+    name: 平台完整性（Play Integrity / App Attest / root·越狱检测）
+    principle: Android 用 Play Integrity API、iOS 用 App Attest/DeviceCheck，把运行环境可信证明交服务端校验；辅以 root/越狱/模拟器/hook 检测。
+    effect: 提高批量伪造/改包/自动化成本；必须服务端联动。
+    effectiveness: supporting
+    pros:
+      - 平台官方能力、可审计
+      - 与 DA0 天然配合
+    cons:
+      - 依赖 Google/Apple 服务与网络
+      - 存在误杀（定制 ROM/企业设备/CI）
+      - 检测可被绕过
+    impacts:
+      architecture: 服务端接验证链
+      runtime: 启动/运行校验
+      ops: 失败策略与测试矩阵
+      portability: 依赖平台
+    tools:
+      - name: Play Integrity API
+        source: https://developer.android.com/google/play/integrity
+        license: platform
+      - name: App Attest / DeviceCheck
+        source: https://developer.apple.com/documentation/devicecheck
+        license: platform
+    best_for: 有服务端、能接受平台依赖的商用 App
+    verify: 伪造环境/改包的成功率与服务端拒绝率
+
+  - id: DA7
+    name: 运行期对抗（Dart 侧反调试/完整性）
+    principle: 检测调试器/附加、校验关键资源/自身哈希、检测 hook/重打包；异常时降级或退出。
+    effect: 抬高动态分析成本（与 DA1/DA4 协同）。
+    effectiveness: supporting
+    pros:
+      - 与静态手段正交；实现成本相对低
+    cons:
+      - Dart 侧检测有限，很容易被 patch
+      - Flutter 引擎可被替换
+      - 误报伤合法用户/CI
+    impacts:
+      build: 需要哈希基线
+      runtime: 启动/运行检测开销
+      ops: 误杀救济与 CI 白名单
+      portability: 需逐平台适配
+    tools:
+      - name: 自研 + 平台原生检测
+        source: n/a
+        license: n/a
+    best_for: 只作为辅助层
+    verify: 挂调试器/重打包的成功率与耗时
+
+  - id: DA8
+    name: 密钥与信任根 + 水印
+    principle: 密钥不进客户端（服务端/KMS/HSM）；本地保存用 Android Keystore / iOS Keychain（Secure Enclave/StrongBox）；水印用于溯源。
+    effect: 代码被逆也拿不到可用密钥；泄露可追踪。
+    effectiveness: supporting
+    pros:
+      - 让攻击产出不可直接用
+      - 平台密钥存储有硬件-backed 选项
+    cons:
+      - 需服务端/硬件；离线受限
+      - 客户端最终使用明文密钥时仍有内存抓取风险
+    impacts:
+      architecture: 密钥生命周期与轮换
+      ops: 托管/合规成本
+      portability: 依赖平台能力
+    tools:
+      - name: Android Keystore
+        source: https://developer.android.com/privacy-and-security/keystore
+        license: platform
+      - name: iOS Keychain / Secure Enclave
+        source: https://developer.apple.com/documentation/security/keychain_services
+        license: platform
+    best_for: 只要还发密钥到客户端，就应优先处理
+    verify: 客户端是否残留可用密钥/明文许可证
+
+# 验证方法论（Dart / Flutter 侧）
+verification:
+  note: >-
+    本技能 verify/attack_sim 面向 LLVM 原生产物，不适用于 Dart AOT 快照；
+    Dart 侧用 blutter/reFlutter/解包/strings 按本文方法论执行，DA4 的 native 部分回到本技能链路。
+  tools:
+    - name: blutter
+      source: https://github.com/worawit/blutter
+      license: 见仓库
+      use: 从 libapp.so + libflutter.so 恢复 Dart 类/函数与伪代码
+    - name: reFlutter
+      source: https://github.com/Impact-I/reFlutter
+      license: 见仓库
+      use: 重打包 Flutter 引擎做流量/运行分析（检验引擎可替换性）
+    - name: unzip / apktool
+      source: https://apktool.org/
+      license: Apache-2.0
+      use: 检查 APK 内是否残留 kernel_blob.bin、符号、调试资源
+    - name: strings / nm / objdump
+      source: 系统 binutils
+      license: GPL
+      use: libapp.so 字符串/符号线索
+    - name: Ghidra / IDA
+      source: https://ghidra-sre.org/
+      license: Apache-2.0 / commercial
+      use: 原生库反编译（DA4）
+    - name: jadx / apktool
+      source: https://github.com/skylot/jadx
+      license: Apache-2.0
+      use: Android host（Java/Kotlin）检查
+  metrics:
+    - 类/函数名可读率（blutter 恢复后）
+    - 字符串明文比例
+    - 是否残留 kernel_blob.bin / snapshot data / symbols / source map
+    - 重建可运行工程的成功率与工时
+    - "逆到底得到了什么（可用算法/密钥 = 防护不够）"
+  steps:
+    - 解包发布物，确认无 kernel_blob.bin/vm_snapshot_data/isolate_snapshot_data/symbols/source map
+    - 对 libapp.so 跑 strings/nm，再用 blutter 恢复类/函数/伪代码
+    - 对比 --obfuscate 前后的名字/字符串/结构可读性
+    - 用 reFlutter 检验引擎替换/重打包难度
+    - DA4 的 native 部分改用 strings/nm/objdump + 本技能 verify/attack_sim

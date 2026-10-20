@@ -92,6 +92,21 @@
   `SKILL.md` 新增「纯 Python 项目」一节并同步 P1/P4、T4、See also；`README(.zh-CN)`、`STATUS`、
   `.agents`、`release.py` 同步；**新增 `tests/test_python_options.py`**。
 
+### 新增（技能改进 · Dart / Flutter 反 REA 选项目录）
+
+- **新增 [`docs/dart-anti-rea.md`](docs/dart-anti-rea.md)**：**DA0–DA8**——服务端化 /
+  构建基线（release AOT + `--obfuscate --split-debug-info`）/ 字符串与常量 / 控制流与自定义 VM /
+  下沉 native（`dart:ffi`、platform channel）/ Web 目标（dart2js、dart2wasm）/ 平台完整性
+  （Play Integrity、App Attest）/ 运行期对抗 / 密钥与水印。含组合阶梯、blutter/reFlutter 验证方法论、
+  P0–P4 接线、许可与合规边界。
+- **口径固定**：**debug/profile 包里的 `kernel_blob.bin` 等于源码**；`--obfuscate` 只重命名标识符、
+  **不做字符串加密**；`--split-debug-info` 符号绝不能随包发布；Flutter 引擎可被替换，不能当唯一防线。
+- **机器可读清单**：新增 [`docs/dart-anti-rea-options.yaml`](docs/dart-anti-rea-options.yaml)。
+- **勘察增强**：扫描器识别 `.dart`（`dart`）与 `pubspec.yaml`（`build_system=pub`），并补回归测试。
+- **接线**：`skill.json.dart_anti_rea` / `guides` / `supported.languages.dart_note`；`SKILL.md` 新增
+  「Dart / Flutter 项目」一节并同步 P1/P4、T4、See also；`README(.zh-CN)`、`STATUS`、`.agents`、
+  `release.py` 同步；**新增 `tests/test_dart_options.py`**。
+
 ### 变更（文档 / PoC 去本地化）
 
 - 清掉入库文件中残留的本机绝对路径（`/opt/<toolchain>`、`/home/<user>` 等），**不改变任何验证结论**：
