@@ -5,6 +5,20 @@
 
 ## [Unreleased]
 
+### 分析（Rust IR 级加固可行性 spike）
+
+- **新增 [`docs/analysis/rust-ir-spike.md`](docs/analysis/rust-ir-spike.md)**：实测 rustc 与引擎的
+  LLVM 版本兼容性——stable `1.99.0`（LLVM 23.1.1）与 `1.82.0`（LLVM 19.1.1）的文本 IR/bitcode
+  **均无法被 LLVM 18.1.8 读取**；`1.78.0`/`1.81.0`（LLVM 18）可跑通，CFF/MBA/不透明谓词功能等价，
+  热循环 2000 万次 126.8 ms → 597.8 ms（4.7×），`.text` 642 B → 1612 B，`rename` 有效。
+- **关键限制**：rustc 的 LLVM 命令行不注册 `-load-pass-plugin`（`-C llvm-args` 无效）、
+  `-Z llvm-plugins` 仅 nightly；cargo 无对象替换/注入钩子，接管链接或 `no_std` 代价高；
+  **字符串加密对 Rust 字面量不生效**（rustc 发成 `<{ [N x i8] }>` 结构包装，pass 只匹配
+  `ConstantDataArray`；同一场景 C 代码正常清除）。
+- **结论**：**不把 Rust 纯代码 IR 级支持纳入 v1.x**；维持“Rust 仅 C/FFI 源”的支持矩阵，
+  敏感核心建议放 C/FFI（模式 B）。若需覆盖 Rust，优先做**菜单级 R0–R8**（文档+测试，不改引擎）。
+  `SKILL.md` 限制一节与 `docs/STATUS.md` 文件地图已同步。
+
 ### 新增（技能改进 · .NET / Unity 反 REA 选项目录）
 
 - **新增 [`docs/dotnet-anti-rea.md`](docs/dotnet-anti-rea.md)**：C# / F# / VB.NET（含 Unity、MAUI、Blazor、

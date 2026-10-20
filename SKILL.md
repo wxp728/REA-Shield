@@ -383,6 +383,8 @@ CIL 带完整元数据，反编译器能近乎还原源码（比 C/C++ 更"一�
 - 变换引擎基于 LLVM Pass：支持 C/C++；Rust 仅 C/FFI 源、Python 仅 C 扩展。
   纯 Rust / Java / .NET / JS/TS 无 IR 层防护（ADR-006）；Java / Android 与 .NET / Unity
   改用「选项菜单 + 方法论」（见上两节与 `docs/java-anti-rea.md`、`docs/dotnet-anti-rea.md`）。
+  Rust 的 IR 级支持已做过可行性验证：受 rustc 自带 LLVM 版本与 cargo 注入点限制，
+  **不纳入 v1.x**；Rust 项目的敏感核心请放在 **C/FFI** 侧。
 - 默认平台 Linux x86_64；其他平台可运行 scan/plan，protect 需自行验证。
 - **不越权改造**：本技能只提供信息与方法论；对目标工程构建体系的任何修改
   （构建脚本、CI、环境）都须先经工作流 P1 出方案、用户审查后再动，且只改用户批准的项。

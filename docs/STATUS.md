@@ -345,6 +345,7 @@ NFR-02 Token 倍数子项 **S7 评估后废弃**（见 §1 说明）。
 | **MCP 客户端配置（可直接粘贴）** | `docs/mcp-clients.md` |
 | **Java / Android 反 REA 选项目录（J0–J8）** | `docs/java-anti-rea.md`、`docs/java-anti-rea-options.yaml` |
 | **.NET / Unity 反 REA 选项目录（D0–D8）** | `docs/dotnet-anti-rea.md`、`docs/dotnet-anti-rea-options.yaml` |
+| **Rust IR 级可行性 spike（结论：不纳入）** | `docs/analysis/rust-ir-spike.md` |
 | **常见问题 / 排障** | `docs/FAQ.md`、`docs/troubleshooting.md` |
 | **端到端示例** | `examples/quickstart/` |
 | **发布说明 / 上传清单** | `docs/release/RELEASE-1.0.0.md`、`upload-checklist.md` |
