@@ -428,7 +428,7 @@
     },
     "languages": {
       "ir_transforms": ["c", "cpp", "rust (C/FFI sources only)", "python (C extensions only)"],
-      "scan_only": ["rust", "java", "csharp", "javascript", "typescript", "python"],
+      "scan_only": ["rust", "java", "csharp", "javascript", "typescript", "python", "go", "dart"],
       "java_note": "No IR transforms for Java bytecode; see the top-level `java_anti_rea` option menu (docs/java-anti-rea.md), and let the user choose the combination. Kotlin/Scala compile to JVM bytecode and follow the same menu.",
       "dotnet_note": "No IL transforms for .NET (C#/F#/VB) or Unity; see the top-level `dotnet_anti_rea` option menu (docs/dotnet-anti-rea.md). NativeAOT/IL2CPP/native-offload outputs go through the regular native pipeline.",
       "js_note": "No source-level transforms for JS/TS; see the top-level `js_anti_rea` option menu (docs/js-anti-rea.md). Never ship source maps; WASM/native-offload outputs (JS4/JS5) go through the regular native pipeline.",
